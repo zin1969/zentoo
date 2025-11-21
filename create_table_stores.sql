@@ -1,0 +1,11 @@
+CREATE TABLE stores (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER trigger_update_updated_at_of_stores
+BEFORE UPDATE ON stores
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_with_current_timestamp();
