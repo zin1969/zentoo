@@ -131,6 +131,8 @@ INSERT INTO holidays (
 INSERT INTO users (
   name
 ) VALUES (
+  'system'
+), (
   'masa'
 );
 
@@ -138,4 +140,82 @@ INSERT INTO stores (
   name
 ) VALUES (
   'Aquavit'
-)
+);
+
+INSERT INTO expense_accounts (
+  name, user_id
+) VALUES (
+  'root',
+  (SELECT id FROM users WHERE name = 'system')
+);
+
+INSERT INTO expense_accounts (
+  parent_id, name, user_id
+) VALUES (
+  (SELECT id FROM expense_accounts WHERE name = 'root'),
+  '食費',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM expense_accounts WHERE name = 'root'),
+  '娯楽費',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM expense_accounts WHERE name = 'root'),
+  '交通費',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM expense_accounts WHERE name = 'root'),
+  '教育費',
+  (SELECT id FROM users WHERE name = 'masa')
+);
+
+INSERT INTO expense_accounts (
+  parent_id, name, user_id
+) VALUES (
+  (SELECT id FROM expense_accounts WHERE name = '娯楽費'),
+  '映画',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM expense_accounts WHERE name = '娯楽費'),
+  '配信サービス',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM expense_accounts WHERE name = '娯楽費'),
+  '漫画',
+  (SELECT id FROM users WHERE name = 'masa')
+);
+
+INSERT INTO liability_accounts (
+  type, name, user_id
+) VALUES (
+  3,
+  'JAL',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  3,
+  'enoteca',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  3,
+  'PayPay',
+  (SELECT id FROM users WHERE name = 'masa')
+);
+
+INSERT INTO credit_cards (
+  liability_account_id, cutoff_day, payment_day, user_id
+) VALUES (
+  (SELECT id FROM liability_accounts WHERE name = 'JAL')
+  15,
+  10,
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM liability_accounts WHERE name = 'enoteca')
+  15,
+  10,
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM liability_accounts WHERE name = 'PayPay')
+  31,
+  27,
+  (SELECT id FROM users WHERE name = 'masa')
+);

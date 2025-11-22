@@ -15,6 +15,8 @@ psql -U "$DB_USER" -d "$DB_NAME" -f get_next_business_day.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_holidays.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_users.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_stores.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f create_table_expense_accounts.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f create_table_liability_accounts.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_journals.sql
 
 echo "Loading initial data..."
