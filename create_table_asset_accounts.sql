@@ -8,7 +8,7 @@ CREATE TABLE asset_accounts (
   -- 1: 現金
   -- 2: 預貯金（銀行、信用金庫、郵貯等）
   -- 3: eManey
-  CHECK (type IN (1, 2, 3))
+  CONSTRAINT asset_account_type CHECK (type IN (1, 2, 3))
 );
 
 CREATE TRIGGER trigger_update_updated_at_of_asset_accounts

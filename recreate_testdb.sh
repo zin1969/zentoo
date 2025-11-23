@@ -20,8 +20,11 @@ psql -U "$DB_USER" -d "$DB_NAME" -f create_table_liability_accounts.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_asset_accounts.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_credit_cards.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_journals.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f create_table_debits.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f create_table_credits.sql
 
 echo "Loading initial data..."
 psql -U "$DB_USER" -d "$DB_NAME" -f init_data.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f test/use_cash.sql
 
 echo "Done."
