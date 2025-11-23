@@ -3,7 +3,7 @@ CREATE TABLE debits (
   journal_id INTEGER REFERENCES journals(id),
   type INTEGER NOT NULL,
   account_id INTEGER NOT NULL,
-  name TEXT,
+  item_name TEXT,
   amount INTEGER NOT NULL,
   user_id INTEGER REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

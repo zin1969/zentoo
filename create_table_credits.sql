@@ -4,7 +4,6 @@ CREATE TABLE credits (
   type INTEGER NOT NULL,
   payment_method_type INTEGER NOT NULL,
   account_id INTEGER NOT NULL,
-  name TEXT,
   amount INTEGER NOT NULL,
   user_id INTEGER REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

@@ -140,6 +140,8 @@ INSERT INTO stores (
   name
 ) VALUES (
   'Aquavit'
+), (
+  'まいばすけっと'
 );
 
 INSERT INTO expense_accounts (
