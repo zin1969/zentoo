@@ -204,18 +204,38 @@ INSERT INTO liability_accounts (
 INSERT INTO credit_cards (
   liability_account_id, cutoff_day, payment_day, user_id
 ) VALUES (
-  (SELECT id FROM liability_accounts WHERE name = 'JAL')
+  (SELECT id FROM liability_accounts WHERE name = 'JAL'),
   15,
   10,
   (SELECT id FROM users WHERE name = 'masa')
 ), (
-  (SELECT id FROM liability_accounts WHERE name = 'enoteca')
+  (SELECT id FROM liability_accounts WHERE name = 'enoteca'),
   15,
   10,
   (SELECT id FROM users WHERE name = 'masa')
 ), (
-  (SELECT id FROM liability_accounts WHERE name = 'PayPay')
+  (SELECT id FROM liability_accounts WHERE name = 'PayPay'),
   31,
   27,
+  (SELECT id FROM users WHERE name = 'masa')
+);
+
+INSERT INTO asset_accounts (
+  type, name, user_id
+) VALUES (
+  1,
+  '現金',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  2,
+  '三菱UFJ銀行 用賀出張所',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  2,
+  'みずほ銀行 玉川支店',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  3,
+  'Suica',
   (SELECT id FROM users WHERE name = 'masa')
 );
