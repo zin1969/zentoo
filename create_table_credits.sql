@@ -14,6 +14,14 @@ CREATE TABLE credits (
   -- 4: 収益(revenue)
   -- 5: 費用(expenses)
   CONSTRAINT credit_type CHECK (type IN (1, 2, 3, 4, 5)),
+  -- 1: 資産(assets)
+  --   1: 現金
+  --   2: 預貯金（銀行、信用金庫、郵貯等）
+  --   3: eManey
+  -- 2: 負債(liabilities)
+  --   1: 借入金(住宅ローン、教育ローン等)
+  --   2: キャッシング
+  --   3: クレジットカード払い
   CONSTRAINT credit_payment_method_type CHECK (
     (type = 1 AND payment_method_type IN (1, 2, 3)) OR
     (type = 2 AND payment_method_type IN (1, 2, 3))

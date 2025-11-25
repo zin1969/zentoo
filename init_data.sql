@@ -174,6 +174,10 @@ INSERT INTO expense_accounts (
 INSERT INTO expense_accounts (
   parent_id, name, user_id
 ) VALUES (
+  (SELECT id FROM expense_accounts WHERE name = '食費'),
+  '外食費',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
   (SELECT id FROM expense_accounts WHERE name = '娯楽費'),
   '映画',
   (SELECT id FROM users WHERE name = 'masa')

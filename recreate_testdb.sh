@@ -26,5 +26,6 @@ psql -U "$DB_USER" -d "$DB_NAME" -f create_table_credits.sql
 echo "Loading initial data..."
 psql -U "$DB_USER" -d "$DB_NAME" -f init_data.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f test/use_cash.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f test/use_credit_only.sql
 
 echo "Done."
