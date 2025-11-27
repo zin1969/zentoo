@@ -203,26 +203,11 @@ INSERT INTO liability_accounts (
   (SELECT id FROM users WHERE name = 'masa')
 ), (
   3,
+  'tcard',
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  3,
   'PayPay',
-  (SELECT id FROM users WHERE name = 'masa')
-);
-
-INSERT INTO credit_cards (
-  liability_account_id, cutoff_day, payment_day, user_id
-) VALUES (
-  (SELECT id FROM liability_accounts WHERE name = 'JAL'),
-  15,
-  10,
-  (SELECT id FROM users WHERE name = 'masa')
-), (
-  (SELECT id FROM liability_accounts WHERE name = 'enoteca'),
-  15,
-  10,
-  (SELECT id FROM users WHERE name = 'masa')
-), (
-  (SELECT id FROM liability_accounts WHERE name = 'PayPay'),
-  31,
-  27,
   (SELECT id FROM users WHERE name = 'masa')
 );
 
@@ -243,5 +228,33 @@ INSERT INTO asset_accounts (
 ), (
   3,
   'Suica',
+  (SELECT id FROM users WHERE name = 'masa')
+);
+
+INSERT INTO credit_cards (
+  liability_account_id, bank_account_id, cutoff_day, payment_day, user_id
+) VALUES (
+  (SELECT id FROM liability_accounts WHERE name = 'JAL'),
+  (SELECT id FROM asset_accounts WHERE name = '三菱UFJ銀行 用賀出張所'),
+  15,
+  10,
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM liability_accounts WHERE name = 'enoteca'),
+  (SELECT id FROM asset_accounts WHERE name = '三菱UFJ銀行 用賀出張所'),
+  15,
+  10,
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM liability_accounts WHERE name = 'tcard'),
+  (SELECT id FROM asset_accounts WHERE name = '三菱UFJ銀行 用賀出張所'),
+  10,
+  27,
+  (SELECT id FROM users WHERE name = 'masa')
+), (
+  (SELECT id FROM liability_accounts WHERE name = 'PayPay'),
+  (SELECT id FROM asset_accounts WHERE name = 'みずほ銀行 玉川支店'),
+  31,
+  27,
   (SELECT id FROM users WHERE name = 'masa')
 );

@@ -1,6 +1,7 @@
 CREATE TABLE credit_cards (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   liability_account_id INTEGER REFERENCES liability_accounts(id),
+  bank_account_id INTEGER REFERENCES asset_accounts(id),
   cutoff_day INTEGER NOT NULL,
   payment_day INTEGER NOT NULL,
   user_id INTEGER REFERENCES users(id),

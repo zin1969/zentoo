@@ -31,16 +31,26 @@ BEGIN
   y := EXTRACT(YEAR FROM journal_date)::int;
   m := EXTRACT(MONTH FROM journal_date)::int;
 
+  -- 締日が月末の場合は月毎の末日に調整
   IF cutoff_day = 31 THEN
     cutoff_date := get_last_date_of_month(y, m);
   ELSE
     cutoff_date := MAKE_DATE(y, m, cutoff_day);
   END IF;
 
-  IF journal_date <= cutoff_date THEN
-    payment_date := MAKE_DATE(y, m, payment_day) + INTERVAL '1 month';
+  -- 締日と支払日の関係で算出方法を変更
+  IF cutoff_day < payment_day THEN
+    IF journal_date <= cutoff_date THEN
+      payment_date := MAKE_DATE(y, m, payment_day);
+    ELSE
+      payment_date := MAKE_DATE(y, m, payment_day) + INTERVAL '1 month';
+    END IF;
   ELSE
-    payment_date := MAKE_DATE(y, m, payment_day) + INTERVAL '2 month';
+    IF journal_date <= cutoff_date THEN
+      payment_date := MAKE_DATE(y, m, payment_day) + INTERVAL '1 month';
+    ELSE
+      payment_date := MAKE_DATE(y, m, payment_day) + INTERVAL '2 month';
+    END IF;
   END IF;
 
   payment_date := get_next_business_day(payment_date);
@@ -49,13 +59,14 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION generate_direct_journal()
+CREATE OR REPLACE FUNCTION generate_direct_debit_journal()
 RETURNS TRIGGER AS $$
 DECLARE
   credit_card_record credit_cards%ROWTYPE;
   original_journal_record journals%ROWTYPE;
   payment_date DATE;
   new_id INT;
+  new_item_name TEXT;
 BEGIN
   -- カード支払い以外は処理をしない
   -- アーリーリターン（早期離脱）
@@ -95,6 +106,47 @@ BEGIN
   )
   RETURNING id INTO new_id;
 
+  -- クレジット支払と口座振替の journal レコードを紐付けるデータを作成
+  INSERT INTO direct_debit_journals (
+    original_id, direct_debit_id, user_id
+  ) VALUES (
+    original_journal_record.id,
+    new_id,
+    original_journal_record.user_id
+  );
+
+  -- 口座振替借方仕訳を作成
+  INSERT INTO credits (
+    journal_id, type, payment_method_type, account_id, amount, user_id
+  ) VALUES (
+    new_id,
+    1,
+    2,
+    credit_card_record.bank_account_id,
+    NEW.amount,
+    original_journal_record.user_id
+  );
+
+  -- 項目名を集約する
+  -- 口座振替貸方仕訳に使用
+  SELECT STRING_AGG(item_name, ',')
+    INTO new_item_name
+    FROM debits
+   WHERE journal_id = original_journal_record.id
+  ;
+
+  -- 口座振替貸方仕訳を作成
+  INSERT INTO debits (
+    journal_id, type, account_id, item_name, amount, user_id
+  ) VALUES (
+    new_id,
+    2,
+    NEW.account_id,
+    new_item_name,
+    NEW.amount,
+    original_journal_record.user_id
+  );
+  
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
