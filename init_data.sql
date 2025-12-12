@@ -258,3 +258,11 @@ INSERT INTO credit_cards (
   27,
   (SELECT id FROM users WHERE name = 'masa')
 );
+
+INSERT INTO equity_accounts (
+  name, user_id
+) VALUES (
+  '元入金',
+  (SELECT id FROM users WHERE name = 'masa')
+);
+

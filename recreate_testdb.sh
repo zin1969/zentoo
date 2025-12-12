@@ -18,6 +18,7 @@ psql -U "$DB_USER" -d "$DB_NAME" -f create_table_stores.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_expense_accounts.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_liability_accounts.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_asset_accounts.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f create_table_equity_accounts.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_credit_cards.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_journals.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f create_table_direct_debit_journals.sql
