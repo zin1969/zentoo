@@ -115,7 +115,7 @@ BEGIN
     original_journal_record.user_id
   );
 
-  -- 口座振替借方仕訳を作成
+  -- 口座振替貸方仕訳を作成
   INSERT INTO credits (
     journal_id, type, payment_method_type, account_id, amount, user_id
   ) VALUES (
@@ -135,7 +135,7 @@ BEGIN
    WHERE journal_id = original_journal_record.id
   ;
 
-  -- 口座振替貸方仕訳を作成
+  -- 口座振替借方仕訳を作成
   INSERT INTO debits (
     journal_id, type, account_id, item_name, amount, user_id
   ) VALUES (
