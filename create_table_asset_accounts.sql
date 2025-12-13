@@ -1,6 +1,6 @@
 CREATE TABLE asset_accounts (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  type INTEGER NOT NULL,
+  asset_type INTEGER NOT NULL,
   name TEXT NOT NULL,
   user_id INTEGER REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -8,7 +8,7 @@ CREATE TABLE asset_accounts (
   -- 1: 現金
   -- 2: 預貯金（銀行、信用金庫、郵貯等）
   -- 3: eManey
-  CONSTRAINT asset_account_type CHECK (type IN (1, 2, 3))
+  CONSTRAINT asset_account_type CHECK (asset_type IN (1, 2, 3))
 );
 
 CREATE TRIGGER trigger_update_updated_at_of_asset_accounts

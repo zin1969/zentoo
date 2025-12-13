@@ -1,7 +1,7 @@
 CREATE TABLE debits (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   journal_id INTEGER REFERENCES journals(id),
-  type INTEGER NOT NULL,
+  element_type INTEGER NOT NULL,
   account_id INTEGER NOT NULL,
   item_name TEXT,
   amount INTEGER NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE debits (
   -- 3: 純資産・資本(equity)
   -- 4: 収益(revenue)
   -- 5: 費用(expenses)
-  CONSTRAINT debit_type CHECK (type IN (1, 2, 3, 4, 5))
+  CONSTRAINT debit_element_type CHECK (element_type IN (1, 2, 3, 4, 5))
 );
 
 CREATE TRIGGER trigger_update_updated_at_of_debits

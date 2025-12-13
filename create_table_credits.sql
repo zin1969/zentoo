@@ -1,7 +1,7 @@
 CREATE TABLE credits (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   journal_id INTEGER REFERENCES journals(id),
-  type INTEGER NOT NULL,
+  element_type INTEGER NOT NULL,
   payment_method_type INTEGER NOT NULL,
   account_id INTEGER NOT NULL,
   amount INTEGER NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE credits (
   -- 3: 純資産・資本(equity)
   -- 4: 収益(revenue)
   -- 5: 費用(expenses)
-  CONSTRAINT credit_type CHECK (type IN (1, 2, 3, 4, 5)),
+  CONSTRAINT credit_element_type CHECK (element_type IN (1, 2, 3, 4, 5)),
   -- 1: 資産(assets)
   --   1: 現金
   --   2: 預貯金（銀行、信用金庫、郵貯等）
@@ -22,9 +22,12 @@ CREATE TABLE credits (
   --   1: 借入金(住宅ローン、教育ローン等)
   --   2: キャッシング
   --   3: クレジットカード払い
+  -- 資産、負債以外
+  --   0: 指定なし
   CONSTRAINT credit_payment_method_type CHECK (
-    (type = 1 AND payment_method_type IN (1, 2, 3)) OR
-    (type = 2 AND payment_method_type IN (1, 2, 3))
+    (element_type = 1 AND payment_method_type IN (1, 2, 3)) OR
+    (element_type = 2 AND payment_method_type IN (1, 2, 3)) OR
+    (element_type IN (3, 4, 5) AND payment_method_type = 0)
   )
 );
 

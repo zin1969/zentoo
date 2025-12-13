@@ -70,7 +70,7 @@ DECLARE
 BEGIN
   -- カード支払い以外は処理をしない
   -- アーリーリターン（早期離脱）
-  IF NOT (NEW.type = 2 AND NEW.payment_method_type = 3) THEN
+  IF NOT (NEW.element_type = 2 AND NEW.payment_method_type = 3) THEN
     RETURN NEW;
   END IF;
 
@@ -117,7 +117,7 @@ BEGIN
 
   -- 口座振替貸方仕訳を作成
   INSERT INTO credits (
-    journal_id, type, payment_method_type, account_id, amount, user_id
+    journal_id, element_type, payment_method_type, account_id, amount, user_id
   ) VALUES (
     new_id,
     1,
@@ -137,7 +137,7 @@ BEGIN
 
   -- 口座振替借方仕訳を作成
   INSERT INTO debits (
-    journal_id, type, account_id, item_name, amount, user_id
+    journal_id, element_type, account_id, item_name, amount, user_id
   ) VALUES (
     new_id,
     2,

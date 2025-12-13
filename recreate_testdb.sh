@@ -28,6 +28,7 @@ psql -U "$DB_USER" -d "$DB_NAME" -f create_table_credits.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f get_next_business_day.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f generate_direct_debit_journal.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f generate_make_a_cash_deposit_journal.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f generate_opening_asset_balance_journal.sql
 
 psql -U "$DB_USER" -d "$DB_NAME" -f alter_table_add_trigger_credits.sql
 
@@ -36,5 +37,6 @@ psql -U "$DB_USER" -d "$DB_NAME" -f init_data.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f test/use_cash.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f test/use_credit_only.sql
 psql -U "$DB_USER" -d "$DB_NAME" -f test/make_a_cash_deposit.sql
+psql -U "$DB_USER" -d "$DB_NAME" -f test/opening_asset_balance.sql
 
 echo "Done."

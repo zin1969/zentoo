@@ -192,7 +192,7 @@ INSERT INTO expense_accounts (
 );
 
 INSERT INTO liability_accounts (
-  type, name, user_id
+  liability_type, name, user_id
 ) VALUES (
   3,
   'JAL',
@@ -212,7 +212,7 @@ INSERT INTO liability_accounts (
 );
 
 INSERT INTO asset_accounts (
-  type, name, user_id
+  asset_type, name, user_id
 ) VALUES (
   1,
   '現金',

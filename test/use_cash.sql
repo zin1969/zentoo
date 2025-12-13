@@ -8,7 +8,7 @@ INSERT INTO journals (
 );
 
 INSERT INTO debits (
-  journal_id, type, account_id, item_name, amount, user_id
+  journal_id, element_type, account_id, item_name, amount, user_id
 ) VALUES (
   (SELECT id FROM journals WHERE store_name = 'まいばすけっと 001'),
   5,
@@ -19,7 +19,7 @@ INSERT INTO debits (
 );
 
 INSERT INTO credits (
-  journal_id, type, payment_method_type, account_id, amount, user_id
+  journal_id, element_type, payment_method_type, account_id, amount, user_id
 ) VALUES (
   (SELECT id FROM journals WHERE store_name = 'まいばすけっと 001'),
   1,
