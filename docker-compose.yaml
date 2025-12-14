@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+
+  api:
+    image: rails:8
+    ports:
+      - "53000:3000"
+    volumes:
+      - /zentoo/api:/opt/app
+    networks:
+      - publicnet
+      - privatenet
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=mysecret_password
+      - SESSION_DB_HOST=redis
+      - SESSION_DB_PORT=6379
+      - SIDEKIQ_Q=fuga
+      - THOR_SILENCE_DEPRECATION=true
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:17
+    ports:
+      - "55432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - privatenet
+    environment:
+      - POSTGRES_PASSWORD=mysecret_password
+
+  redis:
+    image: redis:latest
+    networks:
+      - privatenet
+
+networks:
+  publicnet:
+  privatenet:
+
+volumes:
+  db-data:
