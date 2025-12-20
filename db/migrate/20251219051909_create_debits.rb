@@ -11,9 +11,15 @@ class CreateDebits < ActiveRecord::Migration[8.1]
       t.timestamps default: -> { "CURRENT_TIMESTAMP" }
     end
 
+    # element_type
+    # 1: 資産(assets)
+    # 2: 負債(liabilities)
+    # 3: 純資産・資本(equity)
+    # 4: 収益(revenue)
+    # 5: 費用(expenses)
     execute <<~SQL
       ALTER TABLE debits
-        ADD CONSTRAINT credit_element_type
+        ADD CONSTRAINT debit_element_type
         CHECK (element_type IN (1, 2, 3, 4, 5));
     SQL
   end

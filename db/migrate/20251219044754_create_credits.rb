@@ -12,6 +12,24 @@ class CreateCredits < ActiveRecord::Migration[8.1]
       t.timestamps default: -> { "CURRENT_TIMESTAMP" }
     end
 
+    # element_type
+    # 1: 資産(assets)
+    # 2: 負債(liabilities)
+    # 3: 純資産・資本(equity)
+    # 4: 収益(revenue)
+    # 5: 費用(expenses)
+    #
+    # payment_method_type
+    # 1: 資産(assets)
+    #   1: 現金
+    #   2: 預貯金（銀行、信用金庫、郵貯等）
+    #   3: eManey
+    # 2: 負債(liabilities)
+    #   1: 借入金(住宅ローン、教育ローン等)
+    #   2: キャッシング
+    #   3: クレジットカード払い
+    # 資産、負債以外
+    #   0: 指定なし
     execute <<~SQL
       ALTER TABLE credits
         ADD CONSTRAINT credit_element_type
