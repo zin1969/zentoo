@@ -1,18 +1,33 @@
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateAssetAccountsUpdatedAtTrigger
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateCreditCardsUpdatedAtTrigger
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateDirectDebitJournalsUpdatedAtTrigger
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateEquityAccountsUpdatedAtTrigger
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateExpenseAccountsUpdatedAtTrigger
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateHolidaysUpdatedAtTrigger
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateLiabilityAccountsUpdatedAtTrigger
+## all
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api /bin/ash
+
+## 2025-12-20
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:create
 
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateAssetAccounts
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateCreditCards
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateDirectDebitJournals
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateAssetAccountsUpdatedAtTrigger
+
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateEquityAccounts
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateEquityAccountsUpdatedAtTrigger
+
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateExpenseAccounts
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateHolidays
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateExpenseAccountsUpdatedAtTrigger
+
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateLiabilityAccounts
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateLiabilityAccountsUpdatedAtTrigger
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateCreditCards
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateCreditCardsUpdatedAtTrigger
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateDirectDebitJournals
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateDirectDebitJournalsUpdatedAtTrigger
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateHolidayTypes
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateHolidayTypesUpdatedAtTrigger
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateHolidays
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration CreateHolidaysUpdatedAtTrigger
 
 ## 2025-12-19
 
