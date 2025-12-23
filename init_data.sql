@@ -265,4 +265,3 @@ INSERT INTO equity_accounts (
   '元入金',
   (SELECT id FROM users WHERE name = 'masa')
 );
-
