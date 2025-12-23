@@ -30,5 +30,9 @@ module App
     config.api_only = true
 
     config.active_record.schema_format = :sql
+
+    config.generators do |g|
+      g.test_framework nil
+    end
   end
 end

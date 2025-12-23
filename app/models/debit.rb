@@ -1,0 +1,2 @@
+class Debit < ApplicationRecord
+end

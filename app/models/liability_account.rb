@@ -1,0 +1,2 @@
+class LiabilityAccount < ApplicationRecord
+end

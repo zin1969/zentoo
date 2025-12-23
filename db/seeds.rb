@@ -7,3 +7,16 @@
 #   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
+
+require "factory_bot_rails"
+
+# Users
+FactoryBot.create(:user, :system)
+FactoryBot.create(:user, :masa)
+
+# Stores
+FactoryBot.create(:store, :aquavit)
+FactoryBot.create(:store, :maibasuketto)
+
+# ExpenseAccounts
+load Rails.root.join("db/seeds/expense_accounts.rb")

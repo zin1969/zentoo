@@ -1,0 +1,2 @@
+class AssetAccount < ApplicationRecord
+end

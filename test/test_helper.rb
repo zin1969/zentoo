@@ -11,5 +11,8 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+
+    # For FactoryBot can be written in abbreviation
+    include FactoryBot::Syntax::Methods
   end
 end
