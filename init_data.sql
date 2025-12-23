@@ -148,7 +148,7 @@ INSERT INTO expense_accounts (
   name, user_id
 ) VALUES (
   'root',
-  (SELECT id FROM users WHERE name = 'system')
+  (SELECT id FROM users WHERE name = 'masa')
 );
 
 INSERT INTO expense_accounts (
