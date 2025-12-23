@@ -28,6 +28,12 @@ docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports ap
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g rspec:install
 
 ## 2025-12-20
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:seed
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model HolidayType --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model Holiday --skip-migration
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g migration AddUniqueIndexToHolidaysHoliday
 
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:create
 
