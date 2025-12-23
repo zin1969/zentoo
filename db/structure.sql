@@ -192,7 +192,7 @@ CREATE TABLE public.debits (
     user_id bigint,
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT credit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5])))
+    CONSTRAINT debit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5])))
 );
 
 

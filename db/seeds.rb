@@ -8,15 +8,19 @@
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
 
-require "factory_bot_rails"
-
 # Users
-FactoryBot.create(:user, :system)
-FactoryBot.create(:user, :masa)
+User.find_or_create_by!(name: "system")
+User.find_or_create_by!(name: "masa")
 
 # Stores
-FactoryBot.create(:store, :aquavit)
-FactoryBot.create(:store, :maibasuketto)
+Store.find_or_create_by!(name: "Aquavit")
+Store.find_or_create_by!(name: "まいばすけっと")
 
-# ExpenseAccounts
+# Accounts
 load Rails.root.join("db/seeds/expense_accounts.rb")
+load Rails.root.join("db/seeds/liability_accounts.rb")
+load Rails.root.join("db/seeds/asset_accounts.rb")
+load Rails.root.join("db/seeds/equity_accounts.rb")
+
+# CreditCards
+load Rails.root.join("db/seeds/credit_cards.rb")

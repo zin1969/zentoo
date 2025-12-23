@@ -1,70 +1,59 @@
-require "factory_bot_rails"
-
-# ユーザー取得（INSERT の subquery 相当）
 masa = User.find_by!(name: "masa")
 
 # root
-root = FactoryBot.create(
-  :expense_account,
-  :root,
-  user: masa
+root = ExpenseAccount.find_or_create_by!(
+  user: masa,
+  parent: nil,
+  name: "root"
 )
 
 # root 配下
-food = FactoryBot.create(
-  :expense_account,
-  :food,
+food = ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: root,
-  user: masa
+  name: "食費"
 )
 
-entertainment = FactoryBot.create(
-  :expense_account,
-  :entertainment,
+entertainment = ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: root,
-  user: masa
+  name: "娯楽費"
 )
 
-FactoryBot.create(
-  :expense_account,
-  :transportation,
+ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: root,
-  user: masa
+  name: "交通費"
 )
 
-FactoryBot.create(
-  :expense_account,
-  :education,
+ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: root,
-  user: masa
+  name: "教育費"
 )
 
 # 食費 配下
-FactoryBot.create(
-  :expense_account,
-  :eating_out,
+ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: food,
-  user: masa
+  name: "外食費"
 )
 
 # 娯楽費 配下
-FactoryBot.create(
-  :expense_account,
-  :movie,
+ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: entertainment,
-  user: masa
+  name: "映画"
 )
 
-FactoryBot.create(
-  :expense_account,
-  :streaming,
+ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: entertainment,
-  user: masa
+  name: "配信サービス"
 )
 
-FactoryBot.create(
-  :expense_account,
-  :manga,
+ExpenseAccount.find_or_create_by!(
+  user: masa,
   parent: entertainment,
-  user: masa
+  name: "漫画"
 )
