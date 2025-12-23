@@ -1,5 +1,31 @@
 ## all
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api /bin/ash
+find . -type f -newermt "today"
+find . -type f -newermt "today 07:00"
+
+touch -t "$(date +%Y%m%d)0700.00" /tmp/today_0700
+find . -type f -newer /tmp/today_0700
+
+## 2025-12-23
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model User --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model Store --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model Journal --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model Credit --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model Debit --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model AssetAccount --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model EquityAccount --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model ExpenseAccount --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model LiabilityAccount --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model CreditCard --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model DirectDebitJournal --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model HolidayType --skip-migration
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g model Holiday --skip-migration
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:seed
+
+## 2025-12-22
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails g rspec:install
 
 ## 2025-12-20
 
