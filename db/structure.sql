@@ -885,6 +885,13 @@ CREATE INDEX index_expense_accounts_on_user_id ON public.expense_accounts USING 
 
 
 --
+-- Name: index_holidays_on_holiday; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_holidays_on_holiday ON public.holidays USING btree (holiday);
+
+
+--
 -- Name: index_holidays_on_holiday_type_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1140,6 +1147,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20251220053020'),
 ('20251220025518'),
 ('20251220025453'),
 ('20251220025037'),
