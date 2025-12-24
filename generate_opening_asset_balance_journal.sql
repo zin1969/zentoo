@@ -14,6 +14,7 @@ DECLARE
   new_id INT;
   ITEM_NAME CONSTANT TEXT := '開始残高';
   EQUITY_NAME CONSTANT TEXT := '元入金';
+  EQUITY_ELEMENT_NO CONSTANT INT := 3;
 BEGIN
   -- 預入する銀行の資産科目を取得
   -- 親仕訳データの店名に使用するため
@@ -38,14 +39,14 @@ BEGIN
     journal_id, element_type, account_id, item_name, amount, user_id
   ) VALUES (
     new_id,
-    1,
+    asset_type,
     asset_account_id,
     ITEM_NAME,
     amount,
     user_id
   );
 
-  -- 現金資産科目を取得
+  -- 元入金科目を取得
   -- 預入貸方データの科目に設定するため
   SELECT *
     INTO equity_account_record
@@ -59,7 +60,7 @@ BEGIN
     journal_id, element_type, payment_method_type, account_id, amount, user_id
   ) VALUES (
     new_id,
-    3,
+    EQUITY_ELEMENT_NO,
     0,
     equity_account_record.id,
     amount,
