@@ -4,6 +4,7 @@ class CreateDebits < ActiveRecord::Migration[8.1]
       t.references :journal, foreign_key: true
       t.integer :element_type, null: false
       t.integer :account_id, null: false
+      t.text :item_name
       t.integer :amount, null: false
       t.references :user, foreign_key: true
 
