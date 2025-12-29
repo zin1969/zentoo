@@ -4,6 +4,7 @@ services:
 
   api:
     image: rails:8
+    working_dir: /opt/app
     ports:
       - "53000:3000"
     volumes:
@@ -12,7 +13,6 @@ services:
       - publicnet
       - privatenet
     environment:
-      - RAILS_ENV=test
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=postgres
