@@ -1,0 +1,37 @@
+/api/v1/journals/opening-asset-balance:
+  post:
+    summary: Create opening asset balance journal
+    description: |
+      Creates an opening asset balance journal.
+      Internally calls the PostgreSQL function
+      `create_opening_asset_balance_journal`
+      and returns the created journal ID.
+    operationId: createOpeningAssetBalanceJournal
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
+    responses:
+      '201':
+        description: Journal created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/CreateOpeningAssetBalanceJournalResponse'
+      '400':
+        description: Bad request
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+

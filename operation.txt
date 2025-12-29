@@ -1,0 +1,9 @@
+## 2025-12-29
+
+tree -L 3 design
+
+mkdir -p design/openapi/{paths,schemas,components}
+touch design/openapi/openapi.yaml
+touch design/openapi/paths/journals.yaml
+touch design/openapi/schemas/{journals.yaml,error.yaml}
+touch design/openapi/components/security.yaml

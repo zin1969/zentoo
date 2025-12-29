@@ -1,0 +1,13 @@
+ErrorResponse:
+  type: object
+  required:
+    - error_code
+    - message
+  properties:
+    error_code:
+      type: string
+      example: VALIDATION_ERROR
+    message:
+      type: string
+      example: Invalid amount
+
