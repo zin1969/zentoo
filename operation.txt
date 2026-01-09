@@ -10,13 +10,18 @@ touch -t "$(date +%Y%m%d)0700.00" /tmp/today_0700
 find . -type f -newer /tmp/today_0700
 ```
 
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:migrate:reset
+```
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:create
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:migrate
 docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:seed
+
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails db:migrate:reset
+```
 
 ## 2025-12-27
 
 ```
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rails spec
+docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports api rspec
 ```
 
 ## 2025-12-26
