@@ -77,6 +77,7 @@ app/
 │
 ├── forms/                # ユーザー入力受付・検証
 ├── values/               # Value Object（不変）
+├── types/                # DB ↔ VO 変換
 ├── entities/             # ドメイン Entity（DB 非依存）
 ├── assemblers/           # 変換責務（form → entity 等）
 │
@@ -90,6 +91,11 @@ app/
 ├── validators/           # 共通入力検証
 ├── presenters/           # View 用整形ロジック
 └── support/              # 明確に命名された共通処理のみ
+
+docs/
+└── domain/               # ドメイン層の仕様 (values, entities )
+    ├── values/           # Value Object（不変）
+    └── entities/         # ドメイン Entity（DB 非依存）
 ```
 
 ★：**常にセキュリティレビュー対象**
