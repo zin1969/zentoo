@@ -16,13 +16,35 @@ DECLARE
   EQUITY_NAME CONSTANT TEXT := '元入金';
   EQUITY_ELEMENT_NO CONSTANT INT := 3;
 BEGIN
-  -- 預入する銀行の資産科目を取得
-  -- 親仕訳データの店名に使用するため
+  -- 開始資産額が 0 円未満はエラー
+  IF amount <= 0 THEN
+    RAISE EXCEPTION 'amount must be greater than 0';
+  END IF;
+
+  -- 開始資産科目を取得
   SELECT *
     INTO asset_account_record
     FROM asset_accounts
    WHERE id = asset_account_id
   ;
+
+  -- 資産科目が存在しない場合のガードコード
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'asset_account not found: %', asset_account_id;
+  END IF;
+
+  -- 元入金科目を取得
+  -- 預入貸方データの科目に設定するため
+  SELECT *
+    INTO equity_account_record
+    FROM equity_accounts
+   WHERE name = EQUITY_NAME
+  ;
+
+  -- 元入金科目が存在しない場合のガードコード
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'equity account not found: %', EQUITY_NAME;
+  END IF;
 
   -- 親仕訳データを作成
   INSERT INTO journals (
@@ -45,14 +67,6 @@ BEGIN
     amount,
     user_id
   );
-
-  -- 元入金科目を取得
-  -- 預入貸方データの科目に設定するため
-  SELECT *
-    INTO equity_account_record
-    FROM equity_accounts
-   WHERE name = EQUITY_NAME
-  ;
 
   -- 預入貸方データを作成
   -- 元入金固定

@@ -157,7 +157,6 @@ docs/
 
 #### ルール
 
-* ActiveModel::Model を使用
 * DB・外部通信を行わない
 
 ---
