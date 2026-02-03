@@ -1,19 +1,24 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
-RSpec.describe "CreateOpeningAsset (PostgreSQL function)", type: :model do
+RSpec.describe Journals::CreateOpeningAsset do
+  subject(:repository) { described_class.new }
+
   describe ".create_opening_asset_balance!" do
     let(:user) { create(:user, :masa) }
     let(:asset_account) { create(:asset_account, :cash, user: user) }
     let!(:equity_account) { create(:equity_account, :original_deposit, user: user) }
 
     let(:journal_date) { Date.new(2025, 1, 1) }
-    let(:amount) { 100_000 }
+    let(:asset_type) { ElementType.new(1) }
+    let(:amount) { Amount.new(100_000) }
 
     it "creates opening asset balance journal via postgres function" do
       # --- act ---
-      journal_id = Journals::CreateOpeningAsset.create_opening_asset_balance_journal!(
+      journal_id = repository.create_opening_asset_balance!(
         journal_date: journal_date,
-        asset_type: 1,
+        asset_type: asset_type,
         asset_account_id: asset_account.id,
         amount: amount,
         user_id: user.id
