@@ -1,5 +1,5 @@
 module SessionHandlers
-  class Authenticator
+  class TokenAuthenticator
     InvalidToken = Class.new(StandardError)
 
     def authenticate!(token)
