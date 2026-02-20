@@ -7,4 +7,5 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+  post '/asset-opening-journals', to: 'journals/asset_opening_journals#create'
 end

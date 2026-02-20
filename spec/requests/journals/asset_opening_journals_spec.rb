@@ -25,33 +25,40 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
     }
   end
 
+  let(:user) { OpenStruct.new(id: 1) }
+  let(:authenticator) { instance_double(TokenAuthenticator) }
+  let(:form) { instance_double(CreateOpeningAssetBalanceJournalForm) }
+  let(:service) { instance_double(Journals::CreateOpeningAssetService) }
+  let(:token_manager) { instance_double(TokenManager) }
+
   describe 'success' do
     before do
-      # 認証 stub
-      allow_any_instance_of(TokenAuthenticator)
-        .to receive(:authenticate!)
-        .and_return(OpenStruct.new(id: 1))
+      # Auth
+      allow(TokenAuthenticator).to receive(:new).and_return(authenticator)
+      allow(authenticator).to receive(:authenticate!).and_return(user)
 
-      # Form stub
-      form = instance_double(CreateOpeningAssetBalanceJournalForm)
+      # Form
       allow(CreateOpeningAssetBalanceJournalForm)
         .to receive(:new)
         .and_return(form)
 
       allow(form).to receive(:valid?).and_return(true)
 
-      # Service stub
-      service = instance_double(Journals::CreateOpeningAssetService)
+      allow(form).to receive(:journal_date).and_return(Date.today)
+      allow(form).to receive(:asset_type).and_return('cash')
+      allow(form).to receive(:asset_account_id).and_return(1)
+      allow(form).to receive(:amount).and_return(1000)
+
+      # Service
       allow(Journals::CreateOpeningAssetService)
         .to receive(:new)
         .and_return(service)
 
-      allow(service)
-        .to receive(:call)
-        .and_return(456)
+      allow(service).to receive(:call).and_return(456)
 
-      # Token 発行 stub
-      allow_any_instance_of(TokenManager)
+      # Token
+      allow(TokenManager).to receive(:new).and_return(token_manager)
+      allow(token_manager)
         .to receive(:issue_next_token)
         .and_return('abc.def.ghi')
     end
