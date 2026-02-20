@@ -1,15 +1,13 @@
-module SessionHandlers
-  class TokenAuthenticator
-    InvalidToken = Class.new(StandardError)
+class TokenAuthenticator
+  InvalidToken = Class.new(StandardError)
 
-    def authenticate!(token)
-      raise InvalidToken unless token == 'dummy-token'
+  def authenticate!(token)
+    raise InvalidToken unless token == 'dummy-token'
 
-      # 仮のユーザー情報
-      OpenStruct.new(
-        id: 1,
-        name: 'masa'
-      )
-    end
+    # 仮のユーザー情報
+    OpenStruct.new(
+      id: 1,
+      name: 'masa'
+    )
   end
 end

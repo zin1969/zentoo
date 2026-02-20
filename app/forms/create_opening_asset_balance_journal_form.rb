@@ -1,4 +1,5 @@
 # app/forms/create_opening_asset_balance_journal_form.rb
+
 class CreateOpeningAssetBalanceJournalForm
   include ActiveModel::Model
   include ActiveModel::Attributes
