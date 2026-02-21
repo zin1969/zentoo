@@ -9,6 +9,9 @@ module Journals
       # 2. 認証
       user = TokenAuthenticator.new.authenticate!(token)
 
+      # 5. 次トークン発行
+      next_token = TokenManager.new.issue_next_token
+
       # 3. Form 生成
       form = CreateOpeningAssetBalanceJournalForm.new(
         journal_date: params[:journal_date],
@@ -16,6 +19,13 @@ module Journals
         asset_account_id: params[:asset_account_id],
         amount: Amount.new(params[:amount])
       )
+
+      unless form.valid?
+        return render json: {
+          errors: form.errors.full_messages,
+          next_token: next_token
+        }, status: :unprocessable_content
+      end
 
       # 4. Service 実行
       journal_id = Journals::CreateOpeningAssetService.new.call(
@@ -25,9 +35,6 @@ module Journals
         amount: form.amount,
         user_id: user.id
       )
-
-      # 5. 次トークン発行
-      next_token = TokenManager.new.issue_next_token
 
       render json: {
         journal_id: journal_id,

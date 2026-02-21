@@ -31,6 +31,8 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
   let(:service) { instance_double(Journals::CreateOpeningAssetService) }
   let(:token_manager) { instance_double(TokenManager) }
 
+  let(:errors) { instance_double(ActiveModel::Errors) }
+
   describe 'success' do
     before do
       # Auth
@@ -87,7 +89,8 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
         .and_return(form)
 
       allow(form).to receive(:valid?).and_return(false)
-      allow(form).to receive(:errors)
+      allow(form).to receive(:errors).and_return(errors)
+      allow(errors).to receive(:full_messages)
         .and_return(
           double(to_hash: {
             asset_type: ['must be an ElementType']
