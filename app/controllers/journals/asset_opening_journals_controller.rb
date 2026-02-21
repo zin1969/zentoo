@@ -40,6 +40,12 @@ module Journals
         journal_id: journal_id,
         next_token: next_token
       }, status: :created
+
+    rescue Journals::OpeningAssetAlreadyExistsError => e
+      render json: {
+        error: 'opening_asset_already_exists',
+        next_token: next_token
+      }, status: :conflict
     end
   end
 end

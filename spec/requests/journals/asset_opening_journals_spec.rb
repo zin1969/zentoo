@@ -137,27 +137,38 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
 
   describe 'business error (duplicate)' do
     before do
-      allow_any_instance_of(TokenAuthenticator)
-        .to receive(:authenticate!)
-        .and_return(OpenStruct.new(id: 1))
+      # Auth
+      allow(TokenAuthenticator).to receive(:new).and_return(authenticator)
+      allow(authenticator).to receive(:authenticate!).and_return(user)
 
-      form = instance_double(CreateOpeningAssetBalanceJournalForm)
+      # Form
       allow(CreateOpeningAssetBalanceJournalForm)
         .to receive(:new)
         .and_return(form)
 
       allow(form).to receive(:valid?).and_return(true)
 
-      service = instance_double(Journals::CreateOpeningAssetService)
+      allow(form).to receive(:journal_date).and_return(Date.today)
+      allow(form).to receive(:asset_type).and_return('cash')
+      allow(form).to receive(:asset_account_id).and_return(1)
+      allow(form).to receive(:amount).and_return(1000)
+
+      # Service
       allow(Journals::CreateOpeningAssetService)
         .to receive(:new)
         .and_return(service)
 
       allow(service)
         .to receive(:call)
-        .and_raise(StandardError.new('opening_asset_already_exists'))
+        .and_raise(
+          Journals::OpeningAssetAlreadyExistsError.new(
+            'opening_asset_already_exists'
+          )
+        )
 
-      allow_any_instance_of(TokenManager)
+      # Token
+      allow(TokenManager).to receive(:new).and_return(token_manager)
+      allow(token_manager)
         .to receive(:issue_next_token)
         .and_return('abc.def.ghi')
     end
