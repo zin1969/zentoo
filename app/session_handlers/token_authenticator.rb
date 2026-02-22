@@ -1,8 +1,6 @@
 class TokenAuthenticator
-  InvalidToken = Class.new(StandardError)
-
   def authenticate!(token)
-    raise InvalidToken unless token == 'dummy-token'
+    raise UnauthorizedError unless token == 'dummy-token'
 
     # 仮のユーザー情報
     OpenStruct.new(

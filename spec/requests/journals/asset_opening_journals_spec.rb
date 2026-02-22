@@ -120,7 +120,7 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
     before do
       allow_any_instance_of(TokenAuthenticator)
         .to receive(:authenticate!)
-        .and_raise(TokenAuthenticator::InvalidToken)
+        .and_raise(UnauthorizedError)
     end
 
     it 'returns 401 without next_token' do
@@ -130,7 +130,7 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
 
       body = JSON.parse(response.body)
 
-      expect(body['error']).to eq('invalid_token')
+      expect(body['error']).to eq('unauthorized')
       expect(body).not_to have_key('next_token')
     end
   end
