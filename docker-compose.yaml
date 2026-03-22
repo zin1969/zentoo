@@ -1,49 +1,61 @@
-version: "3.9"
-
 services:
 
   api:
-    image: rails:8
-    working_dir: /opt/app
+    build:
+      context: ../api
+      dockerfile: Dockerfile.dev
+    command: bash -c "bundle install && bin/rails db:prepare && bin/rails s -b 0.0.0.0"
+    working_dir: /rails
+    volumes:
+      - ../api:/rails
+      - bundle:/usr/local/bundle
     ports:
       - "53000:3000"
-    volumes:
-      - /zentoo/api:/opt/app
-    networks:
-      - publicnet
-      - privatenet
     environment:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=postgres
       - DB_PASSWORD=mysecret_password
-      - SESSION_DB_HOST=redis
-      - SESSION_DB_PORT=6379
-      - SIDEKIQ_Q=fuga
-      - THOR_SILENCE_DEPRECATION=true
     depends_on:
       - db
-      - redis
+    networks:
+      - backend
+
+  next:
+    build:
+      context: ../nextjs-app
+      dockerfile: Dockerfile.dev
+    command: sh -c "if [ ! -d node_modules ]; then npm install; fi && npm run dev"
+    working_dir: /app
+    volumes:
+      - ../nextjs-app:/app
+      - next_node_modules:/app/node_modules
+    ports:
+      - "53001:3000"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - api
+    networks:
+      - frontend
+      - backend
 
   db:
     image: postgres:17
-    ports:
-      - "55432:5432"
     volumes:
-      - zentoo-db-data:/var/lib/postgresql/data
-    networks:
-      - privatenet
+      - db-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=mysecret_password
-
-  redis:
-    image: redis:latest
+    ports:
+      - "55432:5432"
     networks:
-      - privatenet
+      - backend
 
 networks:
-  publicnet:
-  privatenet:
+  frontend:
+  backend:
 
 volumes:
-  zentoo-db-data:
+  db-data:
+  next_node_modules:
+  bundle:
