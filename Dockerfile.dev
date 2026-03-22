@@ -1,0 +1,32 @@
+FROM ruby:3.4
+
+WORKDIR /rails
+
+# 必要パッケージ
+RUN apt-get update -qq && \
+    apt-get install -y \
+      build-essential \
+      libpq-dev \
+      postgresql-client \
+      nodejs \
+      git \
+      curl \
+      && rm -rf /var/lib/apt/lists/*
+
+# bundler
+RUN gem install bundler
+
+# Gemfileだけ先にコピー（キャッシュ効かせる）
+COPY Gemfile Gemfile.lock ./
+
+# bundle install（初回ビルド時）
+RUN bundle install
+
+# アプリ全体コピー（開発ではvolumeで上書きされる）
+COPY . .
+
+# ポート
+EXPOSE 3000
+
+# 起動（composeで上書きされる前提）
+CMD ["bash"]
