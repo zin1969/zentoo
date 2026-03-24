@@ -7,5 +7,4 @@ export default function Page() {
       <OpeningAssetForm />
     </main>
   );
-//  return <h1>asset-opening-journals</h1>
 }

@@ -1,24 +1,37 @@
-import { getToken, setToken } from "../cookies/tokenCookie";
+// src/lib/api/apiFetch.ts
 
-export async function apiFetch(url: string, options: RequestInit) {
-  const token = getToken();
+export class ApiError extends Error {
+  status: number;
+  data: any;
 
-  const res = await fetch(url, {
-    ...options,
+  constructor(status: number, data: any) {
+    super(`API Error: ${status}`);
+    this.status = status;
+    this.data = data;
+  }
+}
+
+type FetchOptions = {
+  method?: "GET" | "POST" | "PUT" | "DELETE";
+  body?: any;
+};
+
+export async function apiFetch<T>(
+  path: string,
+  options: FetchOptions = {}
+): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method: options.method || "GET",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json"
-    }
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
   });
 
-  const data = await res.json();
-
-  if (res.status !== 401 && data.next_token) {
-    setToken(data.next_token);
-  }
+  const data = await res.json().catch(() => null);
 
   if (!res.ok) {
-    throw data;
+    throw new ApiError(res.status, data);
   }
 
   return data;
