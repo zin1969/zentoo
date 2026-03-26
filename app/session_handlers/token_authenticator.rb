@@ -1,3 +1,5 @@
+require 'ostruct'
+
 class TokenAuthenticator
   def authenticate!(token)
     raise UnauthorizedError unless token == 'dummy-token'
