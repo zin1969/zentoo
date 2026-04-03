@@ -1,6 +1,5 @@
-export function getAssetAccounts() {
-  return [
-    { id: 1, name: "現金" },
-    { id: 2, name: "普通預金" }
-  ];
+import { apiFetch } from "@/lib/api/apiFetch";
+
+export async function getAssetAccounts() {
+  return apiFetch("/accounts/asset-accounts");
 }
