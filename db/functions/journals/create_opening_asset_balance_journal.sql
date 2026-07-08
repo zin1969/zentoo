@@ -11,7 +11,7 @@ DECLARE
   journal_record journals%ROWTYPE;
   asset_account_record asset_accounts%ROWTYPE;
   equity_account_record equity_accounts%ROWTYPE;
-  new_id INT;
+  new_journal_id INT;
   ITEM_NAME CONSTANT TEXT := '開始残高';
   EQUITY_NAME CONSTANT TEXT := '元入金';
   EQUITY_ELEMENT_NO CONSTANT INT := 3;
@@ -54,13 +54,13 @@ BEGIN
     asset_account_record.name,
     user_id
   )
-  RETURNING id INTO new_id;
+  RETURNING id INTO new_journal_id;
 
   -- 預入借方データを作成
   INSERT INTO debits (
     journal_id, element_type, account_id, item_name, amount, user_id
   ) VALUES (
-    new_id,
+    new_journal_id,
     asset_type,
     asset_account_id,
     ITEM_NAME,
@@ -73,7 +73,7 @@ BEGIN
   INSERT INTO credits (
     journal_id, element_type, payment_method_type, account_id, amount, user_id
   ) VALUES (
-    new_id,
+    new_journal_id,
     EQUITY_ELEMENT_NO,
     0,
     equity_account_record.id,
@@ -82,6 +82,6 @@ BEGIN
   );
 
   -- 親仕訳データの id を返却
-  RETURN new_id;
+  RETURN new_journal_id;
 END;
 $$;

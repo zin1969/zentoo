@@ -21,7 +21,7 @@ DECLARE
   journal_record journals%ROWTYPE;
   asset_account_record asset_accounts%ROWTYPE;
   equity_account_record equity_accounts%ROWTYPE;
-  new_id INT;
+  new_journal_id INT;
   ITEM_NAME CONSTANT TEXT := '開始残高';
   EQUITY_NAME CONSTANT TEXT := '元入金';
   EQUITY_ELEMENT_NO CONSTANT INT := 3;
@@ -64,13 +64,13 @@ BEGIN
     asset_account_record.name,
     user_id
   )
-  RETURNING id INTO new_id;
+  RETURNING id INTO new_journal_id;
 
   -- 預入借方データを作成
   INSERT INTO debits (
     journal_id, element_type, account_id, item_name, amount, user_id
   ) VALUES (
-    new_id,
+    new_journal_id,
     asset_type,
     asset_account_id,
     ITEM_NAME,
@@ -83,7 +83,7 @@ BEGIN
   INSERT INTO credits (
     journal_id, element_type, payment_method_type, account_id, amount, user_id
   ) VALUES (
-    new_id,
+    new_journal_id,
     EQUITY_ELEMENT_NO,
     0,
     equity_account_record.id,
@@ -92,7 +92,99 @@ BEGIN
   );
 
   -- 親仕訳データの id を返却
-  RETURN new_id;
+  RETURN new_journal_id;
+END;
+$$;
+
+
+--
+-- Name: insert_journal_entry(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.insert_journal_entry(journal_data jsonb) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  new_journal_id INT;
+  v_journal_date DATE;
+  v_store_name TEXT;
+  v_user_id INT;
+  v_sum_debit INT := 0;
+  v_sum_credit INT := 0;
+BEGIN
+  -- 1. 借方の合計金額を計算
+  SELECT COALESCE(SUM(amount), 0) INTO v_sum_debit
+  FROM jsonb_to_recordset(journal_data->'debits') AS x(amount INT);
+
+  -- 2. 貸方の合計金額を計算
+  SELECT COALESCE(SUM(amount), 0) INTO v_sum_credit
+  FROM jsonb_to_recordset(journal_data->'credits') AS x(amount INT);
+
+  -- 3. 貸借不一致のバリデーション（金額が合わなければエラーを投げる）
+  IF v_sum_debit <> v_sum_credit THEN
+    RAISE EXCEPTION '貸借の合計金額が一致しません。借方: %, 貸方: %', v_sum_debit, v_sum_credit
+      USING ERRCODE = '23514'; -- Check Violation のエラーコードを指定
+  END IF;
+
+  -- 金額が一致している場合のみ、以降のインサート処理が実行されます
+  -- 4. 親情報の抽出
+  v_journal_date := (journal_data->>'date')::DATE;
+  v_store_name   := (journal_data->>'store_name')::TEXT;
+  v_user_id      := (journal_data->>'user_id')::INT;
+
+  -- 5. 親テーブルへのインサート
+  INSERT INTO journals (date, user_id, created_at)
+  VALUES (v_date, v_user_id, NOW())
+  RETURNING id INTO new_journal_id;
+  -- 5. 親仕訳データを作成
+  INSERT INTO journals (
+    journal_dt, store_name, user_id
+  ) VALUES (
+    v_journal_date,
+    v_store_name,
+    v_user_id
+  )
+  RETURNING id INTO new_journal_id;
+
+  -- 6. 借方（debits）のインサート
+  INSERT INTO debits (
+    journal_id, element_type, account_id, item_name, amount, user_id
+  )
+  SELECT
+    new_journal_id,
+    element_type,
+    account_id,
+    item_name,
+    amount,
+    v_user_id
+  FROM jsonb_to_recordset(journal_data->'debits')
+    AS debits(
+         element_type INT,
+         account_id INT,
+         item_name TEXT,
+         amount INT
+       );
+
+  -- 7. 貸方（credits）のインサート
+  INSERT INTO credits (
+    journal_id, element_type, payment_method_type, account_id, amount, user_id
+  )
+  SELECT
+    new_journal_id,
+    element_type,
+    payment_method_type,
+    account_id,
+    amount,
+    v_user_id
+  FROM jsonb_to_recordset(journal_data->'credits')
+    AS credits(
+         element_type INT,
+         payment_method_type INT,
+         account_id INT,
+         amount INT
+       );
+
+  RETURN new_journal_id;
 END;
 $$;
 
@@ -1235,6 +1327,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260708223810'),
 ('20251226065757'),
 ('20251220053020'),
 ('20251220025518'),

@@ -1,19 +1,9 @@
 class CreateUpdateUpdatedAtTriggerFunction < ActiveRecord::Migration[8.1]
   def up
-    execute <<~SQL
-      CREATE OR REPLACE FUNCTION update_updated_at_with_current_timestamp()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = CURRENT_TIMESTAMP;
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-    SQL
+    create_function 'commons/update_updated_at_with_current_timestamp.sql'
   end
 
   def down
-    execute <<~SQL
-      DROP FUNCTION IF EXISTS update_updated_at_with_current_timestamp();
-    SQL
+    drop_function 'update_updated_at_with_current_timestamp'
   end
 end
