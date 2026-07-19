@@ -21,8 +21,8 @@ BEGIN
 
   -- 3. 貸借不一致のバリデーション（金額が合わなければエラーを投げる）
   IF v_sum_debit <> v_sum_credit THEN
-    RAISE EXCEPTION '貸借の合計金額が一致しません。借方: %, 貸方: %', v_sum_debit, v_sum_credit
-      USING ERRCODE = '23514'; -- Check Violation のエラーコードを指定
+    RAISE EXCEPTION 'unbalance debit and credit. debit: %, credit: %', v_sum_debit, v_sum_credit
+      USING ERRCODE = 'P0001'; -- Check Violation のエラーコードを指定
   END IF;
 
   -- 金額が一致している場合のみ、以降のインサート処理が実行されます
@@ -31,10 +31,6 @@ BEGIN
   v_store_name   := (journal_data->>'store_name')::TEXT;
   v_user_id      := (journal_data->>'user_id')::INT;
 
-  -- 5. 親テーブルへのインサート
-  INSERT INTO journals (date, user_id, created_at)
-  VALUES (v_date, v_user_id, NOW())
-  RETURNING id INTO new_journal_id;
   -- 5. 親仕訳データを作成
   INSERT INTO journals (
     journal_dt, store_name, user_id
