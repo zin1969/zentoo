@@ -9,7 +9,7 @@ module Journals
       @connection = base.connection
     end
 
-    # 開始資産を登録する
+    # 仕訳を登録する
     #
     # @param journal_data [json]
     def insert_journal_entry!(
