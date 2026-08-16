@@ -508,7 +508,7 @@ end
 
 ### 7.1 使用可能メソッド
 
-| 種別        | メソッド                                 |
+| 種別      | メソッド                             |
 | --------- | ------------------------------------ |
 | Function  | `create_function`, `drop_function`   |
 | Procedure | `create_procedure`, `drop_procedure` |
@@ -518,6 +518,17 @@ end
 
 - 原則禁止
 - 新種別 DB オブジェクト対応など、やむを得ない場合のみ可
+
+### 7.3 保存ディレクトリ構成
+
+```text
+lib
+└── migration_helpers
+    ├── function.rb
+    ├── procedure.rb
+    ├── sql_loader.rb
+    └── trigger.rb
+```
 
 ## 8. Rails 設定（必須）
 
