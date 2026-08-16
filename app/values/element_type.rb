@@ -93,4 +93,8 @@ class ElementType
   def to_s
     name
   end
+
+  def as_json(*)
+    value
+  end
 end

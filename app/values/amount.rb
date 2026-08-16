@@ -33,6 +33,10 @@ class Amount
     value.to_i
   end
 
+  def as_json(*)
+    to_i
+  end
+
   # =========================
   # 計算系
   # =========================
