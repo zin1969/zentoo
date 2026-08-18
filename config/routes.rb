@@ -10,5 +10,5 @@ Rails.application.routes.draw do
   post '/asset-opening-journals', to: 'journals/asset_opening_journals#create'
   post '/journal-entries', to: 'journals/journal_entries#create'
 
-  get '/asset-accounts', to: 'accouts/asset_accounts#index'
+  get '/asset-accounts', to: 'accounts/asset_accounts#index'
 end

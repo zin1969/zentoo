@@ -10,7 +10,7 @@ module Journals
       user = TokenAuthenticator.new.authenticate!(token)
 
       # 3. 次トークン発行
-      next_token = TokenManager.new.issue_next_token
+      next_token = TokenManager.new.issue_next_token(user)
 
       # 4. Form 生成（バリデーション込み。失敗時は ArgumentError を送出）
       form = InsertJournalEntryForm.new(request.raw_post)

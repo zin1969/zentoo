@@ -10,7 +10,7 @@ module Journals
       user = TokenAuthenticator.new.authenticate!(token)
 
       # 5. 次トークン発行
-      next_token = TokenManager.new.issue_next_token
+      next_token = TokenManager.new.issue_next_token(user)
 
       # 3. Form 生成
       form = CreateOpeningAssetBalanceJournalForm.new(
