@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createOpeningAsset } from "../actions/createOpeningAsset";
-import { getAssetAccounts } from "@/lib/masters/assetAccounts";
+import { AssetAccount, getAssetAccounts } from "@/lib/masters/assetAccounts";
 
 export default function OpeningAssetForm() {
   const [journalDate, setJournalDate] = useState("");
   const [assetAccountId, setAssetAccountId] = useState("");
   const [amount, setAmount] = useState("");
+  const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
 
-  const assetAccounts = getAssetAccounts();
+  useEffect(() => {
+    getAssetAccounts().then(setAssetAccounts);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,19 +1,16 @@
 // src/app/api/asset-opening-journals/route.ts
 
-import { cookies } from "next/headers";
+import { getToken, setToken, clearToken } from "@/lib/cookies/tokenCookie";
 
 export async function POST(req: Request) {
   const body = await req.json();
 
-  const cookieStore = await cookies();
-
-  //const token = cookieStore.get("token")?.value;
-  const token = "dummy-token"
+  const token = await getToken();
 
   const res = await fetch("http://api:3000/asset-opening-journals", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token ?? ""}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify(body)
@@ -24,12 +21,10 @@ export async function POST(req: Request) {
   try {
     const data = JSON.parse(text);
 
-    // token更新
-    if (res.status !== 401 && data?.next_token) {
-      cookieStore.set("token", data.next_token, {
-        httpOnly: true,
-        path: "/"
-      });
+    if (res.status === 401) {
+      await clearToken();
+    } else if (data?.next_token) {
+      await setToken(data.next_token);
     }
 
     return Response.json(data, { status: res.status });
