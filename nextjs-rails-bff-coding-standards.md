@@ -573,6 +573,23 @@ DELETE       → apiFetch は自動リトライせず、エラーをそのまま
 - Browser 側でエラーを表示し、ユーザーの明示的な再操作に委ねる
 - 業務上どうしても自動リトライが必要な場合は、Idempotency-Key 等による重複排除の仕組みを Rails 側に用意したうえで導入する（本規約の標準では未採用）
 
+## 12.2 相関ID（トレースID）の伝搬
+
+Next.js → Rails の呼び出しでは、`X-Request-Id` ヘッダーで相関IDを伝搬する。
+
+- Next.js は Browser からのリクエストを受け付けた時点で相関ID（例: `crypto.randomUUID()`）を発行する。
+- `apiFetch` は、その処理から呼び出す Rails API へのリクエストに、発行した相関IDを `X-Request-Id` ヘッダーとして付与する。
+- Rails 側は標準の `ActionDispatch::RequestId` ミドルウェアがこのヘッダーをそのまま採用し `request.request_id` として扱うため、追加実装は不要である。`config.log_tags = [:request_id]` によりログに出力される。
+- Next.js 側のサーバーログにも同じ相関IDを出力し、Next.js 側と Rails 側のログを同一のIDで突き合わせられるようにする。
+
+例:
+
+```http
+X-Request-Id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+```
+
+障害調査時は、この相関IDをキーに Next.js 側・Rails 側双方のログを検索する。
+
 ---
 
 # 13. 環境変数
@@ -825,6 +842,7 @@ Rails の業務ロジックを Next.js のテストだけで保証しない。
 - [ ] Rails API の URL を Browser に公開していない
 - [ ] Rails API の URL は Server-side 環境変数で管理している
 - [ ] 機密情報をログに出していない
+- [ ] Next.js → Rails の通信で相関ID（X-Request-Id）を伝搬し、双方のログを突き合わせられる
 - [ ] Rails の内部エラーを Browser にそのまま返していない
 - [ ] DBアクセスは Rails のみが行っている
 - [ ] トランザクションは Rails で管理している
