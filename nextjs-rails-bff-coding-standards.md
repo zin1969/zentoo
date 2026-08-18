@@ -310,20 +310,37 @@ SameSite = Lax または Strict
 
 ---
 
-## 6.3 CSRF Token
+## 6.3 CSRF 対策方式
 
-Cookie ベースの認証で状態変更 API を提供する場合、必要に応じて CSRF Token を利用する。
+状態変更 API（`POST` / `PUT` / `PATCH` / `DELETE`）は、以下を標準の CSRF 対策とする。GET などの参照系 API と状態変更 API は明確に区別する。
 
-対象例:
+### 6.3.1 標準方式: SameSite Cookie + Origin検証
 
-```http
-POST
-PUT
-PATCH
-DELETE
+デフォルトでは CSRF Token を発行せず、次の2点の組み合わせで対策する。
+
+1. **SameSite Cookie**（6.2）により、クロスサイトなフォーム送信・`fetch`/`XHR` からは認証 Cookie が送信されないようにする。
+2. **Origin ヘッダー検証**を状態変更 API の Route Handler で行う。`Origin` ヘッダー（存在しない場合は `Referer` で代替）が自アプリのオリジンと一致しない場合はリクエストを拒否する（403）。
+
+```typescript
+function isSameOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin") ?? req.headers.get("referer");
+  if (!origin) return false;
+
+  return new URL(origin).origin === new URL(req.url).origin;
+}
 ```
 
-GET などの参照系 API と状態変更 API を明確に区別する。
+この検証は状態変更 API 共通のロジックとして実装し、各 Route Handler で重複させない（12章の `apiFetch` 等と同様に共通化する）。
+
+### 6.3.2 CSRF Token を追加する場合
+
+以下のようなケースでは、6.3.1 に加えて CSRF Token（Double Submit Cookie 方式）の導入を検討する。
+
+- 古いブラウザ（SameSite Cookie 未対応）のサポートが要件に含まれる
+- 認証 Cookie を複数サブドメイン間で共有する必要があり、SameSite だけでは保護範囲が不足する
+- 外部サイトからの iframe 埋め込みなど、Origin 検証だけでは不十分な組み込み要件がある
+
+上記に該当しない限り、CSRF Token の追加実装は行わない。
 
 ---
 
@@ -782,7 +799,7 @@ Rails の業務ロジックを Next.js のテストだけで保証しない。
 新しい API を追加する際は、以下を確認する。
 
 - [ ] Browser から Rails API を直接呼び出していない
-- [ ] Browser → Next.js の CSRF 対策を検討している
+- [ ] Browser → Next.js の状態変更 API で、Cookie の SameSite 設定と Origin/Referer 検証による CSRF 対策を実施している
 - [ ] Browser に Rails API の認証情報を渡していない
 - [ ] Rails で認証を行っている
 - [ ] Rails で認可を行っている
