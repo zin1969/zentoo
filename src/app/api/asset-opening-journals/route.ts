@@ -2,6 +2,7 @@
 
 import { getToken, setToken, clearToken } from "@/lib/cookies/tokenCookie";
 import { originGuardResponse } from "@/lib/csrf/originGuard";
+import { apiFetch } from "@/lib/rails/apiFetch";
 
 export async function POST(req: Request) {
   const originError = originGuardResponse(req);
@@ -11,11 +12,10 @@ export async function POST(req: Request) {
 
   const token = await getToken();
 
-  const res = await fetch("http://api:3000/asset-opening-journals", {
+  const res = await apiFetch("/asset-opening-journals", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token ?? ""}`,
-      "Content-Type": "application/json"
+      Authorization: `Bearer ${token ?? ""}`
     },
     body: JSON.stringify(body)
   });

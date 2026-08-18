@@ -1,6 +1,8 @@
 // src/app/api/accounts/asset-accounts/route.ts
 
+import { apiFetch } from "@/lib/rails/apiFetch";
+
 export async function GET() {
-  const res = await fetch("http://api:3000/asset-accounts");
+  const res = await apiFetch("/asset-accounts");
   return Response.json(await res.json());
 }
