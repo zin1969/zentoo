@@ -1,8 +1,12 @@
 // src/app/api/asset-opening-journals/route.ts
 
 import { getToken, setToken, clearToken } from "@/lib/cookies/tokenCookie";
+import { originGuardResponse } from "@/lib/csrf/originGuard";
 
 export async function POST(req: Request) {
+  const originError = originGuardResponse(req);
+  if (originError) return originError;
+
   const body = await req.json();
 
   const token = await getToken();
