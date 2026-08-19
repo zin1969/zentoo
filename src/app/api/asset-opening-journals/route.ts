@@ -41,7 +41,15 @@ export async function POST(req: Request) {
     return Response.json(data, { status: res.status });
 
   } catch (e) {
-    // 👇 HTMLそのまま返す（デバッグ用）
-    return new Response(text, { status: res.status });
+    log("asset_opening_journals.rails_response_unparseable", {
+      requestId,
+      status: res.status,
+      body: text
+    });
+
+    return Response.json(
+      { code: "UNEXPECTED_ERROR", message: "サーバーでエラーが発生しました。" },
+      { status: 502 }
+    );
   }
 }
