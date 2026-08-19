@@ -25,16 +25,21 @@ export async function apiFetch(
   const isIdempotent = IDEMPOTENT_METHODS.has(method);
   const maxAttempts = isIdempotent ? MAX_RETRIES + 1 : 1;
 
+  // 呼び出し元が X-Request-Id を渡さなかった場合のフォールバック。
+  // 相関IDなしで Rails を呼び出すことがないようにする（12.2章）。
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Request-Id": crypto.randomUUID(),
+    ...options.headers
+  };
+
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fetch(`${RAILS_API_BASE_URL}${path}`, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers
-        },
+        headers,
         body: options.body
       });
     } catch (error) {

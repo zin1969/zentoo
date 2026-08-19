@@ -3,10 +3,14 @@
 import { getToken, setToken, clearToken } from "@/lib/cookies/tokenCookie";
 import { originGuardResponse } from "@/lib/csrf/originGuard";
 import { apiFetch } from "@/lib/rails/apiFetch";
+import { log } from "@/lib/logging/logger";
 
 export async function POST(req: Request) {
   const originError = originGuardResponse(req);
   if (originError) return originError;
+
+  const requestId = crypto.randomUUID();
+  log("asset_opening_journals.request_received", { requestId });
 
   const body = await req.json();
 
@@ -15,10 +19,13 @@ export async function POST(req: Request) {
   const res = await apiFetch("/asset-opening-journals", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token ?? ""}`
+      Authorization: `Bearer ${token ?? ""}`,
+      "X-Request-Id": requestId
     },
     body: JSON.stringify(body)
   });
+
+  log("asset_opening_journals.rails_response", { requestId, status: res.status });
 
   const text = await res.text();
 
