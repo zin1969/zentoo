@@ -329,16 +329,19 @@ SameSite = Lax または Strict
 デフォルトでは CSRF Token を発行せず、次の2点の組み合わせで対策する。
 
 1. **SameSite Cookie**（6.2）により、クロスサイトなフォーム送信・`fetch`/`XHR` からは認証 Cookie が送信されないようにする。
-2. **Origin ヘッダー検証**を状態変更 API の Route Handler で行う。`Origin` ヘッダー（存在しない場合は `Referer` で代替）が自アプリのオリジンと一致しない場合はリクエストを拒否する（403）。
+2. **Origin ヘッダー検証**を状態変更 API の Route Handler で行う。`Origin` ヘッダー（存在しない場合は `Referer` で代替）が自アプリの `Host` ヘッダーと一致しない場合はリクエストを拒否する（403）。
 
 ```typescript
 function isSameOrigin(req: Request): boolean {
   const origin = req.headers.get("origin") ?? req.headers.get("referer");
-  if (!origin) return false;
+  const host = req.headers.get("host");
+  if (!origin || !host) return false;
 
-  return new URL(origin).origin === new URL(req.url).origin;
+  return new URL(origin).host === host;
 }
 ```
+
+比較対象は `req.url` ではなく `Host` ヘッダーとする。`req.url` はリバースプロキシやコンテナのポートフォワーディング構成下では、サーバーが内部的に待ち受けているポートに書き換わることがあり、Browser が実際にアクセスした外部向けのオリジンとは一致しなくなる場合があるため。
 
 この検証は状態変更 API 共通のロジックとして実装し、各 Route Handler で重複させない（12章の `apiFetch` 等と同様に共通化する）。
 
