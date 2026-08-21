@@ -11,4 +11,6 @@ Rails.application.routes.draw do
   post '/journal-entries', to: 'journals/journal_entries#create'
 
   get '/asset-accounts', to: 'accounts/asset_accounts#index'
+  get '/expense-accounts', to: 'accounts/expense_accounts#index'
+  get '/liability-accounts', to: 'accounts/liability_accounts#index'
 end
