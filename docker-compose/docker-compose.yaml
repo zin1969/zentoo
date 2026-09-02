@@ -1,0 +1,61 @@
+services:
+
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile.dev
+    command: bash -c "bundle install && bin/rails db:prepare && bin/rails s -b 0.0.0.0"
+    working_dir: /rails
+    volumes:
+      - ../api:/rails
+      - bundle:/usr/local/bundle
+    ports:
+      - "53000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=mysecret_password
+    depends_on:
+      - db
+    networks:
+      - backend
+
+  next:
+    build:
+      context: ../nextjs-app
+      dockerfile: Dockerfile.dev
+    command: sh -c "if [ ! -d node_modules ]; then npm install; fi && npm run dev"
+    working_dir: /app
+    volumes:
+      - ../nextjs-app:/app
+      - next_node_modules:/app/node_modules
+    ports:
+      - "53001:3000"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - api
+    networks:
+      - frontend
+      - backend
+
+  db:
+    image: postgres:17
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=mysecret_password
+    ports:
+      - "55432:5432"
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  db-data:
+  next_node_modules:
+  bundle:
