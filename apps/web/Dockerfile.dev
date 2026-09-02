@@ -1,0 +1,16 @@
+FROM node:20
+
+WORKDIR /app
+
+# package.jsonだけコピー（キャッシュ効かせる）
+COPY package.json package-lock.json ./
+
+# install（初回）
+RUN npm install
+
+# アプリコピー（開発ではvolumeで上書き）
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
