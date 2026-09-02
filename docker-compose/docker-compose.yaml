@@ -2,12 +2,12 @@ services:
 
   api:
     build:
-      context: ../api
+      context: ../apps/api
       dockerfile: Dockerfile.dev
     command: bash -c "bundle install && bin/rails db:prepare && bin/rails s -b 0.0.0.0"
     working_dir: /rails
     volumes:
-      - ../api:/rails
+      - ../apps/api:/rails
       - bundle:/usr/local/bundle
     ports:
       - "53000:3000"
@@ -23,12 +23,12 @@ services:
 
   next:
     build:
-      context: ../nextjs-app
+      context: ../apps/web
       dockerfile: Dockerfile.dev
     command: sh -c "if [ ! -d node_modules ]; then npm install; fi && npm run dev"
     working_dir: /app
     volumes:
-      - ../nextjs-app:/app
+      - ../apps/web:/app
       - next_node_modules:/app/node_modules
     ports:
       - "53001:3000"
