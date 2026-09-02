@@ -1,0 +1,2 @@
+class DirectDebitJournal < ApplicationRecord
+end

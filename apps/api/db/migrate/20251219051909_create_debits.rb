@@ -1,0 +1,27 @@
+class CreateDebits < ActiveRecord::Migration[8.1]
+  def change
+    create_table :debits do |t|
+      t.references :journal, foreign_key: true
+      t.integer :element_type, null: false
+      t.integer :account_id, null: false
+      t.text :item_name
+      t.integer :amount, null: false
+      t.references :user, foreign_key: true
+
+      # PostgreSQL の CURRENT_TIMESTAMP を使う
+      t.timestamps default: -> { "CURRENT_TIMESTAMP" }
+    end
+
+    # element_type
+    # 1: 資産(assets)
+    # 2: 負債(liabilities)
+    # 3: 純資産・資本(equity)
+    # 4: 収益(revenue)
+    # 5: 費用(expenses)
+    execute <<~SQL
+      ALTER TABLE debits
+        ADD CONSTRAINT debit_element_type
+        CHECK (element_type IN (1, 2, 3, 4, 5));
+    SQL
+  end
+end
