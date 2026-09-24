@@ -188,6 +188,7 @@ docs/
 
 * プレースホルダ使用
 * 文字列連結による SQL 生成禁止
+* DB ロジック（function / procedure / trigger）の定義・命名・migration の書き方は [rails_db_logic_coding_standards.md](rails_db_logic_coding_standards.md) に従う。Repository は原則としてそこに定義された function / procedure を呼び出す形で実装し、複雑なクエリロジックを Ruby 側に持たない
 
 ---
 

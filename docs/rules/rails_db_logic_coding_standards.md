@@ -23,6 +23,8 @@
 | PostgreSQL | データ整合性、集約ロジック、自動処理 |
 | Migration | DB オブジェクトの適用・削除のみ |
 
+Ruby 側から本規約の function / procedure を呼び出す実装（Repository）の規約は [rails_api_coding_standards.md](rails_api_coding_standards.md) §4.1 repositories を参照。
+
 ### 2.2 Migration に SQL を直書きしない
 
 ❌ NG
