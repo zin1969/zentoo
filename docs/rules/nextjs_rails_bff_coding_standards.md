@@ -1,5 +1,7 @@
 # Next.js + Rails API コーディング規約
 
+> 本規約は現時点（ソロ開発・単一 VPS への Kamal デプロイ・ログイン機能未実装）のプロジェクト規模に合わせた内容である。CloudFront/WAF・Aurora 等のマネージドインフラ、Next.js/Rails を独立デプロイする際の後方互換運用、ファイルアップロードなど、将来インフラ・体制が拡大した際に見直す設計は [nextjs_rails_bff_target_architecture.md](nextjs_rails_bff_target_architecture.md) にまとめてある。各章の該当箇所からリンクしている。
+
 ## 1. 目的
 
 本規約は、Next.js を Frontend / BFF、Rails を Backend API として利用する Web アプリケーションにおける、API 通信・認証・CSRF 対策・責務分担・実装ルールを定める。
@@ -27,26 +29,25 @@ PostgreSQL
 
 ## 2. 基本アーキテクチャ
 
-### 2.1 システム構成
+### 2.1 システム構成（現状）
 
 ```text
 Internet
    │
    ▼
-CloudFront / WAF
-   │
-   ▼
 Next.js
 (BFF / Browser API)
    │
-   │ Private / Server-to-Server
+   │ Server-to-Server
    ▼
 Rails API
 (Business API)
    │
    ▼
-Aurora / PostgreSQL
+PostgreSQL
 ```
+
+現状は単一 VPS 上に Kamal でコンテナをデプロイする構成を想定する（`apps/api/config/deploy.yml`）。CloudFront / WAF・Aurora 等のマネージドインフラは導入していない。規模拡大時の構成は [nextjs_rails_bff_target_architecture.md](nextjs_rails_bff_target_architecture.md) §システム構成 を参照。
 
 ### 2.2 原則
 
@@ -61,15 +62,9 @@ Aurora / PostgreSQL
 - 認証・認可は Rails 側でも必ず実施する。
 - Next.js の認証・CSRF対策だけを Rails の認証・認可の代替にしない。
 
-### 2.3 サーバー間通信の多層防御
+### 2.3 サーバー間通信の多層防御（将来対応）
 
-7.2 の JWT によるユーザー認証は、あくまで「誰のリクエストか」を Rails 側で識別するための仕組みであり、それ単体を Next.js ↔ Rails 間のネットワークレベルのアクセス制御の代わりにはしない。インフラ構成に応じて、以下のようなネットワークレベルの防御を併用する。
-
-- Rails をプライベートサブネット等に配置し、インターネットから直接到達できないようにする
-- Next.js ↔ Rails 間の通信を VPC 内限定など、許可されたネットワーク経路に制限する
-- 必要に応じて mTLS 等、通信経路自体の相互認証を導入する
-
-JWT 認証（アプリケーションレベル）とネットワーク的な到達性の制限（インフラレベル）は、どちらか一方で足りるものではなく、両方を組み合わせる。
+現状は単一 VPS 構成のため、VPC 分離・mTLS 等のネットワークレベルの多層防御は導入していない。7.2 の JWT によるユーザー認証はアプリケーションレベルの識別であり、ネットワークレベルのアクセス制御の代替にはならない点に変わりはないため、インフラを分離するタイミングで [nextjs_rails_bff_target_architecture.md](nextjs_rails_bff_target_architecture.md) §サーバー間通信の多層防御 の内容を導入する。
 
 ---
 
@@ -358,6 +353,8 @@ function isSameOrigin(req: Request): boolean {
 ---
 
 ## 7. 認証・認可
+
+> 現時点でログイン機能は未実装。本章はログイン機能を実装する際に従う設計であり、実装前の段階で本章の遵守を求めるものではない。
 
 ### 7.1 Browser に Rails 用アクセストークンを持たせない
 
@@ -686,7 +683,7 @@ Next.js
                │
                ▼
 ┌──────────────────────────────┐
-│ PostgreSQL / Aurora           │
+│ PostgreSQL                   │
 └──────────────────────────────┘
 ```
 
@@ -845,49 +842,9 @@ Rails の業務ロジックを Next.js のテストだけで保証しない。
 
 ---
 
-## 21. Rails API変更時の後方互換性とデプロイ順序
+## 21. Rails API変更時の後方互換性とデプロイ順序（将来対応）
 
-Next.js と Rails は個別にデプロイされる。既存 API を変更するときは、両者のデプロイタイミングにズレがあっても動作し続けるようにする。
-
-### 21.1 Expand/Contract（拡張・収縮）方式
-
-既存 API の変更は、パスにバージョンを持たせず、以下の3段階で進める。
-
-```text
-1. Expand（拡張）
-   Rails API に新しいフィールド／新しい挙動を「追加」する。
-   既存フィールド・既存挙動は残したまま、後方互換を維持する。
-        ↓
-2. Migrate（移行）
-   Next.js BFF・Browser を新しい仕様に追従させる。
-   この間、Rails は新旧両方のリクエスト・レスポンスに対応し続ける。
-        ↓
-3. Contract（収縮）
-   Next.js 側が新しい仕様に完全移行したことを確認した後、
-   Rails 側の旧フィールド・旧挙動を削除する。
-```
-
-既存フィールドの削除・型変更・必須化、レスポンス構造の変更などの破壊的変更は、Expand フェーズを経ずに一度に行わない。
-
-### 21.2 デプロイ順序
-
-Expand/Contract の各フェーズで、デプロイ順序は次の通りとする。
-
-```text
-Expand:   Rails を先にデプロイ → 動作確認後、Next.js をデプロイ
-Contract: Next.js を先にデプロイ（新仕様への移行完了）→ 動作確認後、Rails の旧実装を削除してデプロイ
-```
-
-Next.js と Rails を同時にデプロイしない。どちらか一方が先にリリースされた状態でも、他方が壊れないことをデプロイ前に確認する。
-
-### 21.3 レビュー時の確認事項
-
-既存 API を変更するプルリクエストでは、以下を確認する。
-
-- [ ] 既存フィールドの削除・型変更・必須化など、破壊的変更を一度に行っていない
-- [ ] Expand フェーズでは、旧フィールド・旧挙動が残ったままになっている
-- [ ] Contract フェーズは、Next.js 側の移行が完了したことを確認してから行っている
-- [ ] 変更内容に対してデプロイ順序（Expand: Rails→Next.js／Contract: Next.js→Rails）が正しい
+現状は Next.js と Rails をまとめてデプロイしており、複数クライアントが Rails API に依存する状況でもないため、Expand/Contract 方式によるデプロイ順序の管理は行わない。Next.js と Rails を独立してデプロイするようになった場合の方式は [nextjs_rails_bff_target_architecture.md](nextjs_rails_bff_target_architecture.md) §Rails API変更時の後方互換性とデプロイ順序 を参照。
 
 ---
 
@@ -913,39 +870,13 @@ Next.js と Rails を同時にデプロイしない。どちらか一方が先�
 - [ ] CORS が必要最小限になっている
 - [ ] Next.js API のテストがある
 - [ ] Rails API のテストがある
-- [ ] 既存 API の変更は Expand/Contract 方式に沿っており、デプロイ順序が正しい
 - [ ] 一覧を返す API は、件数が増加しない前提でない限りページネーションを実装している
 
 ---
 
-## 23. ファイルアップロード・大容量ペイロード
+## 23. ファイルアップロード・大容量ペイロード（将来対応）
 
-現時点でファイルアップロードを伴う API は存在しないが、将来追加する場合は以下を標準とする。
-
-### 23.1 アップロード方式
-
-Browser → Next.js → Rails という既存の BFF 境界を維持し、Next.js をプロキシとして経由させる。
-
-```text
-Browser
-   │ multipart/form-data
-   ▼
-Next.js (Route Handler)
-   │ Server-to-Server
-   ▼
-Rails API
-   │
-   ▼
-Active Storage / オブジェクトストレージ
-```
-
-- Browser から直接ストレージ（S3 等）にアップロードする Direct Upload 方式（署名付き URL を Browser に渡す方式）は採用しない。Browser に外部ストレージの URL を扱わせることになり、2章の「Browser に Rails API の内部 URL を公開しない」「Browser が利用する API は原則として Next.js 側に提供する」という原則と相容れないため。
-- Next.js は受け取ったファイルを Rails にそのまま転送する。画像変換等の重い処理は Rails 側（Active Storage / image processing）で行い、Next.js では行わない（3章の責務分担に従う）。
-
-### 23.2 サイズ制限
-
-- Next.js Route Handler・Rails 双方で許容する最大リクエストサイズを明示的に設定し、無制限を許容しない。
-- 実際の上限値はアップロード対象（画像、PDF 等）に応じて、機能追加時に決定する。
+現時点でファイルアップロードを伴う機能は存在しない。将来追加する場合の設計は [nextjs_rails_bff_target_architecture.md](nextjs_rails_bff_target_architecture.md) §ファイルアップロード・大容量ペイロード を参照。
 
 ---
 
@@ -993,7 +924,7 @@ Rails API
    │ Business Logic
    │ Transaction
    ▼
-PostgreSQL / Aurora
+PostgreSQL
 ```
 
 重要なのは、**Next.js を単なる API プロキシとしてではなく、Browser と Rails のセキュリティ境界となる BFF として扱うこと**である。
