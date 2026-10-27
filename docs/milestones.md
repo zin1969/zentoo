@@ -16,12 +16,12 @@
 
 **到達点**: 実装済みの範囲が、検証済みの状態になっている。
 
-- [ ] Vagrant 上の Docker で `docker compose up` し、api / next / db が起動する
-- [ ] RSpec 92例が全て通る（落ちるものは修正または理由を記録）
+- [x] Vagrant 上の Docker で `docker compose up` し、api / next / db が起動する
+- [x] RSpec 92例が全て通る（92 examples, 0 failures）
 - [ ] `git push` して GitHub Actions（api-ci / web-ci）が緑になる
-- [ ] 旧 Minitest（`apps/api/test/`）を処分する
-- [ ] `apiFetch` の二重（`lib/api/` と `lib/rails/`）を一本化する
-- [ ] `outline.md` / `sprint_1_outline.md` を現状に更新、または `milestones.md` に統合する
+- [x] 旧 Minitest（`apps/api/test/`）を処分する（`config/ci.rb` も RSpec に切り替え）
+- [x] `apiFetch` の二重を整理する（重複ではなく役割違いだったため、統合せず規約の記述を実態に合わせた）
+- [x] `outline.md` を現状に更新し、重複していた `sprint_1_outline.md` を削除する
 
 **完了条件**: CI が緑で、開発環境が1コマンドで立ち上がる。
 

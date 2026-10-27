@@ -30,7 +30,7 @@
 | 仕訳一覧・残高表示 | **無し** |
 
 - BFF の共通部品（Origin 検証 `originGuard`、`logger`、トークン Cookie、マスタ取得）は実装済み。
-- `apiFetch` が2つある（`lib/api/apiFetch.ts` と `lib/rails/apiFetch.ts`）。規約は前者のみを想定しており、整理が必要。
+- `apiFetch` が2つある（`lib/api/apiFetch.ts` = Browser → BFF、`lib/rails/apiFetch.ts` = Next.js Server → Rails）。重複ではなく役割が別。規約の記載が実態とずれていただけ（M0 で規約を修正済み）。
 - **テストが1件も無い**（テストツール自体が未導入）。
 
 ## 3. テスト
@@ -46,15 +46,15 @@
 | repositories | 4 |
 | **合計** | **92** |
 
-- 通過状況は**未確認**。Docker デーモンが停止しており、ローカルの Ruby も 3.4.3（要求は 3.4.7）のため実行を見送った。
+- 通過状況: **92例 0 failures**（M0 で Vagrant 上の Docker で確認済み）。
 - CI は `bundle exec rspec` に修正済みだが、GitHub 側でまだ一度も実行されていない（未 push）。
-- `apps/api/test/`（Minitest）は旧 API を呼ぶ壊れたテストが残っている。
+- 旧 Minitest（`apps/api/test/`）は M0 で削除済み。
 
 ## 4. 設計書
 
 - OpenAPI（`design/openapi`）は `POST /asset-opening-journals` のみ。`/journal-entries` とマスタ3本は未記載。
 - API 仕様書（`apps/api/docs/interfaces/rest`）は `asset_opening_journals.md` のみ。
-- `outline.md` / `sprint_1_outline.md` は「開始残高の登録まで・ログインは後」のまま。実装は既にそれを超えている。
+- `outline.md` / `sprint_1_outline.md` は「開始残高の登録まで・ログインは後」のままだった（M0 で `outline.md` を更新し、重複の `sprint_1_outline.md` は削除）。
 
 ## 5. 中途半端な箇所（要点）
 

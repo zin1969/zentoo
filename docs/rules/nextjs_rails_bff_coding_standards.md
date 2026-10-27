@@ -542,11 +542,14 @@ src/
 ├── app/
 │   └── api/
 ├── lib/
+│   ├── rails/
+│   │   └── apiFetch.ts   # Next.js (Server) → Rails。本章の `apiFetch`
 │   └── api/
-│       ├── apiFetch.ts
-│       └── errors.ts
+│       └── apiFetch.ts   # Browser → Next.js (BFF)。クライアント側から `/api/...` を呼ぶ
 └── ...
 ```
+
+同名の `apiFetch` が2つあるが役割が異なる。リトライ・相関ID・Rails の Base URL など本章で規定するのは `lib/rails/apiFetch.ts` であり、Route Handler / Server Action からはこちらを使う。`lib/api/apiFetch.ts` は Browser 側の呼び出し用で、Server 側のコードから import しない。
 
 各 Route Handler から直接 `fetch()` の詳細処理を繰り返さない。
 
@@ -714,7 +717,7 @@ Browser は信頼できないクライアントとして扱う。
 ### Next.js
 
 ```text
-nextjs-app/
+apps/web/
 ├── src/
 │   ├── app/
 │   │   └── api/
@@ -723,11 +726,12 @@ nextjs-app/
 │   │       └── ...
 │   ├── components/
 │   ├── lib/
-│   │   ├── api/
-│   │   │   ├── apiFetch.ts
-│   │   │   └── errors.ts
-│   │   ├── auth/
-│   │   └── csrf/
+│   │   ├── rails/        # Next.js (Server) → Rails (apiFetch)
+│   │   ├── api/          # Browser → Next.js (apiFetch)
+│   │   ├── cookies/
+│   │   ├── csrf/
+│   │   ├── logging/
+│   │   └── masters/
 │   └── ...
 └── ...
 ```
@@ -735,7 +739,7 @@ nextjs-app/
 ### Rails
 
 ```text
-api/
+apps/api/
 ├── app/
 │   ├── controllers/
 │   ├── services/
