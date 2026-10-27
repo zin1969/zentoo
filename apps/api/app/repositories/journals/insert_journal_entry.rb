@@ -16,7 +16,7 @@ module Journals
       journal_data:
     )
       sql = "SELECT insert_journal_entry(?::JSONB)"
-      sanitized_sql = @base.sanitize_sql_array([sql, journal_data.to_json])
+      sanitized_sql = @base.sanitize_sql_array([ sql, journal_data.to_json ])
 
       @connection.select_value(sanitized_sql)
     rescue ActiveRecord::StatementInvalid => e

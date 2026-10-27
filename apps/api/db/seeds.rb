@@ -28,7 +28,7 @@ load Rails.root.join("db/seeds/equity_accounts.rb")
 load Rails.root.join("db/seeds/credit_cards.rb")
 
 # puts '== load seeds =='
-# 
+#
 # Dir[Rails.root.join('db/seeds/*.rb')].sort.each do |file|
 #   puts "loading: #{File.basename(file)}"
 #   require file

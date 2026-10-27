@@ -4,7 +4,7 @@ class Amount
   attr_reader :value
 
   def initialize(value)
-    raise ArgumentError, 'amount must not be nil' if value.nil?
+    raise ArgumentError, "amount must not be nil" if value.nil?
 
     @value = BigDecimal(value.to_s)
 
@@ -66,8 +66,8 @@ class Amount
   private
 
   def validate!
-    raise ArgumentError, 'amount must be >= 0' if value.negative?
-    raise ArgumentError, 'amount must be an integer' unless integer_value?
+    raise ArgumentError, "amount must be >= 0" if value.negative?
+    raise ArgumentError, "amount must be an integer" unless integer_value?
   end
 
   def integer_value?
@@ -75,6 +75,6 @@ class Amount
   end
 
   def ensure_amount!(other)
-    raise ArgumentError, 'other must be Amount' unless other.is_a?(Amount)
+    raise ArgumentError, "other must be Amount" unless other.is_a?(Amount)
   end
 end

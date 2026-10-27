@@ -3,7 +3,7 @@ class TokenAuthenticator
     raise UnauthorizedError if token.blank?
 
     payload = decode(token)
-    user = User.find_by(id: payload['sub'])
+    user = User.find_by(id: payload["sub"])
 
     raise UnauthorizedError if user.nil?
 

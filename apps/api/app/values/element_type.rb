@@ -18,23 +18,23 @@ class ElementType
   ].freeze
 
   NAMES = {
-    ASSETS      => 'assets',
-    LIABILITIES => 'liabilities',
-    EQUITY      => 'equity',
-    REVENUE     => 'revenue',
-    EXPENSES    => 'expenses'
+    ASSETS      => "assets",
+    LIABILITIES => "liabilities",
+    EQUITY      => "equity",
+    REVENUE     => "revenue",
+    EXPENSES    => "expenses"
   }.freeze
 
   JAPANESE_NAMES = {
-    ASSETS      => '資産',
-    LIABILITIES => '負債',
-    EQUITY      => '元入金',
-    REVENUE     => '収益',
-    EXPENSES    => '費用'
+    ASSETS      => "資産",
+    LIABILITIES => "負債",
+    EQUITY      => "元入金",
+    REVENUE     => "収益",
+    EXPENSES    => "費用"
   }.freeze
 
   def initialize(value)
-    raise ArgumentError, 'element_type must not be nil' if value.nil?
+    raise ArgumentError, "element_type must not be nil" if value.nil?
 
     @value = Integer(value)
     raise ArgumentError, "invalid element_type: #{@value}" unless ALL_VALUES.include?(@value)

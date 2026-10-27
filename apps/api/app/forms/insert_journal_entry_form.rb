@@ -25,7 +25,7 @@
 }
 =end
 
-require 'json'
+require "json"
 
 # --- メインの親クラス ---
 class InsertJournalEntryForm
@@ -43,15 +43,15 @@ class InsertJournalEntryForm
 
   def initialize(json_string = nil)
     parsed_hash = parse_json(json_string)
-    
+
     # 1. 先に入れ子（配列）のデータを各Formオブジェクトの配列に変換して格納
-    @debits = Array(parsed_hash[:debits]).map do |d| 
+    @debits = Array(parsed_hash[:debits]).map do |d|
       d[:element_type] = ElementType.new(d[:element_type]) if d[:element_type].is_a?(Integer)
       d[:amount] = Amount.new(d[:amount]) if d[:amount].is_a?(Integer)
       DebitEntryForm.new(d)
     end
-    
-    @credits = Array(parsed_hash[:credits]).map do |c| 
+
+    @credits = Array(parsed_hash[:credits]).map do |c|
       c[:element_type] = ElementType.new(c[:element_type]) if c[:element_type].is_a?(Integer)
       c[:amount] = Amount.new(c[:amount]) if c[:amount].is_a?(Integer)
       CreditEntryForm.new(c)
@@ -75,7 +75,7 @@ class InsertJournalEntryForm
     return {} if json_string.blank?
     JSON.parse(json_string, symbolize_names: true)
   rescue JSON::ParserError
-    raise ArgumentError, 'Invalid JSON format'
+    raise ArgumentError, "Invalid JSON format"
   end
 
   # 子クラスたちのバリデーション結果を集約する

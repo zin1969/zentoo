@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 #
 # spec/requests/journals/asset_opening_journals_spec.rb
 
@@ -93,7 +94,7 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
       allow(errors).to receive(:full_messages)
         .and_return(
           double(to_hash: {
-            asset_type: ['must be an ElementType']
+            asset_type: [ 'must be an ElementType' ]
           })
         )
 

@@ -20,12 +20,12 @@ class CreateOpeningAssetBalanceJournalForm
   def validate_asset_type
     return if asset_type.is_a?(ElementType)
 
-    errors.add(:asset_type, 'must be an ElementType')
+    errors.add(:asset_type, "must be an ElementType")
   end
 
   def validate_amount
     return if amount.is_a?(Amount)
 
-    errors.add(:amount, 'must be an Amount')
+    errors.add(:amount, "must be an Amount")
   end
 end

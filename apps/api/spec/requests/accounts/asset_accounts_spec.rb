@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 #
 # spec/requests/accounts/asset_accounts_spec.rb
 

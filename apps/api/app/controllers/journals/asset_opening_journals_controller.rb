@@ -4,7 +4,7 @@ module Journals
   class AssetOpeningJournalsController < ApplicationController
     def create
       # 1. Authorization ヘッダ取得
-      token = request.headers['Authorization']&.split(' ')&.last
+      token = request.headers["Authorization"]&.split(" ")&.last
 
       # 2. 認証
       user = TokenAuthenticator.new.authenticate!(token)
@@ -43,7 +43,7 @@ module Journals
 
     rescue Journals::OpeningAssetAlreadyExistsError => e
       render json: {
-        error: 'opening_asset_already_exists',
+        error: "opening_asset_already_exists",
         next_token: next_token
       }, status: :conflict
     end

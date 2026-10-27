@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 #
 # spec/requests/accounts/liability_accounts_spec.rb
 

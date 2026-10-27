@@ -15,7 +15,7 @@ class CreditEntryForm
   private
 
   def validate_types
-    errors.add(:element_type, 'must be an ElementType') unless element_type.is_a?(ElementType)
-    errors.add(:amount, 'must be an Amount') unless amount.is_a?(Amount)
+    errors.add(:element_type, "must be an ElementType") unless element_type.is_a?(ElementType)
+    errors.add(:amount, "must be an Amount") unless amount.is_a?(Amount)
   end
 end

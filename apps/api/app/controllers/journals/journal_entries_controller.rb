@@ -4,7 +4,7 @@ module Journals
   class JournalEntriesController < ApplicationController
     def create
       # 1. Authorization ヘッダ取得
-      token = request.headers['Authorization']&.split(' ')&.last
+      token = request.headers["Authorization"]&.split(" ")&.last
 
       # 2. 認証
       user = TokenAuthenticator.new.authenticate!(token)
@@ -27,13 +27,13 @@ module Journals
 
     rescue ArgumentError => e
       render json: {
-        errors: [e.message],
+        errors: [ e.message ],
         next_token: next_token
       }, status: :unprocessable_content
 
     rescue Journals::InsertJournalEntry::UnbalancedJournal
       render json: {
-        error: 'unbalanced_journal',
+        error: "unbalanced_journal",
         next_token: next_token
       }, status: :unprocessable_content
     end
