@@ -30,6 +30,8 @@ services:
     volumes:
       - ../apps/web:/app
       - next_node_modules:/app/node_modules
+      # Turbopack のキャッシュは共有フォルダ上だと sync に失敗する (os error 22) ため分離する
+      - next_dot_next:/app/.next
     ports:
       - "53001:3000"
     environment:
@@ -58,4 +60,5 @@ networks:
 volumes:
   db-data:
   next_node_modules:
+  next_dot_next:
   bundle:

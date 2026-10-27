@@ -16,10 +16,10 @@
 
 **到達点**: 実装済みの範囲が、検証済みの状態になっている。
 
-- [x] Vagrant 上の Docker で `docker compose up` し、api / next / db が起動する
+- [x] Vagrant 上の Docker で `docker compose up` し、api / next / db が起動する（next は `.next` を名前付きボリュームに分離して Turbopack の os error 22 を回避）
 - [x] RSpec 92例が全て通る（92 examples, 0 failures）
 - [x] Next.js を修正版（16.4.3）へ更新し、`npm audit` を 0 件にする（critical を含む脆弱性対応。tsc / lint / build 通過を確認）
-- [ ] `git push` して GitHub Actions（api-ci / web-ci）が緑になる
+- [x] `git push` して GitHub Actions（api-ci / web-ci）が緑になる（runner を `ubuntu-24.04` に固定、gem を更新して bundler-audit を 0 件にした）
 - [x] 旧 Minitest（`apps/api/test/`）を処分する（`config/ci.rb` も RSpec に切り替え）
 - [x] `apiFetch` の二重を整理する（重複ではなく役割違いだったため、統合せず規約の記述を実態に合わせた）
 - [x] `outline.md` を現状に更新し、重複していた `sprint_1_outline.md` を削除する
