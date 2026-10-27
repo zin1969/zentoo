@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { createOpeningAsset } from "../actions/createOpeningAsset";
 import { AssetAccount, getAssetAccounts } from "@/lib/masters/assetAccounts";
-import { ApiError } from "@/lib/api/apiFetch";
+import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
 function extractErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    const data = error.data;
+    const data: ApiErrorBody = error.data ?? {};
 
     if (Array.isArray(data?.errors) && data.errors.length > 0) {
       return data.errors.join(" / ");

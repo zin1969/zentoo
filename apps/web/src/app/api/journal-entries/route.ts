@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
     return Response.json(data, { status: res.status });
 
-  } catch (e) {
+  } catch {
     log("journal_entries.rails_response_unparseable", {
       requestId,
       status: res.status,

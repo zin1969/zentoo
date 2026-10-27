@@ -1,10 +1,17 @@
 // src/lib/api/apiFetch.ts
 
+export type ApiErrorBody = {
+  errors?: string[];
+  error?: string;
+  message?: string;
+  code?: string;
+};
+
 export class ApiError extends Error {
   status: number;
-  data: any;
+  data: ApiErrorBody | null;
 
-  constructor(status: number, data: any) {
+  constructor(status: number, data: ApiErrorBody | null) {
     super(`API Error: ${status}`);
     this.status = status;
     this.data = data;
@@ -13,7 +20,7 @@ export class ApiError extends Error {
 
 type FetchOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
-  body?: any;
+  body?: unknown;
 };
 
 export async function apiFetch<T>(
