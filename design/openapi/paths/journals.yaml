@@ -28,6 +28,12 @@ asset-opening-journals:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 勘定科目が存在しない、または認証済みユーザーの科目ではない（error が asset_account_not_found。両者は区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
       '409':
         description: 開始残高が既に登録されている（error が opening_asset_already_exists）
         content:

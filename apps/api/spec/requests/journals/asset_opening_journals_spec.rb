@@ -185,4 +185,35 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
       expect(body['next_token']).to eq('abc.def.ghi')
     end
   end
+
+  describe 'asset account not found' do
+    before do
+      allow(TokenAuthenticator).to receive(:new).and_return(authenticator)
+      allow(authenticator).to receive(:authenticate!).and_return(user)
+
+      allow(CreateOpeningAssetBalanceJournalForm).to receive(:new).and_return(form)
+      allow(form).to receive(:valid?).and_return(true)
+      allow(form).to receive(:journal_date).and_return(Date.today)
+      allow(form).to receive(:asset_type).and_return('cash')
+      allow(form).to receive(:asset_account_id).and_return(1)
+      allow(form).to receive(:amount).and_return(1000)
+
+      allow(Journals::CreateOpeningAssetService).to receive(:new).and_return(service)
+      allow(service).to receive(:call).and_raise(Journals::AssetAccountNotFoundError)
+
+      allow(TokenManager).to receive(:new).and_return(token_manager)
+      allow(token_manager).to receive(:issue_next_token).and_return('abc.def.ghi')
+    end
+
+    it 'returns 404 with next_token' do
+      post path, params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:not_found)
+
+      body = JSON.parse(response.body)
+
+      expect(body['error']).to eq('asset_account_not_found')
+      expect(body['next_token']).to eq('abc.def.ghi')
+    end
+  end
 end

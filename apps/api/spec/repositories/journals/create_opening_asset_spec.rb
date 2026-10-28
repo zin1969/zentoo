@@ -47,6 +47,34 @@ RSpec.describe Journals::CreateOpeningAsset do
       expect(credit.user_id).to eq(user.id)
     end
 
+    context "when the asset account does not belong to the user" do
+      let(:other_users_account) { create(:asset_account, :suica, user: create(:user)) }
+
+      def register_for(account_id)
+        ActiveRecord::Base.transaction(requires_new: true) do
+          repository.create_opening_asset_balance!(
+            journal_date: journal_date,
+            asset_type: asset_type,
+            asset_account_id: account_id,
+            amount: amount,
+            user_id: user.id
+          )
+        end
+      end
+
+      it "raises AssetAccountNotFound for another user's account and creates nothing" do
+        account_id = other_users_account.id
+        count_before = Journal.count
+
+        expect { register_for(account_id) }.to raise_error(described_class::AssetAccountNotFound)
+        expect(Journal.count).to eq(count_before)
+      end
+
+      it "raises AssetAccountNotFound for an account that does not exist" do
+        expect { register_for(0) }.to raise_error(described_class::AssetAccountNotFound)
+      end
+    end
+
     context "when the opening balance of the account is already registered" do
       def register(account)
         repository.create_opening_asset_balance!(

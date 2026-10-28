@@ -26,9 +26,10 @@ BEGIN
     INTO asset_account_record
     FROM asset_accounts
    WHERE id = asset_account_id
+     AND asset_accounts.user_id = create_opening_asset_balance_journal.user_id
   ;
 
-  -- 資産科目が存在しない場合のガードコード
+  -- 資産科目が存在しない、または他ユーザーの科目の場合のガードコード（存在有無を区別しない）
   IF NOT FOUND THEN
     RAISE EXCEPTION 'asset_account not found: %', asset_account_id;
   END IF;
@@ -50,6 +51,7 @@ BEGIN
     INTO equity_account_record
     FROM equity_accounts
    WHERE name = EQUITY_NAME
+     AND equity_accounts.user_id = create_opening_asset_balance_journal.user_id
   ;
 
   -- 元入金科目が存在しない場合のガードコード

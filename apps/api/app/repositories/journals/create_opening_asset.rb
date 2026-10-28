@@ -3,6 +3,7 @@
 module Journals
   class CreateOpeningAsset
     class OpeningAssetAlreadyExists < StandardError; end
+    class AssetAccountNotFound < StandardError; end
 
     def initialize(connection: ActiveRecord::Base.connection)
       @connection = connection
@@ -55,6 +56,8 @@ module Journals
       case error.message
       when /opening asset already exists/
         OpeningAssetAlreadyExists.new
+      when /asset_account not found/
+        AssetAccountNotFound.new
       else
         error
       end

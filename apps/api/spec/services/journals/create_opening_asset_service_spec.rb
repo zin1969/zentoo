@@ -38,6 +38,23 @@ RSpec.describe Journals::CreateOpeningAssetService do
       end
     end
 
+    context 'when repository raises AssetAccountNotFound' do
+      it 'raises AssetAccountNotFoundError' do
+        allow(repository).to receive(:create_opening_asset_balance!)
+          .and_raise(Journals::CreateOpeningAsset::AssetAccountNotFound)
+
+        expect {
+          service.call(
+            journal_date: journal_date,
+            asset_type: asset_type,
+            asset_account_id: asset_account_id,
+            amount: amount,
+            user_id: user_id
+          )
+        }.to raise_error(Journals::AssetAccountNotFoundError)
+      end
+    end
+
     context 'when repository raises OpeningAssetAlreadyExists' do
       it 'raises OpeningAssetAlreadyExistsError' do
         allow(repository).to receive(:create_opening_asset_balance!)

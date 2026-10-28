@@ -24,6 +24,8 @@ module Journals
       end
     rescue CreateOpeningAsset::OpeningAssetAlreadyExists
       raise OpeningAssetAlreadyExistsError
+    rescue CreateOpeningAsset::AssetAccountNotFound
+      raise AssetAccountNotFoundError
     end
   end
 end

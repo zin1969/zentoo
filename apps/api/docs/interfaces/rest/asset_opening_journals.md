@@ -63,6 +63,17 @@ POST /asset-opening-journals
 }
 ```
 
+### Not Found (404 Not Found)
+
+指定した勘定科目が存在しない、または認証済みユーザーの科目ではない場合。両者は区別しない。
+
+```json
+{
+  "error": "asset_account_not_found",
+  "next_token": "abc.def.ghi"
+}
+```
+
 ### Business Error (409 Conflict:重複)
 
 ```json

@@ -46,6 +46,13 @@ module Journals
         error: "opening_asset_already_exists",
         next_token: next_token
       }, status: :conflict
+
+    rescue Journals::AssetAccountNotFoundError
+      # 存在しない科目と他ユーザーの科目は区別しない
+      render json: {
+        error: "asset_account_not_found",
+        next_token: next_token
+      }, status: :not_found
     end
   end
 end

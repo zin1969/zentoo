@@ -24,6 +24,10 @@ function extractErrorMessage(error: unknown): string {
       return "この勘定科目の開始残高は既に登録されています。";
     }
 
+    if (data?.error === "asset_account_not_found") {
+      return "選択した勘定科目が見つかりません。画面を再読み込みしてください。";
+    }
+
   }
 
   return "登録に失敗しました。時間をおいて再度お試しください。";

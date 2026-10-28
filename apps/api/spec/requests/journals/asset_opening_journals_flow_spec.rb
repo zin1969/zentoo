@@ -46,6 +46,32 @@ RSpec.describe 'POST /asset-opening-journals (without stubs)', type: :request do
     expect(body['next_token']).to be_present
   end
 
+  it "returns 404 and creates nothing for another user's account" do
+    other_users_account = create(:asset_account, :suica, user: create(:user))
+
+    expect { post_opening(other_users_account) }.not_to change(Journal, :count)
+
+    expect(response).to have_http_status(:not_found)
+    expect(JSON.parse(response.body)['error']).to eq('asset_account_not_found')
+  end
+
+  it 'returns 404 for an account that does not exist' do
+    post '/asset-opening-journals',
+         params: { journal_date: '2026-02-01', asset_type: 1, asset_account_id: 0, amount: 1_000 }.to_json,
+         headers: headers
+
+    expect(response).to have_http_status(:not_found)
+  end
+
+  it "does not use another user's equity account" do
+    other_equity = create(:equity_account, :original_deposit, user: create(:user))
+
+    post_opening(asset_account)
+
+    credit = Journal.find(JSON.parse(response.body)['journal_id']).credits.first
+    expect(credit.account_id).not_to eq(other_equity.id)
+  end
+
   it 'allows an opening balance for another account' do
     post_opening(asset_account)
     post_opening(create(:asset_account, :suica, user: user))

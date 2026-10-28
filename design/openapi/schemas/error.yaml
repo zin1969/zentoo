@@ -9,6 +9,7 @@ ErrorResponse:
       examples:
         - unauthorized
         - opening_asset_already_exists
+        - asset_account_not_found
         - unbalanced_journal
     errors:
       type: array
