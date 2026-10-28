@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createOpeningAsset } from "../actions/createOpeningAsset";
 import { AssetAccount, getAssetAccounts } from "@/lib/masters/assetAccounts";
 import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
@@ -23,15 +24,18 @@ function extractErrorMessage(error: unknown): string {
       return "この勘定科目の開始残高は既に登録されています。";
     }
 
-    if (error.status === 401) {
-      return "認証の有効期限が切れました。再度ログインしてください。";
-    }
   }
 
   return "登録に失敗しました。時間をおいて再度お試しください。";
 }
 
+// 認証切れ（BFF がトークン Cookie を破棄済み）の場合は、ログイン画面へ誘導する。
+function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 export default function OpeningAssetForm() {
+  const router = useRouter();
   const [journalDate, setJournalDate] = useState("");
   const [assetAccountId, setAssetAccountId] = useState("");
   const [amount, setAmount] = useState("");
@@ -40,8 +44,18 @@ export default function OpeningAssetForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    getAssetAccounts().then(setAssetAccounts);
-  }, []);
+    getAssetAccounts()
+      .then(setAssetAccounts)
+      .catch((error) => {
+        if (isUnauthorized(error)) {
+          router.replace("/login");
+          return;
+        }
+
+        setStatus("error");
+        setErrorMessage("勘定科目の取得に失敗しました。時間をおいて再度お試しください。");
+      });
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +75,11 @@ export default function OpeningAssetForm() {
       setAssetAccountId("");
       setAmount("");
     } catch (error) {
+      if (isUnauthorized(error)) {
+        router.replace("/login");
+        return;
+      }
+
       setStatus("error");
       setErrorMessage(extractErrorMessage(error));
     }
