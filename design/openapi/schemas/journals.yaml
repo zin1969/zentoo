@@ -1,37 +1,96 @@
-/api/v1/journals/opening-asset-balance:
-  post:
-    summary: Create opening asset balance journal
-    description: |
-      Creates an opening asset balance journal.
-      Internally calls the PostgreSQL function
-      `create_opening_asset_balance_journal`
-      and returns the created journal ID.
-    operationId: createOpeningAssetBalanceJournal
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '../schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
-    responses:
-      '201':
-        description: Journal created successfully
-        content:
-          application/json:
-            schema:
-              $ref: '../schemas/journals.yaml#/CreateOpeningAssetBalanceJournalResponse'
-      '400':
-        description: Bad request
-        content:
-          application/json:
-            schema:
-              $ref: '../schemas/error.yaml#/ErrorResponse'
-      '401':
-        description: Unauthorized
-        content:
-          application/json:
-            schema:
-              $ref: '../schemas/error.yaml#/ErrorResponse'
+CreateOpeningAssetBalanceJournalRequest:
+  type: object
+  required:
+    - journal_date
+    - asset_type
+    - asset_account_id
+    - amount
+  properties:
+    journal_date:
+      type: string
+      format: date
+      examples:
+        - '2026-02-01'
+    asset_type:
+      type: integer
+      const: 1
+      description: 要素種別（1 = 資産）
+    asset_account_id:
+      type: integer
+      description: 資産勘定科目の ID（`GET /asset-accounts`）
+    amount:
+      type: integer
+      minimum: 0
+      examples:
+        - 100000
 
+JournalCreatedResponse:
+  type: object
+  required:
+    - journal_id
+    - next_token
+  properties:
+    journal_id:
+      type: integer
+    next_token:
+      type: string
+      description: 次のリクエストに使う JWT
+
+InsertJournalEntryRequest:
+  type: object
+  description: |
+    借方合計と貸方合計は一致している必要がある。
+    ユーザー ID はトークンから決まるため、リクエストに含めても無視される。
+  required:
+    - date
+    - debits
+    - credits
+  properties:
+    date:
+      type: string
+      format: date
+      examples:
+        - '2026-07-19'
+    store_name:
+      type: string
+      examples:
+        - ピザーラ
+    debits:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required:
+          - element_type
+          - account_id
+          - amount
+        properties:
+          element_type:
+            type: integer
+            enum: [1, 2, 3, 4, 5]
+            description: 1 = 資産, 2 = 負債, 3 = 元入金, 4 = 収益, 5 = 費用
+          account_id:
+            type: integer
+          amount:
+            type: integer
+          item_name:
+            type: string
+    credits:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required:
+          - element_type
+          - account_id
+          - amount
+        properties:
+          element_type:
+            type: integer
+            enum: [1, 2, 3, 4, 5]
+          payment_method_type:
+            type: integer
+          account_id:
+            type: integer
+          amount:
+            type: integer

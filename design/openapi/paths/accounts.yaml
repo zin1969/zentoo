@@ -1,0 +1,71 @@
+asset-accounts:
+  get:
+    tags: [accounts]
+    summary: 資産勘定科目の一覧
+    description: 認証済みユーザーの資産勘定科目のみ返す。トークンのローテーション（`next_token`）は行わない。
+    operationId: listAssetAccounts
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: 資産勘定科目の配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/accounts.yaml#/AssetAccount'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+liability-accounts:
+  get:
+    tags: [accounts]
+    summary: 負債勘定科目の一覧
+    description: 認証済みユーザーの負債勘定科目のみ返す。トークンのローテーション（`next_token`）は行わない。
+    operationId: listLiabilityAccounts
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: 負債勘定科目の配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/accounts.yaml#/LiabilityAccount'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+expense-accounts:
+  get:
+    tags: [accounts]
+    summary: 費用勘定科目の一覧
+    description: 認証済みユーザーの費用勘定科目のみ返す。トークンのローテーション（`next_token`）は行わない。
+    operationId: listExpenseAccounts
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: 費用勘定科目の配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/accounts.yaml#/ExpenseAccount'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

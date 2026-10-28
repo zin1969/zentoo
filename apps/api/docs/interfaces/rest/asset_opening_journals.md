@@ -59,7 +59,7 @@ POST /asset-opening-journals
 
 ```json
 {
-  "error": "invalid_token"
+  "error": "unauthorized"
 }
 ```
 

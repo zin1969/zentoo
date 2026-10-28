@@ -1,13 +1,19 @@
 ErrorResponse:
   type: object
-  required:
-    - error_code
-    - message
+  description: |
+    エラー応答。`error`（機械可読なコード）または `errors`（バリデーションメッセージの配列）のいずれかが入る。
+    401 の場合は `next_token` を返さない。
   properties:
-    error_code:
+    error:
       type: string
-      example: VALIDATION_ERROR
-    message:
+      examples:
+        - unauthorized
+        - opening_asset_already_exists
+        - unbalanced_journal
+    errors:
+      type: array
+      items:
+        type: string
+    next_token:
       type: string
-      example: Invalid amount
-
+      description: 次のリクエストに使う JWT（401 では返らない）

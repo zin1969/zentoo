@@ -1,5 +1,79 @@
-bearerAuth:
-  type: http
-  scheme: bearer
-  bearerFormat: Token
+asset-opening-journals:
+  post:
+    tags: [journals]
+    summary: 開始残高（開始資産）仕訳の登録
+    description: |
+      資産勘定科目の開始残高を登録する。同じ勘定科目の開始残高は 1 件のみ登録できる。
+      内部で PostgreSQL 関数 `create_opening_asset_balance_journal` を呼び出す。
+      401 以外では新しい `next_token` を返す。
+    operationId: createOpeningAssetBalanceJournal
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
+    responses:
+      '201':
+        description: 登録成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '409':
+        description: 開始残高が既に登録されている（error が opening_asset_already_exists）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
 
+journal-entries:
+  post:
+    tags: [journals]
+    summary: 仕訳の登録
+    description: |
+      借方・貸方を指定して仕訳を登録する。
+      内部で PostgreSQL 関数 `insert_journal_entry` を呼び出す。
+      401 以外では新しい `next_token` を返す。
+    operationId: insertJournalEntry
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/InsertJournalEntryRequest'
+    responses:
+      '201':
+        description: 登録成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（errors）、または貸借不一致（error が unbalanced_journal）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

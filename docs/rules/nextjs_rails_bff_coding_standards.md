@@ -1,6 +1,6 @@
 # Next.js + Rails API コーディング規約
 
-> 本規約は現時点（ソロ開発・単一 VPS への Kamal デプロイ・ログイン機能未実装）のプロジェクト規模に合わせた内容である。CloudFront/WAF・Aurora 等のマネージドインフラ、Next.js/Rails を独立デプロイする際の後方互換運用、ファイルアップロードなど、将来インフラ・体制が拡大した際に見直す設計は [nextjs_rails_bff_target_architecture.md](nextjs_rails_bff_target_architecture.md) にまとめてある。各章の該当箇所からリンクしている。
+> 本規約は現時点（ソロ開発・単一 VPS への Kamal デプロイ）のプロジェクト規模に合わせた内容である。CloudFront/WAF・Aurora 等のマネージドインフラ、Next.js/Rails を独立デプロイする際の後方互換運用、ファイルアップロードなど、将来インフラ・体制が拡大した際に見直す設計は [nextjs_rails_bff_target_architecture.md](nextjs_rails_bff_target_architecture.md) にまとめてある。各章の該当箇所からリンクしている。
 
 ## 1. 目的
 
@@ -354,7 +354,7 @@ function isSameOrigin(req: Request): boolean {
 
 ## 7. 認証・認可
 
-> 現時点でログイン機能は未実装。本章はログイン機能を実装する際に従う設計であり、実装前の段階で本章の遵守を求めるものではない。
+> ログイン機能は実装済み（`POST /login`、BFF の `/api/login`・`/api/logout`、`src/proxy.ts` による未ログイン時の遷移）。マスタ取得のような配列を返す GET は `next_token` を返さず、トークンのローテーションは行わない。
 
 ### 7.1 Browser に Rails 用アクセストークンを持たせない
 

@@ -1,0 +1,58 @@
+AssetAccount:
+  type: object
+  required:
+    - id
+    - name
+    - element_type
+    - payment_method_type
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+      examples:
+        - 現金
+    element_type:
+      type: integer
+      const: 1
+      description: 要素種別（1 = 資産）
+    payment_method_type:
+      type: integer
+      enum: [1, 2, 3]
+      description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
+
+LiabilityAccount:
+  type: object
+  required:
+    - id
+    - name
+    - element_type
+    - payment_method_type
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+      examples:
+        - JAL
+    element_type:
+      type: integer
+      const: 2
+      description: 要素種別（2 = 負債）
+    payment_method_type:
+      type: integer
+      enum: [1, 2, 3]
+      description: 1 = 借入金, 2 = キャッシング, 3 = クレジットカード払い
+
+ExpenseAccount:
+  type: object
+  required:
+    - id
+    - name
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+      examples:
+        - 食費

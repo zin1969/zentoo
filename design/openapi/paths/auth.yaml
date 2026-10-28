@@ -1,0 +1,31 @@
+login:
+  post:
+    tags: [auth]
+    summary: ログイン
+    description: |
+      ユーザー名とパスワードを検証し、最初の JWT を発行する。
+      ユーザー不在・パスワード未設定・パスワード不一致はいずれも 401 とし、区別しない。
+      ブルートフォース対策として、同一 IP から 3 分間に 10 回を超えると 429 を返す。
+    operationId: login
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/auth.yaml#/LoginRequest'
+    responses:
+      '201':
+        description: ログイン成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/auth.yaml#/LoginResponse'
+      '401':
+        description: 認証失敗
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '429':
+        description: 試行回数が多すぎる（レスポンスボディなし）

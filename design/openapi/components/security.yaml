@@ -1,0 +1,7 @@
+bearerAuth:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: |
+    `POST /login` または各レスポンスの `next_token` で得た JWT（有効期限 15 分）。
+    仕訳登録系のレスポンスでは新しい `next_token` が返るため、次のリクエストはそれを使う。

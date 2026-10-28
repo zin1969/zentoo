@@ -1,24 +1,60 @@
 openapi: 3.1.0
 
 info:
-  title: Journal API
-  description: API for journal management
+  title: Zentoo API
+  description: |
+    複式簿記ベースのお小遣い帳 API。
+
+    Next.js (BFF) から Rails API を呼び出す内部 API であり、Browser から直接は呼ばれない。
+    ログイン以外のエンドポイントは `Authorization: Bearer <JWT>` が必須。
   version: 1.0.0
 
 servers:
-  - url: https://api.example.com
+  - url: http://localhost:53000
+    description: Local development (docker compose)
+
+tags:
+  - name: auth
+    description: 認証
+  - name: accounts
+    description: 勘定科目マスタ
+  - name: journals
+    description: 仕訳
 
 paths:
-  $ref: './paths/journals.yaml'
+  /login:
+    $ref: './paths/auth.yaml#/login'
+  /asset-accounts:
+    $ref: './paths/accounts.yaml#/asset-accounts'
+  /liability-accounts:
+    $ref: './paths/accounts.yaml#/liability-accounts'
+  /expense-accounts:
+    $ref: './paths/accounts.yaml#/expense-accounts'
+  /asset-opening-journals:
+    $ref: './paths/journals.yaml#/asset-opening-journals'
+  /journal-entries:
+    $ref: './paths/journals.yaml#/journal-entries'
 
 components:
   securitySchemes:
-    $ref: './components/security.yaml'
+    bearerAuth:
+      $ref: './components/security.yaml#/bearerAuth'
   schemas:
-    CreateOpeningAssetBalanceJournalRequest:
-      $ref: './schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
-    CreateOpeningAssetBalanceJournalResponse:
-      $ref: './schemas/journals.yaml#/CreateOpeningAssetBalanceJournalResponse'
     ErrorResponse:
       $ref: './schemas/error.yaml#/ErrorResponse'
-
+    LoginRequest:
+      $ref: './schemas/auth.yaml#/LoginRequest'
+    LoginResponse:
+      $ref: './schemas/auth.yaml#/LoginResponse'
+    AssetAccount:
+      $ref: './schemas/accounts.yaml#/AssetAccount'
+    LiabilityAccount:
+      $ref: './schemas/accounts.yaml#/LiabilityAccount'
+    ExpenseAccount:
+      $ref: './schemas/accounts.yaml#/ExpenseAccount'
+    CreateOpeningAssetBalanceJournalRequest:
+      $ref: './schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
+    JournalCreatedResponse:
+      $ref: './schemas/journals.yaml#/JournalCreatedResponse'
+    InsertJournalEntryRequest:
+      $ref: './schemas/journals.yaml#/InsertJournalEntryRequest'

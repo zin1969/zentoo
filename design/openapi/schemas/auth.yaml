@@ -1,0 +1,22 @@
+LoginRequest:
+  type: object
+  required:
+    - name
+    - password
+  properties:
+    name:
+      type: string
+      examples:
+        - masa
+    password:
+      type: string
+      format: password
+
+LoginResponse:
+  type: object
+  required:
+    - token
+  properties:
+    token:
+      type: string
+      description: 最初の JWT（有効期限 15 分）
