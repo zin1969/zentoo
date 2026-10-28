@@ -22,6 +22,8 @@ module Journals
           user_id:
         )
       end
+    rescue CreateOpeningAsset::OpeningAssetAlreadyExists
+      raise OpeningAssetAlreadyExistsError
     end
   end
 end

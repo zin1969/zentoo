@@ -39,7 +39,7 @@ RSpec.describe Journals::CreateOpeningAssetService do
     end
 
     context 'when repository raises OpeningAssetAlreadyExists' do
-      it 'propagates the exception' do
+      it 'raises OpeningAssetAlreadyExistsError' do
         allow(repository).to receive(:create_opening_asset_balance!)
           .and_raise(Journals::CreateOpeningAsset::OpeningAssetAlreadyExists)
 
@@ -51,7 +51,7 @@ RSpec.describe Journals::CreateOpeningAssetService do
             amount: amount,
             user_id: user_id
           )
-        }.to raise_error(Journals::CreateOpeningAsset::OpeningAssetAlreadyExists)
+        }.to raise_error(Journals::OpeningAssetAlreadyExistsError)
       end
     end
   end

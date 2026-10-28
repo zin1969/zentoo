@@ -12,7 +12,7 @@ DECLARE
   asset_account_record asset_accounts%ROWTYPE;
   equity_account_record equity_accounts%ROWTYPE;
   new_journal_id INT;
-  ITEM_NAME CONSTANT TEXT := '開始残高';
+  OPENING_ITEM_NAME CONSTANT TEXT := '開始残高';
   EQUITY_NAME CONSTANT TEXT := '元入金';
   EQUITY_ELEMENT_NO CONSTANT INT := 3;
 BEGIN
@@ -31,6 +31,17 @@ BEGIN
   -- 資産科目が存在しない場合のガードコード
   IF NOT FOUND THEN
     RAISE EXCEPTION 'asset_account not found: %', asset_account_id;
+  END IF;
+
+  -- 同じ資産科目の開始残高が既に登録されている場合はエラー
+  IF EXISTS (
+    SELECT 1
+      FROM debits d
+     WHERE d.element_type = asset_type
+       AND d.account_id = asset_account_id
+       AND d.item_name = OPENING_ITEM_NAME
+  ) THEN
+    RAISE EXCEPTION 'opening asset already exists: %', asset_account_id;
   END IF;
 
   -- 元入金科目を取得
@@ -63,7 +74,7 @@ BEGIN
     new_journal_id,
     asset_type,
     asset_account_id,
-    ITEM_NAME,
+    OPENING_ITEM_NAME,
     amount,
     user_id
   );

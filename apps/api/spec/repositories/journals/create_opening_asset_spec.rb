@@ -46,5 +46,34 @@ RSpec.describe Journals::CreateOpeningAsset do
       expect(credit.amount).to eq(amount)
       expect(credit.user_id).to eq(user.id)
     end
+
+    context "when the opening balance of the account is already registered" do
+      def register(account)
+        repository.create_opening_asset_balance!(
+          journal_date: journal_date,
+          asset_type: asset_type,
+          asset_account_id: account.id,
+          amount: amount,
+          user_id: user.id
+        )
+      end
+
+      before { register(asset_account) }
+
+      it "raises OpeningAssetAlreadyExists and does not create another journal" do
+        count_before = Journal.count
+
+        # DB 関数の例外でトランザクションが中断状態にならないよう、セーブポイントで包む
+        expect { ActiveRecord::Base.transaction(requires_new: true) { register(asset_account) } }
+          .to raise_error(described_class::OpeningAssetAlreadyExists)
+        expect(Journal.count).to eq(count_before)
+      end
+
+      it "allows an opening balance for a different account" do
+        other_account = create(:asset_account, :suica, user: user)
+
+        expect { register(other_account) }.to change { Journal.count }.by(1)
+      end
+    end
   end
 end

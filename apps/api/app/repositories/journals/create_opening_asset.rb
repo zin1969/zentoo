@@ -44,16 +44,15 @@ module Journals
       result = @connection.raw_connection.exec_params(sql, binds)
 
       result.getvalue(0, 0).to_i
-    rescue ActiveRecord::StatementInvalid => e
+    # raw_connection 経由のため、DB 関数の RAISE EXCEPTION は PG::RaiseException として届く
+    rescue PG::RaiseException => e
       raise map_exception(e)
     end
 
     private
 
     def map_exception(error)
-      return error unless error.cause.is_a?(PG::RaiseException)
-
-      case error.cause&.message
+      case error.message
       when /opening asset already exists/
         OpeningAssetAlreadyExists.new
       else
