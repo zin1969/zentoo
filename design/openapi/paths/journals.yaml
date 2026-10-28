@@ -77,6 +77,12 @@ journal-entries:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 借方・貸方の科目が存在しない、または使えない（error が account_not_found。資産・負債科目は本人のもののみ、費用・資本科目は共通科目か本人の科目のみ使える。存在しない科目と他人の科目は区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
         description: バリデーションエラー（errors）、または貸借不一致（error が unbalanced_journal）
         content:

@@ -46,12 +46,15 @@ BEGIN
   END IF;
 
   -- 元入金科目を取得
-  -- 預入貸方データの科目に設定するため
+  -- 預入貸方データの科目に設定するため（共通科目を優先し、無ければ本人の科目を使う）
   SELECT *
     INTO equity_account_record
     FROM equity_accounts
    WHERE name = EQUITY_NAME
-     AND equity_accounts.user_id = create_opening_asset_balance_journal.user_id
+     AND (equity_accounts.user_id IS NULL
+          OR equity_accounts.user_id = create_opening_asset_balance_journal.user_id)
+   ORDER BY equity_accounts.user_id NULLS FIRST
+   LIMIT 1
   ;
 
   -- 元入金科目が存在しない場合のガードコード

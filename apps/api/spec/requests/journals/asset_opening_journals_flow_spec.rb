@@ -72,6 +72,17 @@ RSpec.describe 'POST /asset-opening-journals (without stubs)', type: :request do
     expect(credit.account_id).not_to eq(other_equity.id)
   end
 
+  it 'uses the common equity account when the user has none of their own' do
+    EquityAccount.where(user: user).delete_all
+    common_equity = create(:equity_account, :original_deposit, :common)
+
+    post_opening(asset_account)
+
+    expect(response).to have_http_status(:created)
+    credit = Journal.find(JSON.parse(response.body)['journal_id']).credits.first
+    expect(credit.account_id).to eq(common_equity.id)
+  end
+
   it 'allows an opening balance for another account' do
     post_opening(asset_account)
     post_opening(create(:asset_account, :suica, user: user))

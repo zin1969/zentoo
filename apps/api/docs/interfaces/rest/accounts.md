@@ -14,7 +14,8 @@ GET /expense-accounts
 
 ## Authentication / Authorization
 - Authorization ヘッダに Bearer トークンを指定する
-- 認証済みユーザーの勘定科目のみ返す（他ユーザーの科目は返らない）
+- 資産・負債科目は認証済みユーザーのもののみ返す（他ユーザーの科目は返らない）
+- 費用科目は、全ユーザー共通の科目（`user_id` が NULL）と認証済みユーザー自身の科目を返す
 - 配列を返すため `next_token` は返却しない（トークンのローテーションは行わない）
 
 ## Request

@@ -3,6 +3,7 @@
 module Journals
   class InsertJournalEntry
     class UnbalancedJournal < StandardError; end
+    class AccountNotFound < StandardError; end
 
     def initialize(base: ActiveRecord::Base)
       @base = base
@@ -29,6 +30,8 @@ module Journals
       case error.cause&.message
       when /unbalance debit and credit/
         UnbalancedJournal.new
+      when /account not found/
+        AccountNotFound.new
       else
         error
       end

@@ -3,6 +3,11 @@ FactoryBot.define do
     name { "default" }
     association :user
 
+    # 全ユーザーが使える共通科目
+    trait :common do
+      user { nil }
+    end
+
     trait :root do
       name { "root" }
       parent { nil }

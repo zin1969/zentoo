@@ -5,7 +5,7 @@ module Accounts
     include Authenticatable
 
     def index
-      render json: current_user.expense_accounts.select(:id, :name).order(:id)
+      render json: ExpenseAccount.available_to(current_user).select(:id, :name).order(:id)
     end
   end
 end

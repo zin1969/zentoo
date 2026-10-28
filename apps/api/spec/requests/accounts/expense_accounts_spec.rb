@@ -32,6 +32,15 @@ RSpec.describe 'GET /expense-accounts', type: :request do
     expect(names).to eq([ '食費' ])
   end
 
+  it 'also returns the common accounts (user_id IS NULL)' do
+    create(:expense_account, :food, :common, name: '交通費')
+
+    get '/expense-accounts', headers: headers
+
+    names = JSON.parse(response.body).map { |a| a['name'] }
+    expect(names).to contain_exactly('食費', '交通費')
+  end
+
   it 'returns 401 without a token' do
     get '/expense-accounts'
 

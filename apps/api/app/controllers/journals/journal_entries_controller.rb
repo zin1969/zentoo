@@ -31,6 +31,12 @@ module Journals
         next_token: next_token
       }, status: :unprocessable_content
 
+    rescue Journals::InsertJournalEntry::AccountNotFound
+      render json: {
+        error: "account_not_found",
+        next_token: next_token
+      }, status: :not_found
+
     rescue Journals::InsertJournalEntry::UnbalancedJournal
       render json: {
         error: "unbalanced_journal",

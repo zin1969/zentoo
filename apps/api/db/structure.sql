@@ -56,12 +56,15 @@ BEGIN
   END IF;
 
   -- 元入金科目を取得
-  -- 預入貸方データの科目に設定するため
+  -- 預入貸方データの科目に設定するため（共通科目を優先し、無ければ本人の科目を使う）
   SELECT *
     INTO equity_account_record
     FROM equity_accounts
    WHERE name = EQUITY_NAME
-     AND equity_accounts.user_id = create_opening_asset_balance_journal.user_id
+     AND (equity_accounts.user_id IS NULL
+          OR equity_accounts.user_id = create_opening_asset_balance_journal.user_id)
+   ORDER BY equity_accounts.user_id NULLS FIRST
+   LIMIT 1
   ;
 
   -- 元入金科目が存在しない場合のガードコード
@@ -124,6 +127,12 @@ DECLARE
   v_user_id INT;
   v_sum_debit INT := 0;
   v_sum_credit INT := 0;
+  v_entry RECORD;
+  v_available BOOLEAN;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_LIABILITIES CONSTANT INT := 2;
+  ELEMENT_EQUITY CONSTANT INT := 3;
+  ELEMENT_EXPENSES CONSTANT INT := 5;
 BEGIN
   -- 1. 借方の合計金額を計算
   SELECT COALESCE(SUM(amount), 0) INTO v_sum_debit
@@ -144,6 +153,41 @@ BEGIN
   v_journal_date := (journal_data->>'date')::DATE;
   v_store_name   := (journal_data->>'store_name')::TEXT;
   v_user_id      := (journal_data->>'user_id')::INT;
+
+  -- 4.5 借方・貸方の科目が使えるか確認する
+  -- 資産・負債科目は本人のもののみ。費用・資本科目は共通科目（user_id IS NULL）も使える。
+  -- 他人の科目と存在しない科目は区別しない。収益科目はテーブルが無いため常に使えない
+  FOR v_entry IN
+    SELECT d.element_type, d.account_id
+      FROM jsonb_to_recordset(journal_data->'debits') AS d(element_type INT, account_id INT)
+    UNION ALL
+    SELECT c.element_type, c.account_id
+      FROM jsonb_to_recordset(journal_data->'credits') AS c(element_type INT, account_id INT)
+  LOOP
+    v_available := CASE v_entry.element_type
+      WHEN ELEMENT_ASSETS THEN EXISTS (
+        SELECT 1 FROM asset_accounts a
+         WHERE a.id = v_entry.account_id AND a.user_id = v_user_id
+      )
+      WHEN ELEMENT_LIABILITIES THEN EXISTS (
+        SELECT 1 FROM liability_accounts a
+         WHERE a.id = v_entry.account_id AND a.user_id = v_user_id
+      )
+      WHEN ELEMENT_EQUITY THEN EXISTS (
+        SELECT 1 FROM equity_accounts a
+         WHERE a.id = v_entry.account_id AND (a.user_id IS NULL OR a.user_id = v_user_id)
+      )
+      WHEN ELEMENT_EXPENSES THEN EXISTS (
+        SELECT 1 FROM expense_accounts a
+         WHERE a.id = v_entry.account_id AND (a.user_id IS NULL OR a.user_id = v_user_id)
+      )
+      ELSE FALSE
+    END;
+
+    IF NOT v_available THEN
+      RAISE EXCEPTION 'account not found: element_type=%, account_id=%', v_entry.element_type, v_entry.account_id;
+    END IF;
+  END LOOP;
 
   -- 5. 親仕訳データを作成
   INSERT INTO journals (
@@ -1054,10 +1098,24 @@ CREATE INDEX index_direct_debit_journals_on_user_id ON public.direct_debit_journ
 
 
 --
+-- Name: index_equity_accounts_on_common_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_equity_accounts_on_common_name ON public.equity_accounts USING btree (name) WHERE (user_id IS NULL);
+
+
+--
 -- Name: index_equity_accounts_on_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_equity_accounts_on_user_id ON public.equity_accounts USING btree (user_id);
+
+
+--
+-- Name: index_expense_accounts_on_common_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_expense_accounts_on_common_name ON public.expense_accounts USING btree (COALESCE(parent_id, (0)::bigint), name) WHERE (user_id IS NULL);
 
 
 --
@@ -1344,6 +1402,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029060000'),
 ('20261028120000'),
 ('20261028090000'),
 ('20261027120000'),

@@ -1,59 +1,59 @@
-masa = User.find_by!(name: "masa")
+# 費用科目・資本科目は全ユーザー共通（user_id IS NULL）
 
 # root
 root = ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: nil,
   name: "root"
 )
 
 # root 配下
 food = ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: root,
   name: "食費"
 )
 
 entertainment = ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: root,
   name: "娯楽費"
 )
 
 ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: root,
   name: "交通費"
 )
 
 ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: root,
   name: "教育費"
 )
 
 # 食費 配下
 ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: food,
   name: "外食費"
 )
 
 # 娯楽費 配下
 ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: entertainment,
   name: "映画"
 )
 
 ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: entertainment,
   name: "配信サービス"
 )
 
 ExpenseAccount.find_or_create_by!(
-  user: masa,
+  user: nil,
   parent: entertainment,
   name: "漫画"
 )

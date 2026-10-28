@@ -154,5 +154,80 @@ RSpec.describe Journals::InsertJournalEntry do
         }.to raise_error(Journals::InsertJournalEntry::UnbalancedJournal)
       end
     end
+
+    describe "account availability" do
+      def journal_data_for(debit_account:, credit_account:, debit_element: 5, credit_element: 1)
+        {
+          date: "2026-07-19",
+          user_id: user.id,
+          store_name: "ピザーラ",
+          debits: [ { element_type: debit_element, account_id: debit_account.id, amount: 1_000, item_name: "ピザ" } ],
+          credits: [ { element_type: credit_element, payment_method_type: 1, account_id: credit_account.id, amount: 1_000 } ]
+        }
+      end
+
+      def insert_in_savepoint(data)
+        ActiveRecord::Base.transaction(requires_new: true) do
+          repository.insert_journal_entry!(journal_data: data)
+        end
+      end
+
+      it "accepts a common expense account (user_id IS NULL)" do
+        common_expense = create(:expense_account, :food, :common)
+
+        journal_id = repository.insert_journal_entry!(
+          journal_data: journal_data_for(debit_account: common_expense, credit_account: asset_account)
+        )
+
+        expect(Journal.find(journal_id).debits.first.account_id).to eq(common_expense.id)
+      end
+
+      it "rejects another user's expense account" do
+        other_expense = create(:expense_account, :food, user: create(:user))
+
+        expect {
+          insert_in_savepoint(journal_data_for(debit_account: other_expense, credit_account: asset_account))
+        }.to raise_error(Journals::InsertJournalEntry::AccountNotFound)
+
+        expect(Journal.count).to eq(0)
+      end
+
+      it "rejects another user's asset account" do
+        other_asset = create(:asset_account, :cash, user: create(:user))
+
+        expect {
+          insert_in_savepoint(journal_data_for(debit_account: expense_account, credit_account: other_asset))
+        }.to raise_error(Journals::InsertJournalEntry::AccountNotFound)
+
+        expect(Journal.count).to eq(0)
+      end
+
+      it "rejects another user's liability account" do
+        other_liability = create(:liability_account, :jal, user: create(:user))
+
+        expect {
+          insert_in_savepoint(
+            journal_data_for(debit_account: expense_account, credit_account: other_liability, credit_element: 2)
+          )
+        }.to raise_error(Journals::InsertJournalEntry::AccountNotFound)
+      end
+
+      it "rejects an account id that does not exist" do
+        missing = build_stubbed(:asset_account, id: 0)
+
+        expect {
+          insert_in_savepoint(journal_data_for(debit_account: expense_account, credit_account: missing))
+        }.to raise_error(Journals::InsertJournalEntry::AccountNotFound)
+      end
+
+      it "rejects an account whose element_type does not match its table" do
+        # 資産科目の ID を、費用科目として指定する
+        expect {
+          insert_in_savepoint(
+            journal_data_for(debit_account: asset_account, credit_account: asset_account, debit_element: 5)
+          )
+        }.to raise_error(Journals::InsertJournalEntry::AccountNotFound)
+      end
+    end
   end
 end
