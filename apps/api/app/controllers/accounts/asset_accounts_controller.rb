@@ -2,8 +2,10 @@
 
 module Accounts
   class AssetAccountsController < ApplicationController
+    include Authenticatable
+
     def index
-      accounts = AssetAccount.select(:id, :name, :asset_type).map do |account|
+      accounts = current_user.asset_accounts.select(:id, :name, :asset_type).order(:id).map do |account|
         {
           id: account.id,
           name: account.name,

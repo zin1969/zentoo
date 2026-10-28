@@ -2,8 +2,10 @@
 
 module Accounts
   class LiabilityAccountsController < ApplicationController
+    include Authenticatable
+
     def index
-      accounts = LiabilityAccount.select(:id, :name, :liability_type).map do |account|
+      accounts = current_user.liability_accounts.select(:id, :name, :liability_type).order(:id).map do |account|
         {
           id: account.id,
           name: account.name,

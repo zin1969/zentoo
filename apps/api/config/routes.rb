@@ -7,6 +7,8 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   # root "posts#index"
+  post "/login", to: "sessions#create"
+
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"
   post "/journal-entries", to: "journals/journal_entries#create"
 

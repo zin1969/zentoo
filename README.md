@@ -22,4 +22,4 @@
 cd docker-compose && docker compose -f docker-compose.yaml up
 ```
 
-詳細は各ディレクトリの README / operation.txt を参照。
+起動・初期データ・ログインユーザー・CI 相当のチェックは [docs/development.md](docs/development.md) を参照。

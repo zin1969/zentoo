@@ -698,7 +698,8 @@ CREATE TABLE public.users (
     id bigint NOT NULL,
     name text,
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    password_digest text
 );
 
 
@@ -1096,6 +1097,13 @@ CREATE INDEX index_liability_accounts_on_user_id ON public.liability_accounts US
 
 
 --
+-- Name: index_users_on_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_users_on_name ON public.users USING btree (name);
+
+
+--
 -- Name: asset_accounts trigger_update_updated_at_of_asset_accounts; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1323,6 +1331,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261027120000'),
 ('20260708223810'),
 ('20251226065757'),
 ('20251220053020'),

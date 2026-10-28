@@ -7,6 +7,7 @@ require 'rails_helper'
 
 RSpec.describe 'GET /asset-accounts', type: :request do
   let(:user) { create(:user, :masa) }
+  let(:headers) { { 'Authorization' => "Bearer #{TokenManager.new.issue_next_token(user)}" } }
 
   before do
     create(:asset_account, :cash, user: user)
@@ -14,7 +15,7 @@ RSpec.describe 'GET /asset-accounts', type: :request do
   end
 
   it 'returns 200 with id, name, element_type and payment_method_type' do
-    get '/asset-accounts'
+    get '/asset-accounts', headers: headers
 
     expect(response).to have_http_status(:ok)
 
@@ -27,5 +28,20 @@ RSpec.describe 'GET /asset-accounts', type: :request do
     deposit = body.find { |a| a['name'] == '三菱UFJ銀行 用賀出張所' }
     expect(deposit['element_type']).to eq(1)
     expect(deposit['payment_method_type']).to eq(2)
+  end
+
+  it 'returns only the accounts of the authenticated user' do
+    create(:asset_account, :suica, user: create(:user))
+
+    get '/asset-accounts', headers: headers
+
+    names = JSON.parse(response.body).map { |a| a['name'] }
+    expect(names).to contain_exactly('現金', '三菱UFJ銀行 用賀出張所')
+  end
+
+  it 'returns 401 without a token' do
+    get '/asset-accounts'
+
+    expect(response).to have_http_status(:unauthorized)
   end
 end

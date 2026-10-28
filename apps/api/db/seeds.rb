@@ -11,8 +11,21 @@
 #   end
 
 # Users
+# system はパスワードなし（ログイン不可）。
 User.find_or_create_by!(name: "system")
-User.find_or_create_by!(name: "masa")
+
+# masa がログイン用ユーザー。パスワードは SEED_USER_PASSWORD で指定する。
+# 未指定の場合、開発・テスト環境のみ "password" を使い、本番ではエラーにする。
+masa = User.find_or_create_by!(name: "masa")
+if masa.password_digest.blank?
+  masa.update!(
+    password: ENV.fetch("SEED_USER_PASSWORD") do
+      raise "SEED_USER_PASSWORD is required in production" if Rails.env.production?
+
+      "password"
+    end
+  )
+end
 
 # Stores
 Store.find_or_create_by!(name: "Aquavit")
