@@ -142,3 +142,47 @@ journal-entries:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+
+cash-deposit-journals:
+  post:
+    tags: [journals]
+    summary: 現金の預け入れ仕訳の登録
+    description: |
+      現金を預金口座に預け入れる仕訳（借方: 預金口座、貸方: 現金）を登録する。
+      預け入れ先は、認証済みユーザーの預金口座のみ。貸方の現金科目は、ユーザーの現金科目が 1 つだけのときに限って、それを使う。
+      内部で PostgreSQL 関数 `create_cash_deposit_journal` を呼び出す。
+      401 以外では新しい `next_token` を返す。
+    operationId: createCashDepositJournal
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/CreateCashDepositJournalRequest'
+    responses:
+      '201':
+        description: 登録成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 預け入れ先が存在しない、他のユーザーの科目、または預金口座ではない（error が asset_account_not_found。これらは区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（errors）、またはユーザーの現金科目が 0 件・2 件以上で貸方を決められない（error が cash_account_not_determined）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

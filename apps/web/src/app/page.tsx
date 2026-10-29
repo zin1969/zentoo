@@ -3,6 +3,7 @@ import LogoutButton from "./components/LogoutButton";
 
 const MENU = [
   { href: "/journal-entries", title: "お買い物登録", description: "日々の支出を登録する" },
+  { href: "/cash-deposit-journals", title: "現金の預け入れ", description: "現金を預金口座に預け入れた仕訳を登録する" },
   { href: "/journals", title: "仕訳一覧", description: "登録した仕訳を期間で確認する" },
   { href: "/account-balances", title: "残高", description: "口座・現金・カードの残高を確認する" },
   { href: "/monthly-expenses", title: "月次の支出", description: "月ごとの支出を科目別に確認する" },

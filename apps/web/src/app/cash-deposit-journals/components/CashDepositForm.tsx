@@ -1,0 +1,183 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createCashDeposit } from "../actions/createCashDeposit";
+import { AssetAccount, getAssetAccounts } from "@/lib/masters/assetAccounts";
+import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
+
+type Status = "idle" | "submitting" | "success" | "error";
+
+// asset-accounts の payment_method_type（2 = 預貯金）
+const DEPOSIT_PAYMENT_METHOD_TYPE = 2;
+
+// 端末のローカル日付（YYYY-MM-DD）
+function today() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    const data: ApiErrorBody = error.data ?? {};
+
+    if (Array.isArray(data?.errors) && data.errors.length > 0) {
+      return data.errors.join(" / ");
+    }
+
+    if (data?.error === "asset_account_not_found") {
+      return "選択した預け入れ先が見つかりません。画面を再読み込みしてください。";
+    }
+
+    if (data?.error === "cash_account_not_determined") {
+      return "現金の科目を 1 つに決められないため登録できません。現金の科目が 1 つだけ登録されているか確認してください。";
+    }
+  }
+
+  return "登録に失敗しました。時間をおいて再度お試しください。";
+}
+
+// 認証切れ（BFF がトークン Cookie を破棄済み）の場合は、ログイン画面へ誘導する。
+function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
+export default function CashDepositForm() {
+  const router = useRouter();
+  const [journalDate, setJournalDate] = useState(today);
+  const [bankAccountId, setBankAccountId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [bankAccounts, setBankAccounts] = useState<AssetAccount[]>([]);
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAssetAccounts()
+      .then((accounts) =>
+        setBankAccounts(accounts.filter((a) => a.payment_method_type === DEPOSIT_PAYMENT_METHOD_TYPE))
+      )
+      .catch((error) => {
+        if (isUnauthorized(error)) {
+          router.replace("/login");
+          return;
+        }
+
+        setStatus("error");
+        setErrorMessage("預け入れ先の取得に失敗しました。時間をおいて再度お試しください。");
+      });
+  }, [router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("submitting");
+    setErrorMessage(null);
+
+    try {
+      await createCashDeposit({
+        journal_date: journalDate,
+        bank_account_id: Number(bankAccountId),
+        amount: Number(amount)
+      });
+
+      setStatus("success");
+      setAmount("");
+    } catch (error) {
+      if (isUnauthorized(error)) {
+        router.replace("/login");
+        return;
+      }
+
+      setStatus("error");
+      setErrorMessage(extractErrorMessage(error));
+    }
+  };
+
+  const isSubmitting = status === "submitting";
+  const inputClass =
+    "rounded-md border border-black/15 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-black/20";
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex w-full flex-col gap-5 rounded-xl border border-black/10 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-black/20"
+    >
+      {status === "success" && (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-300">
+          預け入れを登録しました。
+        </p>
+      )}
+
+      {status === "error" && errorMessage && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+          {errorMessage}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="journal-date" className="text-sm font-medium text-foreground">
+          日付
+        </label>
+        <input
+          id="journal-date"
+          type="date"
+          value={journalDate}
+          onChange={(e) => setJournalDate(e.target.value)}
+          required
+          className={inputClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="bank-account" className="text-sm font-medium text-foreground">
+          預け入れ先
+        </label>
+        <select
+          id="bank-account"
+          value={bankAccountId}
+          onChange={(e) => setBankAccountId(e.target.value)}
+          required
+          className={inputClass}
+        >
+          <option value="">選択してください</option>
+          {bankAccounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="amount" className="text-sm font-medium text-foreground">
+          金額
+        </label>
+        <div className="relative">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-black/40 dark:text-white/40">
+            ¥
+          </span>
+          <input
+            id="amount"
+            type="number"
+            min="1"
+            step="1"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            className={`${inputClass} w-full pl-7 text-right`}
+          />
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="mt-2 inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isSubmitting ? "登録中..." : "登録"}
+      </button>
+    </form>
+  );
+}

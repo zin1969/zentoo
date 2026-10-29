@@ -17,5 +17,7 @@ Rails アプリ（`apps/api`）に DB ロジックの管理基盤（`apps/api/db
 | `get_next_business_day.sql` | `apps/api/db/functions/commons/get_next_business_day.sql` |
 | `alter_table_add_trigger_credits.sql` | `apps/api/db/triggers/credits/credits_after_insert.sql` |
 | `test/use_credit_only.sql`, `test/use_cash.sql` | `apps/api/spec/db/triggers/credits_after_insert_spec.rb`, `apps/api/spec/db/functions/get_payment_date_spec.rb` |
+| `generate_make_a_cash_deposit_journal.sql` | `apps/api/db/functions/journals/create_cash_deposit_journal.sql`（名前を「現金の預け入れ」に直し、預金口座の持ち主・種別の確認、現金科目をユーザーで絞って 1 つに決める確認、金額の確認を追加して書き直し済み） |
+| `test/make_a_cash_deposit.sql` | `apps/api/spec/repositories/journals/create_cash_deposit_spec.rb`, `apps/api/spec/requests/journals/cash_deposit_journals_spec.rb` |
 
 参照目的の保管のみで、削除しても実害はない。

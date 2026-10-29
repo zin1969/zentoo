@@ -38,6 +38,8 @@ paths:
     $ref: './paths/journals.yaml#/asset-opening-journals'
   /journal-entries:
     $ref: './paths/journals.yaml#/journal-entries'
+  /cash-deposit-journals:
+    $ref: './paths/journals.yaml#/cash-deposit-journals'
   /account-balances:
     $ref: './paths/reports.yaml#/account-balances'
   /monthly-expenses:
@@ -62,6 +64,8 @@ components:
       $ref: './schemas/accounts.yaml#/ExpenseAccount'
     CreateOpeningAssetBalanceJournalRequest:
       $ref: './schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
+    CreateCashDepositJournalRequest:
+      $ref: './schemas/journals.yaml#/CreateCashDepositJournalRequest'
     JournalCreatedResponse:
       $ref: './schemas/journals.yaml#/JournalCreatedResponse'
     InsertJournalEntryRequest:

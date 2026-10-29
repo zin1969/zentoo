@@ -24,6 +24,30 @@ CreateOpeningAssetBalanceJournalRequest:
       examples:
         - 100000
 
+CreateCashDepositJournalRequest:
+  type: object
+  description: ユーザー ID はトークンから決まるため、リクエストに含めても無視される。
+  required:
+    - journal_date
+    - bank_account_id
+    - amount
+  properties:
+    journal_date:
+      type: string
+      format: date
+      description: 預け入れた日（過去・未来も指定できる）
+      examples:
+        - '2026-10-20'
+    bank_account_id:
+      type: integer
+      description: 預け入れ先の預金口座の ID（`GET /asset-accounts` の `payment_method_type` が 2 のもの）
+    amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      examples:
+        - 45000
+
 JournalCreatedResponse:
   type: object
   required:
