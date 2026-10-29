@@ -5,7 +5,7 @@ journals:
     description: |
       認証済みユーザーの仕訳を、日付の新しい順（同じ日付は ID の新しい順）に 50 件ずつ返す。
       クレジットカード払いの仕訳と、自動で作られた引き落とし仕訳は、互いの ID で結び付けて返す。
-      参照のみの API なので、トークンのローテーション（`next_token`）は行わない。
+      参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
     operationId: listJournals
     security:
       - bearerAuth: []

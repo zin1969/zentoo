@@ -125,7 +125,7 @@ RSpec.describe 'GET /journals', type: :request do
     expect(journals[debit_journal_id]['debits'].sole['account_name']).to eq('tcard')
   end
 
-  it 'does not rotate the token' do
+  it 'does not put next_token in the body' do
     register(date: '2026-10-01')
 
     expect(get_journals).not_to have_key('next_token')

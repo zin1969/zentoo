@@ -13,7 +13,7 @@ GET /journals
 ## Authentication / Authorization
 - Authorization ヘッダに Bearer トークンを指定する
 - 認証済みユーザーの仕訳のみ返す
-- 参照のみの API なので `next_token` は返却しない（トークンのローテーションは行わない）
+- 参照のみの API なので本文に `next_token` は含めない。新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（画面を開いたままでも期限切れにならないよう、BFF が Cookie を更新する）
 
 ## Request
 

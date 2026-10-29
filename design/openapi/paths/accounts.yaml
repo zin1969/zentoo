@@ -2,7 +2,7 @@ asset-accounts:
   get:
     tags: [accounts]
     summary: 資産勘定科目の一覧
-    description: 認証済みユーザーの資産勘定科目のみ返す。トークンのローテーション（`next_token`）は行わない。
+    description: 認証済みユーザーの資産勘定科目のみ返す。新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（本文に `next_token` は含めない）。
     operationId: listAssetAccounts
     security:
       - bearerAuth: []
@@ -26,7 +26,7 @@ liability-accounts:
   get:
     tags: [accounts]
     summary: 負債勘定科目の一覧
-    description: 認証済みユーザーの負債勘定科目のみ返す。トークンのローテーション（`next_token`）は行わない。
+    description: 認証済みユーザーの負債勘定科目のみ返す。新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（本文に `next_token` は含めない）。
     operationId: listLiabilityAccounts
     security:
       - bearerAuth: []
@@ -50,7 +50,7 @@ expense-accounts:
   get:
     tags: [accounts]
     summary: 費用勘定科目の一覧
-    description: 全ユーザー共通の費用勘定科目と、認証済みユーザー自身の費用勘定科目を返す。トークンのローテーション（`next_token`）は行わない。
+    description: 全ユーザー共通の費用勘定科目と、認証済みユーザー自身の費用勘定科目を返す。新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（本文に `next_token` は含めない）。
     operationId: listExpenseAccounts
     security:
       - bearerAuth: []

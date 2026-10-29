@@ -4,7 +4,7 @@ module Journals
   class JournalsController < ApplicationController
     include Authenticatable
 
-    # 配列系の参照 API（マスタ）と同じく、トークンのローテーションは行わない
+    # 参照 API なので本文に next_token は載せない（新しいトークンは X-Next-Token ヘッダで返る）
     def index
       form = ListJournalsForm.new(params.permit(:from, :to, :page).to_h)
 

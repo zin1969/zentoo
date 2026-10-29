@@ -354,7 +354,7 @@ function isSameOrigin(req: Request): boolean {
 
 ## 7. 認証・認可
 
-> ログイン機能は実装済み（`POST /login`、BFF の `/api/login`・`/api/logout`、`src/proxy.ts` による未ログイン時の遷移）。マスタ取得のような配列を返す GET は `next_token` を返さず、トークンのローテーションは行わない。
+> ログイン機能は実装済み（`POST /login`、BFF の `/api/login`・`/api/logout`、`src/proxy.ts` による未ログイン時の遷移）。マスタ取得のような配列を返す GET は本文に `next_token` を持てないため、新しい JWT をレスポンスヘッダ `X-Next-Token` で返し、BFF（`proxyAuthedGet`）が Cookie を更新する。
 
 ### 7.1 Browser に Rails 用アクセストークンを持たせない
 
