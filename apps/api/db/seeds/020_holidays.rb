@@ -74,7 +74,29 @@ Holiday.upsert_all(
     { holiday: '2026-10-12', holiday_type_id: 14 },
     { holiday: '2026-11-03', holiday_type_id: 15 },
     { holiday: '2026-11-23', holiday_type_id: 16 },
-    { holiday: '2026-12-31', holiday_type_id: 21 }
+    { holiday: '2026-12-31', holiday_type_id: 21 },
+
+    # ---- 2027 ----
+    { holiday: '2027-01-01', holiday_type_id: 1 },
+    { holiday: '2027-01-02', holiday_type_id: 21 },
+    { holiday: '2027-01-03', holiday_type_id: 21 },
+    { holiday: '2027-01-11', holiday_type_id: 2 },
+    { holiday: '2027-02-11', holiday_type_id: 3 },
+    { holiday: '2027-02-23', holiday_type_id: 4 },
+    { holiday: '2027-03-21', holiday_type_id: 5 },
+    { holiday: '2027-03-22', holiday_type_id: 17 },
+    { holiday: '2027-04-29', holiday_type_id: 6 },
+    { holiday: '2027-05-03', holiday_type_id: 7 },
+    { holiday: '2027-05-04', holiday_type_id: 8 },
+    { holiday: '2027-05-05', holiday_type_id: 9 },
+    { holiday: '2027-07-19', holiday_type_id: 10 },
+    { holiday: '2027-08-11', holiday_type_id: 11 },
+    { holiday: '2027-09-20', holiday_type_id: 12 },
+    { holiday: '2027-09-23', holiday_type_id: 13 },
+    { holiday: '2027-10-11', holiday_type_id: 14 },
+    { holiday: '2027-11-03', holiday_type_id: 15 },
+    { holiday: '2027-11-23', holiday_type_id: 16 },
+    { holiday: '2027-12-31', holiday_type_id: 21 }
   ],
   unique_by: :index_holidays_on_holiday
 )

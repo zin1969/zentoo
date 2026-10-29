@@ -159,9 +159,6 @@ export default function JournalEntryForm() {
     try {
       await createJournalEntry({
         date,
-        // Rails 側の InsertJournalEntryForm は user_id の presence バリデーションを持つが、
-        // controller が認証済みユーザーの ID で必ず上書きするため、ここではダミー値でよい。
-        user_id: 0,
         store_name: storeName,
         debits: debitLines.map((line) => ({
           element_type: EXPENSE_ELEMENT_TYPE,

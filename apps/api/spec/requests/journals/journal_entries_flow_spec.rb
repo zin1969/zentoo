@@ -24,7 +24,6 @@ RSpec.describe 'POST /journal-entries (without stubs)', type: :request do
     post '/journal-entries',
          params: {
            date: '2026-07-19',
-           user_id: 0, # Web クライアントと同じダミー値。controller が認証済みユーザーの ID で上書きする
            store_name: 'ピザーラ',
            debits: [ { element_type: 5, account_id: expense.id, amount: 1_000, item_name: 'ピザ' } ],
            credits: [ { element_type: 1, payment_method_type: 1, account_id: asset.id, amount: 1_000 } ]
@@ -46,7 +45,6 @@ RSpec.describe 'POST /journal-entries (without stubs)', type: :request do
     post '/journal-entries',
          params: {
            date: '2025-11-25',
-           user_id: 0,
            store_name: 'Aquavit',
            debits: [ { element_type: 5, account_id: common_expense.id, amount: 3_300, item_name: 'バー' } ],
            credits: [ { element_type: 2, payment_method_type: 3, account_id: jal.id, amount: 3_300 } ]

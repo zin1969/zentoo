@@ -70,7 +70,6 @@ RSpec.describe Journals::InsertJournalEntry do
       let(:json_string) do
         {
           date: "2026-07-19",
-          user_id: user.id,
           store_name: "ピザーラ",
           debits: [
             {
@@ -91,7 +90,8 @@ RSpec.describe Journals::InsertJournalEntry do
         }.to_json
       end
 
-      let(:validated_data) { InsertJournalEntryForm.new(json_string).validated_data }
+      # user_id はフォームでは受け取らず、controller が認証済みユーザーで補う
+      let(:validated_data) { InsertJournalEntryForm.new(json_string).validated_data.merge(user_id: user.id) }
 
       it "serializes ElementType/Amount as raw values and registers the journal" do
         # --- act ---

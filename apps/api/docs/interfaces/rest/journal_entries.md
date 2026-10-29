@@ -13,7 +13,7 @@ POST /journal-entries
 ## Authentication / Authorization
 - Authorization ヘッダに Bearer トークンを指定する
 - トークンはワンタイムであり、レスポンスごとに更新される
-- 仕訳の持ち主は認証済みユーザーになる（リクエストの `user_id` は検証だけに使い、値は無視される）
+- 仕訳の持ち主は認証済みユーザーになる（リクエストに持ち主は指定しない。`user_id` を送っても無視される）
 - 使える科目: 資産・負債科目は本人のもののみ。費用・資本科目は共通科目（全ユーザー共通）と本人の科目
 
 ## Request
@@ -29,7 +29,6 @@ POST /journal-entries
 ```json
 {
   "date": "2026-07-19",
-  "user_id": 0,
   "store_name": "ピザーラ",
   "debits": [
     { "element_type": 5, "account_id": 10051, "amount": 1000, "item_name": "ピザ" }

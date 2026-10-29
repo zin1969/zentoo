@@ -44,7 +44,6 @@ RSpec.describe 'POST /journal-entries', type: :request do
   let(:validated_data) do
     {
       date: Date.new(2026, 7, 19),
-      user_id: 999,
       store_name: 'ピザーラ',
       debits: [
         {

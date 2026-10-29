@@ -7,7 +7,6 @@ RSpec.describe InsertJournalEntryForm do
   subject(:form) { described_class.new(json_string) }
 
   let(:date)       { '2026-07-19' }
-  let(:user_id)    { 2 }
   let(:store_name) { 'ピザーラ' }
 
   let(:debits) do
@@ -36,7 +35,6 @@ RSpec.describe InsertJournalEntryForm do
   let(:json_string) do
     {
       date: date,
-      user_id: user_id,
       store_name: store_name,
       debits: debits,
       credits: credits
@@ -52,7 +50,7 @@ RSpec.describe InsertJournalEntryForm do
       it 'saves the casted data to validated_data' do
         # 期待通り、自動でDateオブジェクトや独自型に変換されていることを検証
         expect(form.validated_data[:date]).to eq(Date.new(2026, 7, 19))
-        expect(form.validated_data[:user_id]).to eq(2)
+        expect(form.validated_data).not_to have_key(:user_id)
         expect(form.validated_data[:store_name]).to eq('ピザーラ')
 
         # 配列の中身が ElementType や Amount に変換されていることを検証
@@ -86,13 +84,13 @@ RSpec.describe InsertJournalEntryForm do
       end
     end
 
-    context 'when user_id is missing' do
-      let(:user_id) { nil }
+    context 'when a client still sends user_id' do
+      let(:json_string) do
+        { date: date, user_id: 999, store_name: store_name, debits: debits, credits: credits }.to_json
+      end
 
-      it 'raises a validation error' do
-        expect { described_class.new(json_string) }.to raise_error(
-          ArgumentError, /Validation failed: User can't be blank/
-        )
+      it 'ignores it' do
+        expect(form.validated_data).not_to have_key(:user_id)
       end
     end
 

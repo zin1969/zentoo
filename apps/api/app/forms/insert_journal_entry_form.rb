@@ -4,7 +4,6 @@
 【JSONサンプル】
 {
   "date": "2026-07-19",
-  "user_id": 2,
   "store_name": "ピザーラ",
   "debits": [
     {
@@ -33,10 +32,9 @@ class InsertJournalEntryForm
   include ActiveModel::Attributes
 
   attribute :date, :date
-  attribute :user_id, :integer
   attribute :store_name, :string
 
-  validates :date, :user_id, presence: true
+  validates :date, presence: true
   validate :validate_nested_entries
 
   attr_reader :validated_data, :debits, :credits
@@ -59,7 +57,8 @@ class InsertJournalEntryForm
 
 
     # 2. 親クラス（トップレベルの属性）の初期化
-    super(parsed_hash.except(:debits, :credits))
+    #    user_id は受け取らない（持ち主は controller が認証済みユーザーから決める）。古いクライアントが送っても無視する
+    super(parsed_hash.except(:debits, :credits, :user_id))
 
     # 3. 自動チェックと、成功時のインスタンス変数保存
     if valid?
@@ -97,7 +96,6 @@ class InsertJournalEntryForm
   def to_hash
     {
       date: date,
-      user_id: user_id,
       store_name: store_name,
       # 子オブジェクトから、型変換済みの値をハッシュとして取り出す
       debits: debits.map { |d| d.attributes.symbolize_keys },
