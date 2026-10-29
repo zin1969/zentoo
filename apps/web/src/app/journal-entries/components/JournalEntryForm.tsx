@@ -21,7 +21,8 @@ type DebitLine = {
 
 type CreditLine = {
   key: string;
-  paymentAccountId: string;
+  // 資産と負債は別テーブルで ID が重なるため、「種別-ID」で区別する（paymentKey 参照）
+  paymentKey: string;
   amount: string;
 };
 
@@ -32,6 +33,12 @@ type PaymentAccount = {
   payment_method_type: number;
   category: "asset" | "liability";
 };
+
+const DEPOSIT_PAYMENT_METHOD_TYPE = 2;
+
+function paymentKey(account: Pick<PaymentAccount, "category" | "id">) {
+  return `${account.category}-${account.id}`;
+}
 
 let lineKeySeq = 0;
 function nextKey() {
@@ -44,7 +51,7 @@ function emptyDebitLine(): DebitLine {
 }
 
 function emptyCreditLine(): CreditLine {
-  return { key: nextKey(), paymentAccountId: "", amount: "" };
+  return { key: nextKey(), paymentKey: "", amount: "" };
 }
 
 // 認証切れ（BFF がトークン Cookie を破棄済み）の場合は、ログイン画面へ誘導する。
@@ -114,7 +121,10 @@ export default function JournalEntryForm() {
     Promise.all([getAssetAccounts(), getLiabilityAccounts()])
       .then(([assetAccounts, liabilityAccounts]) => {
         setPaymentAccounts([
-          ...assetAccounts.map((a) => ({ ...a, category: "asset" as const })),
+          // 預貯金（銀行口座）は支払い方法として選ばせない。カード払いの引き落としは自動仕訳で作る
+          ...assetAccounts
+            .filter((a) => a.payment_method_type !== DEPOSIT_PAYMENT_METHOD_TYPE)
+            .map((a) => ({ ...a, category: "asset" as const })),
           ...liabilityAccounts.map((a) => ({ ...a, category: "liability" as const }))
         ]);
       })
@@ -160,12 +170,12 @@ export default function JournalEntryForm() {
           item_name: line.itemName
         })),
         credits: creditLines.map((line) => {
-          const account = paymentAccounts.find((a) => a.id === Number(line.paymentAccountId));
+          const account = paymentAccounts.find((a) => paymentKey(a) === line.paymentKey);
 
           return {
             element_type: account?.element_type,
             payment_method_type: account?.payment_method_type,
-            account_id: Number(line.paymentAccountId),
+            account_id: account?.id,
             amount: Number(line.amount)
           };
         })
@@ -344,26 +354,26 @@ export default function JournalEntryForm() {
               className="flex items-center gap-2 rounded-lg border border-black/10 p-3 dark:border-white/10"
             >
               <select
-                value={line.paymentAccountId}
-                onChange={(e) => updateCreditLine(line.key, { paymentAccountId: e.target.value })}
+                value={line.paymentKey}
+                onChange={(e) => updateCreditLine(line.key, { paymentKey: e.target.value })}
                 required
                 className={`${lineInputClass} min-w-0 flex-1`}
               >
                 <option value="">支払い方法を選択</option>
-                <optgroup label="資産">
+                <optgroup label="現金・電子マネー">
                   {paymentAccounts
                     .filter((a) => a.category === "asset")
                     .map((a) => (
-                      <option key={`asset-${a.id}`} value={a.id}>
+                      <option key={paymentKey(a)} value={paymentKey(a)}>
                         {a.name}
                       </option>
                     ))}
                 </optgroup>
-                <optgroup label="負債">
+                <optgroup label="クレジットカード等">
                   {paymentAccounts
                     .filter((a) => a.category === "liability")
                     .map((a) => (
-                      <option key={`liability-${a.id}`} value={a.id}>
+                      <option key={paymentKey(a)} value={paymentKey(a)}>
                         {a.name}
                       </option>
                     ))}
