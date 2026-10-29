@@ -30,6 +30,8 @@ paths:
     $ref: './paths/accounts.yaml#/liability-accounts'
   /expense-accounts:
     $ref: './paths/accounts.yaml#/expense-accounts'
+  /journals:
+    $ref: './paths/journals.yaml#/journals'
   /asset-opening-journals:
     $ref: './paths/journals.yaml#/asset-opening-journals'
   /journal-entries:
@@ -58,3 +60,7 @@ components:
       $ref: './schemas/journals.yaml#/JournalCreatedResponse'
     InsertJournalEntryRequest:
       $ref: './schemas/journals.yaml#/InsertJournalEntryRequest'
+    JournalList:
+      $ref: './schemas/journals.yaml#/JournalList'
+    Journal:
+      $ref: './schemas/journals.yaml#/Journal'

@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   # root "posts#index"
   post "/login", to: "sessions#create"
 
+  get "/journals", to: "journals/journals#index"
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"
   post "/journal-entries", to: "journals/journal_entries#create"
 

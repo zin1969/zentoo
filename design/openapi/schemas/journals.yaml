@@ -94,3 +94,77 @@ InsertJournalEntryRequest:
             type: integer
           amount:
             type: integer
+
+JournalList:
+  type: object
+  required: [journals, page, per_page, total_count]
+  properties:
+    journals:
+      type: array
+      items:
+        $ref: '#/Journal'
+    page:
+      type: integer
+    per_page:
+      type: integer
+      examples:
+        - 50
+    total_count:
+      type: integer
+      description: 期間に該当する仕訳の総数
+
+Journal:
+  type: object
+  required:
+    - id
+    - journal_date
+    - debits
+    - credits
+    - original_journal_id
+    - direct_debit_journal_id
+  properties:
+    id:
+      type: integer
+    journal_date:
+      type: string
+      format: date
+    store_name:
+      type: [string, 'null']
+    debits:
+      type: array
+      items:
+        type: object
+        required: [element_type, account_id, account_name, amount]
+        properties:
+          element_type:
+            type: integer
+          account_id:
+            type: integer
+          account_name:
+            type: [string, 'null']
+          item_name:
+            type: [string, 'null']
+          amount:
+            type: integer
+    credits:
+      type: array
+      items:
+        type: object
+        required: [element_type, payment_method_type, account_id, account_name, amount]
+        properties:
+          element_type:
+            type: integer
+          payment_method_type:
+            type: integer
+          account_id:
+            type: integer
+          account_name:
+            type: [string, 'null']
+          amount:
+            type: integer
+    original_journal_id:
+      type: [integer, 'null']
+      description: この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID
+    direct_debit_journal_id:
+      type: [integer, 'null']
+      description: この仕訳がカード払いの場合、引き落とし仕訳の ID

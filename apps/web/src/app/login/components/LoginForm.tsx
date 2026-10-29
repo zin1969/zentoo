@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiError, apiFetch } from "@/lib/api/apiFetch";
 
 // ログイン後の遷移先
-const AFTER_LOGIN_PATH = "/asset-opening-journals";
+const AFTER_LOGIN_PATH = "/";
 
 function extractErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {

@@ -1,3 +1,54 @@
+journals:
+  get:
+    tags: [journals]
+    summary: 仕訳の一覧
+    description: |
+      認証済みユーザーの仕訳を、日付の新しい順（同じ日付は ID の新しい順）に 50 件ずつ返す。
+      クレジットカード払いの仕訳と、自動で作られた引き落とし仕訳は、互いの ID で結び付けて返す。
+      参照のみの API なので、トークンのローテーション（`next_token`）は行わない。
+    operationId: listJournals
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: from
+        in: query
+        description: 期間の開始日（この日を含む）。省略すると開始日で絞らない。
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: 期間の終了日（この日を含む）。省略すると終了日で絞らない。`from` より前の日付は指定できない。
+        schema:
+          type: string
+          format: date
+      - name: page
+        in: query
+        description: ページ番号（1 始まり）。省略すると 1。
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+    responses:
+      '200':
+        description: 仕訳の一覧（該当が無い、またはページが範囲外なら `journals` は空配列）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalList'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 期間・ページの指定が不正（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
 asset-opening-journals:
   post:
     tags: [journals]
