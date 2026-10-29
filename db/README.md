@@ -6,11 +6,10 @@
 
 | ファイル | 対象機能 |
 |---|---|
-| `generate_direct_debit_journal.sql`（`get_last_date_of_month` / `get_payment_date` / `generate_direct_debit_journal`） | 口座振替仕訳の自動生成 |
-| `alter_table_add_trigger_credits.sql` | 上記を `credits` への INSERT 契機で発火させるトリガー |
-| `get_next_business_day.sql` | 営業日計算 |
 | `generate_make_a_cash_deposit_journal.sql` | 現金入金仕訳の自動生成 |
-| `test/use_credit_only.sql`, `test/make_a_cash_deposit.sql`, `test/use_cash.sql` | 上記機能の手動検証シナリオ |
+| `test/make_a_cash_deposit.sql` | 上記機能の手動検証シナリオ |
+
+クレジットカードの引き落とし仕訳（`generate_direct_debit_journal.sql` ほか）は移植済みで、`archive/` に移動した。
 
 ## 扱い方
 

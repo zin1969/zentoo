@@ -53,6 +53,8 @@ journal-entries:
     summary: 仕訳の登録
     description: |
       借方・貸方を指定して仕訳を登録する。
+      貸方がクレジットカード払い（`element_type` が 2 で `payment_method_type` が 3）の場合、DB のトリガーが引き落とし日の仕訳を自動で作る
+      （締日・支払日はカード設定に従い、土日・祝日・銀行休日は翌営業日にずらす）。
       内部で PostgreSQL 関数 `insert_journal_entry` を呼び出す。
       401 以外では新しい `next_token` を返す。
     operationId: insertJournalEntry
@@ -84,7 +86,7 @@ journal-entries:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
-        description: バリデーションエラー（errors）、または貸借不一致（error が unbalanced_journal）
+        description: バリデーションエラー（errors）、貸借不一致（error が unbalanced_journal）、またはカード払いなのに引き落とし設定が無い（error が credit_card_setting_not_found）
         content:
           application/json:
             schema:

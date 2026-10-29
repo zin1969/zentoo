@@ -37,6 +37,12 @@ module Journals
         next_token: next_token
       }, status: :not_found
 
+    rescue Journals::InsertJournalEntry::CreditCardSettingNotFound
+      render json: {
+        error: "credit_card_setting_not_found",
+        next_token: next_token
+      }, status: :unprocessable_content
+
     rescue Journals::InsertJournalEntry::UnbalancedJournal
       render json: {
         error: "unbalanced_journal",

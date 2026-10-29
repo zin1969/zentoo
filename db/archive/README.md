@@ -13,5 +13,9 @@ Rails アプリ（`apps/api`）に DB ロジックの管理基盤（`apps/api/db
 | `init_data.sql` | `apps/api/db/seeds/020_holidays.rb` |
 | `recreate_testdb.sh` | `bin/rails db:test:prepare`（RSpec の `rails_helper.rb` が自動実行） |
 | `test/opening_asset_balance.sql` | `apps/api/spec/repositories/journals/create_opening_asset_spec.rb` |
+| `generate_direct_debit_journal.sql`（`get_last_date_of_month` / `get_payment_date` / `generate_direct_debit_journal`） | `apps/api/db/functions/commons/get_last_date_of_month.sql`, `get_payment_date.sql`、`apps/api/db/triggers/credits/credits_after_insert.sql`（月末日の丸め、カード設定が無い場合のエラー、ユーザーの絞り込みを追加して書き直し済み） |
+| `get_next_business_day.sql` | `apps/api/db/functions/commons/get_next_business_day.sql` |
+| `alter_table_add_trigger_credits.sql` | `apps/api/db/triggers/credits/credits_after_insert.sql` |
+| `test/use_credit_only.sql`, `test/use_cash.sql` | `apps/api/spec/db/triggers/credits_after_insert_spec.rb`, `apps/api/spec/db/functions/get_payment_date_spec.rb` |
 
 参照目的の保管のみで、削除しても実害はない。

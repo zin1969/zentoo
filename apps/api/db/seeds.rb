@@ -27,6 +27,9 @@ if masa.password_digest.blank?
   )
 end
 
+# Holidays（引き落とし日の営業日計算に使う）
+load Rails.root.join("db/seeds/020_holidays.rb")
+
 # Stores
 Store.find_or_create_by!(name: "Aquavit")
 Store.find_or_create_by!(name: "まいばすけっと")

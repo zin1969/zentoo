@@ -221,4 +221,37 @@ RSpec.describe 'POST /journal-entries', type: :request do
       expect(body['next_token']).to eq('abc.def.ghi')
     end
   end
+
+  describe 'business error (credit card setting not found)' do
+    before do
+      allow(TokenAuthenticator).to receive(:new).and_return(authenticator)
+      allow(authenticator).to receive(:authenticate!).and_return(user)
+
+      allow(TokenManager).to receive(:new).and_return(token_manager)
+      allow(token_manager)
+        .to receive(:issue_next_token)
+        .and_return('abc.def.ghi')
+
+      allow(InsertJournalEntryForm).to receive(:new).and_return(form)
+      allow(form).to receive(:validated_data).and_return(validated_data)
+
+      allow(Journals::InsertJournalEntryService)
+        .to receive(:new)
+        .and_return(service)
+
+      allow(service).to receive(:call)
+        .and_raise(Journals::InsertJournalEntry::CreditCardSettingNotFound)
+    end
+
+    it 'returns 422 with error and next_token' do
+      post path, params: params.to_json, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+
+      body = JSON.parse(response.body)
+
+      expect(body['error']).to eq('credit_card_setting_not_found')
+      expect(body['next_token']).to eq('abc.def.ghi')
+    end
+  end
 end

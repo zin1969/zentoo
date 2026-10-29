@@ -4,6 +4,7 @@ module Journals
   class InsertJournalEntry
     class UnbalancedJournal < StandardError; end
     class AccountNotFound < StandardError; end
+    class CreditCardSettingNotFound < StandardError; end
 
     def initialize(base: ActiveRecord::Base)
       @base = base
@@ -32,6 +33,8 @@ module Journals
         UnbalancedJournal.new
       when /account not found/
         AccountNotFound.new
+      when /credit_card setting not found/
+        CreditCardSettingNotFound.new
       else
         error
       end

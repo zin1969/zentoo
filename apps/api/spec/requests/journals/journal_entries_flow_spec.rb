@@ -39,6 +39,25 @@ RSpec.describe 'POST /journal-entries (without stubs)', type: :request do
     expect(Journal.last.user_id).to eq(user.id)
   end
 
+  it 'creates the direct debit journal when paying by credit card' do
+    jal = create(:liability_account, :jal, user: user)
+    create(:credit_card, :jal, user: user, liability_account: jal, bank_account: cash)
+
+    post '/journal-entries',
+         params: {
+           date: '2025-11-25',
+           user_id: 0,
+           store_name: 'Aquavit',
+           debits: [ { element_type: 5, account_id: common_expense.id, amount: 3_300, item_name: 'バー' } ],
+           credits: [ { element_type: 2, payment_method_type: 3, account_id: jal.id, amount: 3_300 } ]
+         }.to_json,
+         headers: headers
+
+    expect(response).to have_http_status(:created)
+    expect(DirectDebitJournal.count).to eq(1)
+    expect(Journal.count).to eq(2)
+  end
+
   it "returns 404 and creates nothing for another user's expense account" do
     other_expense = create(:expense_account, :food, user: create(:user))
 

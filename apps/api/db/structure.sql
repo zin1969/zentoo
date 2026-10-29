@@ -114,6 +114,217 @@ $$;
 
 
 --
+-- Name: credits_after_insert_fn(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.credits_after_insert_fn() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_credit_card credit_cards%ROWTYPE;
+  v_original_journal journals%ROWTYPE;
+  v_bank_asset_type INT;
+  v_payment_date DATE;
+  v_direct_debit_journal_id BIGINT;
+  v_item_names TEXT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_LIABILITIES CONSTANT INT := 2;
+  PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
+BEGIN
+  -- カード払い以外は何もしない
+  IF NOT (NEW.element_type = ELEMENT_LIABILITIES AND NEW.payment_method_type = PAYMENT_METHOD_CREDIT_CARD) THEN
+    RETURN NEW;
+  END IF;
+
+  -- 締日・支払日・引き落とし口座を持つカード設定を取得する
+  SELECT cc.*
+    INTO v_credit_card
+    FROM credit_cards cc
+   WHERE cc.liability_account_id = NEW.account_id
+     AND cc.user_id = NEW.user_id
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'credit_card setting not found: liability_account_id=%', NEW.account_id;
+  END IF;
+
+  -- 引き落とし口座の種別を、貸方の支払方法にそのまま使うため取得する
+  SELECT aa.asset_type
+    INTO v_bank_asset_type
+    FROM asset_accounts aa
+   WHERE aa.id = v_credit_card.bank_account_id
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'credit_card setting not found: bank_account_id=%', v_credit_card.bank_account_id;
+  END IF;
+
+  SELECT j.*
+    INTO v_original_journal
+    FROM journals j
+   WHERE j.id = NEW.journal_id
+  ;
+
+  v_payment_date := get_payment_date(
+    v_credit_card.cutoff_day,
+    v_credit_card.payment_day,
+    v_original_journal.journal_dt
+  );
+
+  -- 引き落とし仕訳を作成する
+  INSERT INTO journals (
+    journal_dt, store_name, user_id
+  ) VALUES (
+    v_payment_date,
+    v_original_journal.store_name,
+    v_original_journal.user_id
+  )
+  RETURNING id INTO v_direct_debit_journal_id;
+
+  -- カード払いの仕訳と引き落とし仕訳を紐付ける
+  INSERT INTO direct_debit_journals (
+    original_id, direct_debit_id, user_id
+  ) VALUES (
+    v_original_journal.id,
+    v_direct_debit_journal_id,
+    v_original_journal.user_id
+  );
+
+  -- 貸方: 引き落とし口座
+  INSERT INTO credits (
+    journal_id, element_type, payment_method_type, account_id, amount, user_id
+  ) VALUES (
+    v_direct_debit_journal_id,
+    ELEMENT_ASSETS,
+    v_bank_asset_type,
+    v_credit_card.bank_account_id,
+    NEW.amount,
+    v_original_journal.user_id
+  );
+
+  -- 元の仕訳の項目名を集約して、借方の項目名にする
+  SELECT STRING_AGG(d.item_name, ',' ORDER BY d.id)
+    INTO v_item_names
+    FROM debits d
+   WHERE d.journal_id = v_original_journal.id
+  ;
+
+  -- 借方: カード（負債）の支払い
+  INSERT INTO debits (
+    journal_id, element_type, account_id, item_name, amount, user_id
+  ) VALUES (
+    v_direct_debit_journal_id,
+    ELEMENT_LIABILITIES,
+    NEW.account_id,
+    v_item_names,
+    NEW.amount,
+    v_original_journal.user_id
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: get_last_date_of_month(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_last_date_of_month(y integer, m integer) RETURNS date
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_first_date_of_next_month DATE;
+BEGIN
+  v_first_date_of_next_month := (MAKE_DATE(y, m, 1) + INTERVAL '1 month')::DATE;
+
+  RETURN v_first_date_of_next_month - 1;
+END;
+$$;
+
+
+--
+-- Name: get_next_business_day(date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_next_business_day(p_date date) RETURNS date
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_date DATE := p_date;
+  SUNDAY CONSTANT INT := 0;
+  SATURDAY CONSTANT INT := 6;
+BEGIN
+  LOOP
+    -- 土日なら翌日へ
+    IF EXTRACT(DOW FROM v_date) IN (SUNDAY, SATURDAY) THEN
+      v_date := v_date + 1;
+      CONTINUE;
+    END IF;
+
+    -- 祝日・銀行休日なら翌日へ（holidays に未登録の期間は土日のみで判定される）
+    IF EXISTS (SELECT 1 FROM holidays h WHERE h.holiday = v_date) THEN
+      v_date := v_date + 1;
+      CONTINUE;
+    END IF;
+
+    EXIT;
+  END LOOP;
+
+  RETURN v_date;
+END;
+$$;
+
+
+--
+-- Name: get_payment_date(integer, integer, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_payment_date(cutoff_day integer, payment_day integer, journal_date date) RETURNS date
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_first_date_of_month DATE;
+  v_cutoff_date DATE;
+  v_months_ahead INT;
+  v_payment_month DATE;
+  v_payment_date DATE;
+BEGIN
+  v_first_date_of_month := DATE_TRUNC('month', journal_date)::DATE;
+
+  -- 30・31 日締めのように月に存在しない日は、その月の末日に丸める
+  v_cutoff_date := LEAST(
+    v_first_date_of_month + (cutoff_day - 1),
+    get_last_date_of_month(
+      EXTRACT(YEAR FROM journal_date)::INT,
+      EXTRACT(MONTH FROM journal_date)::INT
+    )
+  );
+
+  -- 締日が支払日より前なら当月払い・翌月払い、締日が支払日以降なら翌月払い・翌々月払い
+  IF cutoff_day < payment_day THEN
+    v_months_ahead := CASE WHEN journal_date <= v_cutoff_date THEN 0 ELSE 1 END;
+  ELSE
+    v_months_ahead := CASE WHEN journal_date <= v_cutoff_date THEN 1 ELSE 2 END;
+  END IF;
+
+  v_payment_month := (v_first_date_of_month + (v_months_ahead * INTERVAL '1 month'))::DATE;
+
+  -- 支払日も月に存在しない日（2 月 30 日など）は末日に丸める
+  v_payment_date := LEAST(
+    v_payment_month + (payment_day - 1),
+    get_last_date_of_month(
+      EXTRACT(YEAR FROM v_payment_month)::INT,
+      EXTRACT(MONTH FROM v_payment_month)::INT
+    )
+  );
+
+  RETURN get_next_business_day(v_payment_date);
+END;
+$$;
+
+
+--
 -- Name: insert_journal_entry(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1175,6 +1386,13 @@ CREATE UNIQUE INDEX index_users_on_name ON public.users USING btree (name);
 
 
 --
+-- Name: credits credits_after_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER credits_after_insert AFTER INSERT ON public.credits FOR EACH ROW EXECUTE FUNCTION public.credits_after_insert_fn();
+
+
+--
 -- Name: asset_accounts trigger_update_updated_at_of_asset_accounts; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1402,6 +1620,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029061000'),
 ('20261029060000'),
 ('20261028120000'),
 ('20261028090000'),

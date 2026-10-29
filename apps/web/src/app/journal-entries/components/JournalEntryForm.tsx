@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createJournalEntry } from "../actions/createJournalEntry";
 import { ExpenseAccount, getExpenseAccounts } from "@/lib/masters/expenseAccounts";
 import { getAssetAccounts } from "@/lib/masters/assetAccounts";
@@ -46,6 +47,11 @@ function emptyCreditLine(): CreditLine {
   return { key: nextKey(), paymentAccountId: "", amount: "" };
 }
 
+// 認証切れ（BFF がトークン Cookie を破棄済み）の場合は、ログイン画面へ誘導する。
+function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 function sumAmounts(amounts: string[]) {
   return amounts.reduce((total, a) => total + (Number(a) || 0), 0);
 }
@@ -66,8 +72,12 @@ function extractErrorMessage(error: unknown): string {
       return data.message;
     }
 
-    if (error.status === 401) {
-      return "認証の有効期限が切れました。再度ログインしてください。";
+    if (data?.error === "account_not_found") {
+      return "選択した勘定科目が見つかりません。画面を再読み込みしてください。";
+    }
+
+    if (data?.error === "credit_card_setting_not_found") {
+      return "クレジットカードの引き落とし設定が見つかりません。";
     }
   }
 
@@ -75,6 +85,7 @@ function extractErrorMessage(error: unknown): string {
 }
 
 export default function JournalEntryForm() {
+  const router = useRouter();
   const [date, setDate] = useState("");
   const [storeName, setStoreName] = useState("");
   const [debitLines, setDebitLines] = useState<DebitLine[]>([emptyDebitLine()]);
@@ -87,9 +98,18 @@ export default function JournalEntryForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    const handleMasterError = (message: string) => (error: unknown) => {
+      if (isUnauthorized(error)) {
+        router.replace("/login");
+        return;
+      }
+
+      setErrorMessage(message);
+    };
+
     getExpenseAccounts()
       .then(setExpenseAccounts)
-      .catch(() => setErrorMessage("勘定科目の取得に失敗しました。時間をおいて再度お試しください。"));
+      .catch(handleMasterError("勘定科目の取得に失敗しました。時間をおいて再度お試しください。"));
 
     Promise.all([getAssetAccounts(), getLiabilityAccounts()])
       .then(([assetAccounts, liabilityAccounts]) => {
@@ -98,8 +118,8 @@ export default function JournalEntryForm() {
           ...liabilityAccounts.map((a) => ({ ...a, category: "liability" as const }))
         ]);
       })
-      .catch(() => setErrorMessage("支払い方法の取得に失敗しました。時間をおいて再度お試しください。"));
-  }, []);
+      .catch(handleMasterError("支払い方法の取得に失敗しました。時間をおいて再度お試しください。"));
+  }, [router]);
 
   const debitTotal = sumAmounts(debitLines.map((l) => l.amount));
   const creditTotal = sumAmounts(creditLines.map((l) => l.amount));
@@ -157,6 +177,11 @@ export default function JournalEntryForm() {
       setDebitLines([emptyDebitLine()]);
       setCreditLines([emptyCreditLine()]);
     } catch (error) {
+      if (isUnauthorized(error)) {
+        router.replace("/login");
+        return;
+      }
+
       setStatus("error");
       setErrorMessage(extractErrorMessage(error));
     }
