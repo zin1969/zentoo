@@ -1,0 +1,78 @@
+AccountBalance:
+  type: object
+  required:
+    - account_id
+    - account_name
+    - balance
+  properties:
+    account_id:
+      type: integer
+    account_name:
+      type: string
+    balance:
+      type: integer
+      description: 資産は借方 − 貸方、負債は貸方 − 借方（未払いの額）
+
+AccountBalances:
+  type: object
+  required:
+    - date
+    - assets
+    - liabilities
+    - total_assets
+    - total_liabilities
+    - net_assets
+  properties:
+    date:
+      type: string
+      format: date
+      description: 基準日
+    assets:
+      type: array
+      items:
+        $ref: '#/AccountBalance'
+    liabilities:
+      type: array
+      items:
+        $ref: '#/AccountBalance'
+    total_assets:
+      type: integer
+    total_liabilities:
+      type: integer
+    net_assets:
+      type: integer
+      description: total_assets − total_liabilities
+
+MonthlyExpense:
+  type: object
+  required:
+    - account_id
+    - account_name
+    - amount
+  properties:
+    account_id:
+      type: integer
+    account_name:
+      type: string
+    amount:
+      type: integer
+
+MonthlyExpenses:
+  type: object
+  required:
+    - month
+    - total
+    - items
+  properties:
+    month:
+      type: string
+      description: 対象月（`YYYY-MM`）
+      examples:
+        - '2026-10'
+    total:
+      type: integer
+    items:
+      type: array
+      description: 金額の大きい順
+      items:
+        $ref: '#/MonthlyExpense'

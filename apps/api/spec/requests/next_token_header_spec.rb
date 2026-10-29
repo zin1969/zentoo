@@ -8,7 +8,7 @@ RSpec.describe 'X-Next-Token header on read APIs', type: :request do
   let(:user) { create(:user, :masa) }
   let(:headers) { { 'Authorization' => "Bearer #{TokenManager.new.issue_next_token(user)}" } }
 
-  paths = %w[/asset-accounts /liability-accounts /expense-accounts /journals]
+  paths = %w[/asset-accounts /liability-accounts /expense-accounts /journals /account-balances /monthly-expenses]
 
   paths.each do |path|
     describe "GET #{path}" do

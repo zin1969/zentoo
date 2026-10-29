@@ -20,6 +20,8 @@ tags:
     description: 勘定科目マスタ
   - name: journals
     description: 仕訳
+  - name: reports
+    description: 残高・支出の集計
 
 paths:
   /login:
@@ -36,6 +38,10 @@ paths:
     $ref: './paths/journals.yaml#/asset-opening-journals'
   /journal-entries:
     $ref: './paths/journals.yaml#/journal-entries'
+  /account-balances:
+    $ref: './paths/reports.yaml#/account-balances'
+  /monthly-expenses:
+    $ref: './paths/reports.yaml#/monthly-expenses'
 
 components:
   securitySchemes:
@@ -64,3 +70,11 @@ components:
       $ref: './schemas/journals.yaml#/JournalList'
     Journal:
       $ref: './schemas/journals.yaml#/Journal'
+    AccountBalance:
+      $ref: './schemas/reports.yaml#/AccountBalance'
+    AccountBalances:
+      $ref: './schemas/reports.yaml#/AccountBalances'
+    MonthlyExpense:
+      $ref: './schemas/reports.yaml#/MonthlyExpense'
+    MonthlyExpenses:
+      $ref: './schemas/reports.yaml#/MonthlyExpenses'

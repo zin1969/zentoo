@@ -227,6 +227,57 @@ $$;
 
 
 --
+-- Name: get_account_balances(integer, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_account_balances(user_id integer, as_of_date date) RETURNS TABLE(element_type integer, account_id bigint, account_name text, balance bigint)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_LIABILITIES CONSTANT INT := 2;
+BEGIN
+  -- 指定日（含む）までの仕訳から、資産・負債科目ごとの借方合計・貸方合計を求める
+  -- 資産の残高は「借方 - 貸方」、負債の残高（未払いの額）は「貸方 - 借方」
+  RETURN QUERY
+  WITH movements AS (
+    SELECT d.element_type, d.account_id, d.amount::BIGINT AS debit_amount, 0::BIGINT AS credit_amount
+      FROM debits d
+      JOIN journals j ON j.id = d.journal_id
+     WHERE j.user_id = get_account_balances.user_id
+       AND j.journal_dt <= as_of_date
+       AND d.element_type IN (ELEMENT_ASSETS, ELEMENT_LIABILITIES)
+    UNION ALL
+    SELECT c.element_type, c.account_id, 0::BIGINT, c.amount::BIGINT
+      FROM credits c
+      JOIN journals j ON j.id = c.journal_id
+     WHERE j.user_id = get_account_balances.user_id
+       AND j.journal_dt <= as_of_date
+       AND c.element_type IN (ELEMENT_ASSETS, ELEMENT_LIABILITIES)
+  ), totals AS (
+    SELECT m.element_type, m.account_id,
+           SUM(m.debit_amount) AS debit_total,
+           SUM(m.credit_amount) AS credit_total
+      FROM movements m
+     GROUP BY m.element_type, m.account_id
+  )
+  SELECT ELEMENT_ASSETS, aa.id::BIGINT, aa.name,
+         (COALESCE(t.debit_total, 0) - COALESCE(t.credit_total, 0))::BIGINT
+    FROM asset_accounts aa
+    LEFT JOIN totals t ON t.element_type = ELEMENT_ASSETS AND t.account_id = aa.id
+   WHERE aa.user_id = get_account_balances.user_id
+  UNION ALL
+  SELECT ELEMENT_LIABILITIES, la.id::BIGINT, la.name,
+         (COALESCE(t.credit_total, 0) - COALESCE(t.debit_total, 0))::BIGINT
+    FROM liability_accounts la
+    LEFT JOIN totals t ON t.element_type = ELEMENT_LIABILITIES AND t.account_id = la.id
+   WHERE la.user_id = get_account_balances.user_id
+  ORDER BY 1, 2;
+END;
+$$;
+
+
+--
 -- Name: get_last_date_of_month(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -239,6 +290,36 @@ BEGIN
   v_first_date_of_next_month := (MAKE_DATE(y, m, 1) + INTERVAL '1 month')::DATE;
 
   RETURN v_first_date_of_next_month - 1;
+END;
+$$;
+
+
+--
+-- Name: get_monthly_expenses(integer, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_monthly_expenses(user_id integer, target_month date) RETURNS TABLE(account_id bigint, account_name text, amount bigint)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_month_start DATE;
+  ELEMENT_EXPENSES CONSTANT INT := 5;
+BEGIN
+  -- target_month は月内のどの日付でもよい
+  v_month_start := DATE_TRUNC('month', target_month)::DATE;
+
+  -- 仕訳日が当月の費用科目の借方を、科目ごとに合計する（金額の大きい順）
+  RETURN QUERY
+  SELECT ea.id::BIGINT, ea.name, SUM(d.amount)::BIGINT
+    FROM debits d
+    JOIN journals j ON j.id = d.journal_id
+    JOIN expense_accounts ea ON ea.id = d.account_id
+   WHERE d.element_type = ELEMENT_EXPENSES
+     AND j.user_id = get_monthly_expenses.user_id
+     AND j.journal_dt >= v_month_start
+     AND j.journal_dt < (v_month_start + INTERVAL '1 month')::DATE
+   GROUP BY ea.id, ea.name
+   ORDER BY SUM(d.amount) DESC, ea.id;
 END;
 $$;
 
@@ -1620,6 +1701,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029062000'),
 ('20261029061000'),
 ('20261029060000'),
 ('20261028120000'),
