@@ -93,6 +93,8 @@
 
 **方針**: 最初は単一 VPS に Kamal で置き、いずれ PaaS に移す。移しやすいよう、特定の置き場所に依存させない（設定は環境変数、DB 接続は `DATABASE_URL` またはホスト指定、イメージは Kamal 専用にしない）。Cookie は production で secure にしているので、HTTPS（ドメイン）が必須。
 
+**本番のデータ**: 空の DB から始め、開発 DB のデータは移さない。seed（共通の費用科目・資本科目、祝日、ユーザーと各口座・カード）を入れたあと、開始資産・開始負債を画面から登録する。
+
 - [ ] 本番用の Dockerfile（`apps/api/Dockerfile`、`apps/web/Dockerfile`）を作り、イメージのビルドと起動を確認する（本番は DB を 1 つにし、Solid Queue / Cache / Cable の DB を持たない）
 - [ ] 本番のシークレット管理（`SECRET_KEY_BASE`、`JWT_SECRET_KEY` を環境変数で渡す。`RAILS_MASTER_KEY` は使わない）と、初期データ（seed）の入れ方を手順書にする
 - [ ] Kamal の設定（`deploy.yml` を実値にする。Rails は外部に公開せず Next.js からだけ呼ぶ）と、VPS・ドメイン・イメージ置き場の準備
