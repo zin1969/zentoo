@@ -3,6 +3,11 @@
 # If running the rails server then create or migrate existing database
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
+
+  # db:prepare は DB を新しく作ったときにしか seed を実行しない。初回起動で SEED_USER_PASSWORD を付け忘れて
+  # seed が途中で失敗しても、環境変数を足して再起動すれば seed をやり直せるよう、
+  # ログインできるユーザー（パスワードを持つユーザー）がいなければ seed を実行する
+  ./bin/rails runner 'exit(User.where.not(password_digest: nil).exists? ? 0 : 1)' || ./bin/rails db:seed
 fi
 
 exec "${@}"
