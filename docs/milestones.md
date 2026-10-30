@@ -84,12 +84,20 @@
 
 **到達点**: 自分のスマホやブラウザから、本番環境で使える。
 
-- [ ] `apps/api` の本番用 Dockerfile を作成し、`deploy.yml` を実値にする
-- [ ] Web のデプロイ方法を決めて整備する
-- [ ] 本番のシークレット管理（`RAILS_MASTER_KEY`、JWT 秘密鍵）
-- [ ] バックアップ（PostgreSQL）の方針
+**準備**: 本番で実際に使い始める前に、未払いのカードの開始残高を登録できるようにする（M2 のカード払いと M3 の残高に関わるため。開始資産登録の負債版）。
 
-**完了条件**: 本番環境で M1〜M3 の操作が一通りできる。
+- [ ] 開始負債の登録（DB 関数 `create_opening_liability_balance_journal`。借方: 元入金、貸方: カード。引き落とし仕訳は、指定した引き落とし日で自動的に作る）
+- [ ] 開始負債の API（`POST /liability-opening-journals`）と画面（開始日・カード・未払いの金額・引き落とし日）、トップページの導線
+
+**方針**: 最初は単一 VPS に Kamal で置き、いずれ PaaS に移す。移しやすいよう、特定の置き場所に依存させない（設定は環境変数、DB 接続は `DATABASE_URL` またはホスト指定、イメージは Kamal 専用にしない）。Cookie は production で secure にしているので、HTTPS（ドメイン）が必須。
+
+- [ ] 本番用の Dockerfile（`apps/api/Dockerfile`、`apps/web/Dockerfile`）を作り、イメージのビルドと起動を確認する（本番は DB を 1 つにし、Solid Queue / Cache / Cable の DB を持たない）
+- [ ] 本番のシークレット管理（`SECRET_KEY_BASE`、`JWT_SECRET_KEY` を環境変数で渡す。`RAILS_MASTER_KEY` は使わない）と、初期データ（seed）の入れ方を手順書にする
+- [ ] Kamal の設定（`deploy.yml` を実値にする。Rails は外部に公開せず Next.js からだけ呼ぶ）と、VPS・ドメイン・イメージ置き場の準備
+- [ ] PostgreSQL の運用（VPS 上のコンテナ）と、日次バックアップ（別の場所へ保管）・復元の確認
+- [ ] 本番で M1〜M4 の操作を一通り行う（スマホから確認）
+
+**完了条件**: 本番環境で M1〜M4 の操作が一通りできる。
 
 ## 後回し（いまは着手しない）
 

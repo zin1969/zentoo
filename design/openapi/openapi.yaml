@@ -38,6 +38,8 @@ paths:
     $ref: './paths/journals.yaml#/asset-opening-journals'
   /journal-entries:
     $ref: './paths/journals.yaml#/journal-entries'
+  /liability-opening-journals:
+    $ref: './paths/journals.yaml#/liability-opening-journals'
   /cash-deposit-journals:
     $ref: './paths/journals.yaml#/cash-deposit-journals'
   /account-balances:
@@ -64,6 +66,8 @@ components:
       $ref: './schemas/accounts.yaml#/ExpenseAccount'
     CreateOpeningAssetBalanceJournalRequest:
       $ref: './schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
+    CreateOpeningLiabilityBalanceJournalRequest:
+      $ref: './schemas/journals.yaml#/CreateOpeningLiabilityBalanceJournalRequest'
     CreateCashDepositJournalRequest:
       $ref: './schemas/journals.yaml#/CreateCashDepositJournalRequest'
     JournalCreatedResponse:

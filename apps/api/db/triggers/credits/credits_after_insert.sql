@@ -10,6 +10,7 @@ DECLARE
   ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
+  DIRECT_DEBIT_PAYMENT_DATE_SETTING CONSTANT TEXT := 'app.direct_debit_payment_date';
 BEGIN
   -- カード払い以外は何もしない
   IF NOT (NEW.element_type = ELEMENT_LIABILITIES AND NEW.payment_method_type = PAYMENT_METHOD_CREDIT_CARD) THEN
@@ -45,11 +46,17 @@ BEGIN
    WHERE j.id = NEW.journal_id
   ;
 
-  v_payment_date := get_payment_date(
-    v_credit_card.cutoff_day,
-    v_credit_card.payment_day,
-    v_original_journal.journal_dt
-  );
+  -- 引き落とし日が呼び出し元（開始負債の登録）から指定されていれば、それを使う。
+  -- 指定がなければ、カードの締日・支払日と仕訳日から計算する
+  v_payment_date := NULLIF(current_setting(DIRECT_DEBIT_PAYMENT_DATE_SETTING, TRUE), '')::DATE;
+
+  IF v_payment_date IS NULL THEN
+    v_payment_date := get_payment_date(
+      v_credit_card.cutoff_day,
+      v_credit_card.payment_day,
+      v_original_journal.journal_dt
+    );
+  END IF;
 
   -- 引き落とし仕訳を作成する
   INSERT INTO journals (

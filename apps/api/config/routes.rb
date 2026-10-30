@@ -13,6 +13,7 @@ Rails.application.routes.draw do
   get "/account-balances", to: "reports/account_balances#index"
   get "/monthly-expenses", to: "reports/monthly_expenses#index"
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"
+  post "/liability-opening-journals", to: "journals/liability_opening_journals#create"
   post "/journal-entries", to: "journals/journal_entries#create"
   post "/cash-deposit-journals", to: "journals/cash_deposit_journals#create"
 

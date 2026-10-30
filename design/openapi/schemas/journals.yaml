@@ -48,6 +48,38 @@ CreateCashDepositJournalRequest:
       examples:
         - 45000
 
+CreateOpeningLiabilityBalanceJournalRequest:
+  type: object
+  description: ユーザー ID はトークンから決まるため、リクエストに含めても無視される。
+  required:
+    - journal_date
+    - liability_account_id
+    - amount
+    - payment_date
+  properties:
+    journal_date:
+      type: string
+      format: date
+      description: 開始日（開始資産の登録と同じ日にそろえる）
+      examples:
+        - '2026-10-30'
+    liability_account_id:
+      type: integer
+      description: カード（負債科目）の ID（`GET /liability-accounts`）
+    amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 未払いの金額
+      examples:
+        - 30000
+    payment_date:
+      type: string
+      format: date
+      description: 引き落とし日（カードの明細にある支払日）。開始日以降。土日・祝日でもずらさない。
+      examples:
+        - '2026-11-10'
+
 JournalCreatedResponse:
   type: object
   required:
