@@ -25,7 +25,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - 「完了」は次の 4 つがそろったとき: API（RSpec）、Web 画面（実機確認）、仕様書（OpenAPI と `apps/api/docs/interfaces/rest`）、CI が緑。
 - 役割分担:
   - ユーザーが `git_zin1969 push origin main` で push し、Docker / Vagrant のコマンドを実行して出力を貼る。
-  - アシスタントはファイルを編集し、ローカルでコミットする。コミットの末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` を付ける。
+  - アシスタントはファイルを編集し、ローカルでコミットする。コミットの末尾に、作業したモデルの `Co-Authored-By` を付ける。
 - Mac には node / npm / docker がない。Docker は Vagrant の中で動く。
 
 ## 現在の状態
@@ -34,9 +34,9 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - 追加で完了したもの: 開始負債の登録、ダミー費用科目 `root` の廃止（親なし = トップレベル）。
 - **M5「外から使える」を進行中**。
   - 完了: 本番用 Dockerfile（API と Web）、シークレット管理と seed の手順書（`docs/deployment.md`）。
-  - 未完了: Kamal の設定、VPS・ドメイン・イメージ置き場の準備、PostgreSQL の運用とバックアップ、本番での通し確認。
-- `a3a29b7`（本番手順書の追加）までコミット済み。`d068af3` より後のコミットは**未 push**の可能性がある（約 8 件）。push して api-ci / web-ci を確認すること。
-- 作業ツリーはこの `HANDOFF.md` を除いてクリーン。
+  - 作成済みで実機は未確認: Kamal の設定（`apps/api/config/deploy.yml`、`deploy_web.yml`）、VPS 初期設定の手順書、バックアップ（`ops/backup_postgres.sh`）。`kamal config` もまだ通していない。
+  - 未完了: VPS・ドメイン・イメージ置き場の準備、デプロイ、バックアップと復元の確認、本番での通し確認。
+- `cb634f5` までは push 済みで、最後にコードが変わったコミットの api-ci / web-ci は緑（2026-10-30 に GitHub Actions で確認）。Kamal の設定のコミットは未 push。
 
 ## 決めたこと
 
@@ -55,19 +55,13 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 
 ### M5（次にやること）
 
-ユーザーが VPS・ドメイン・レジストリを用意したら、次の情報を受け取る（秘密は貼らない）:
+次は、ユーザーが `docs/deployment.md` の「Xserver VPS + Kamal」を順に実行する。IP アドレス・ドメイン・秘密情報はリポジトリに書かない（公開リポジトリ。Vagrant の `~/.zentoo-kamal.env` に置く）。
 
-1. VPS の IP アドレス
-2. 使うドメイン（サブドメイン）
-3. GitHub のユーザー名（ghcr.io のイメージ名に使う）
-
-その後:
-
-- [ ] VPS の初期設定の手順書（一般ユーザー、ssh は公開鍵のみ、root とパスワードでのログインを無効化、ファイアウォール、自動更新）。Xserver VPS はパケットフィルターが別にあるので、22・80・443 を許可する。
-- [ ] `apps/api/config/deploy.yml` を Kamal 用に書き直す（いまは Rails 生成のままで、`SOLID_QUEUE_IN_PUMA` や `localhost:5555` が残っている）。Rails と Next.js の 2 サービス、PostgreSQL は VPS 上のコンテナ、Rails は非公開。
-- [ ] PostgreSQL の日次バックアップ（VPS の外に保管）と、復元の確認。
+- [ ] VPS の準備と初期設定、DNS、GitHub のトークン。
+- [ ] `kamal config` の確認と初回デプロイ。設定を実機で直す可能性がある（特に proxy なしの Rails の起動待ちと、`deploy_web.yml` のビルドのパス）。
+- [ ] バックアップの保管先を決めて（rclone）、日次バックアップと復元を確認。
 - [ ] 本番でスマホから M1〜M4 を通し確認（チェックリストは `docs/deployment.md`）。
-- [ ] `docs/deployment.md` の「置き場所ごとの設定」を埋める。`docs/milestones.md` の M5 を更新する。
+- [ ] `docs/milestones.md` の M5 を更新する。
 
 ### M5 のあと（候補。未着手）
 

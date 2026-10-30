@@ -97,8 +97,8 @@
 
 - [x] 本番用の Dockerfile（`apps/api/Dockerfile`、`apps/web/Dockerfile`）を作り、イメージのビルドと起動を確認する（本番は DB を 1 つにし、Solid Queue / Cache / Cable の DB を持たない）
 - [x] 本番のシークレット管理（`SECRET_KEY_BASE`、`JWT_SECRET_KEY` を環境変数で渡す。`RAILS_MASTER_KEY` は使わない）と、初期データ（seed）の入れ方を手順書にする（[deployment.md](deployment.md)。置き場所ごとの設定は、準備が済んでから追記する）
-- [ ] Kamal の設定（`deploy.yml` を実値にする。Rails は外部に公開せず Next.js からだけ呼ぶ）と、VPS・ドメイン・イメージ置き場の準備
-- [ ] PostgreSQL の運用（VPS 上のコンテナ）と、日次バックアップ（別の場所へ保管）・復元の確認
+- [ ] Kamal の設定（Rails は外部に公開せず Next.js からだけ呼ぶ）と、VPS・ドメイン・イメージ置き場の準備（設定と手順書は作成済み。実機では未確認。IP などの実値は環境変数で渡す）
+- [ ] PostgreSQL の運用（VPS 上のコンテナ）と、日次バックアップ（別の場所へ保管）・復元の確認（スクリプトと手順書は作成済み。実機では未確認）
 - [ ] 本番で M1〜M4 の操作を一通り行う（スマホから確認）
 
 **完了条件**: 本番環境で M1〜M4 の操作が一通りできる。

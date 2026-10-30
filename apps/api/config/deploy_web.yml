@@ -1,0 +1,38 @@
+# Next.js の Kamal 設定。Rails API と PostgreSQL は config/deploy.yml。手順は docs/deployment.md。
+# Kamal は apps/api から実行するので、パスは apps/api からの相対パスで書く。
+service: zentoo-web
+
+image: <%= ENV.fetch("ZENTOO_REGISTRY_USER") %>/zentoo-web
+
+servers:
+  web:
+    - <%= ENV.fetch("ZENTOO_HOST") %>
+
+# 公開するのはこのサービスだけ。TLS は kamal-proxy で終端し、Let's Encrypt の証明書を自動で取る
+proxy:
+  ssl: true
+  host: <%= ENV.fetch("ZENTOO_DOMAIN") %>
+  app_port: 3000
+  healthcheck:
+    path: /login
+
+registry:
+  server: ghcr.io
+  username: <%= ENV.fetch("ZENTOO_REGISTRY_USER") %>
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    RAILS_API_URL: http://zentoo-api:3000
+
+aliases:
+  logs: app logs -f
+
+builder:
+  arch: amd64
+  context: ../web
+  dockerfile: ../web/Dockerfile
+
+ssh:
+  user: deploy

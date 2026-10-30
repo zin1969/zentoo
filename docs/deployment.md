@@ -2,7 +2,7 @@
 
 本番で動かすための設定と手順。開発の手順は [development.md](development.md)、現在地は [milestones.md](milestones.md) を参照。
 
-このドキュメントは、置き場所（VPS + Kamal、将来の PaaS）に依存しない部分を書く。置き場所ごとの設定（Kamal の `deploy.yml`、バックアップなど）は、準備が済んでから「置き場所ごとの設定」に追記する。
+前半は、置き場所（VPS + Kamal、将来の PaaS）に依存しない部分を書く。Kamal の設定やバックアップなどは「置き場所ごとの設定」に書く。
 
 ## 構成の考え方
 
@@ -148,9 +148,199 @@ docker exec docker-compose-db-1 psql -U postgres -c "DROP DATABASE app_productio
 
 ## 置き場所ごとの設定
 
-VPS・ドメイン・イメージ置き場の準備が済んでから書く。
+### Xserver VPS + Kamal
 
-- Kamal の設定（`config/deploy.yml`）: Rails と Next.js の 2 つのサービス、公開するのは Next.js だけ
-- PostgreSQL の運用（VPS 上のコンテナ）
-- 日次バックアップ（別の場所へ保管）と、復元の確認
-- PaaS へ移すときの対応表
+構成は VPS 1 台。リポジトリは公開なので、IP アドレスと秘密情報はリポジトリに書かず、環境変数で渡す。
+
+```text
+kamal-proxy (80, 443) ──▶ zentoo-web ──▶ zentoo-api ──▶ zentoo-api-db
+                          公開            kamal ネットワークの中だけ
+```
+
+| 設定ファイル | 内容 |
+|--------------|------|
+| `apps/api/config/deploy.yml` | Rails API（proxy なし）と PostgreSQL（accessory） |
+| `apps/api/config/deploy_web.yml` | Next.js（proxy、HTTPS） |
+| `apps/api/.kamal/secrets` | 秘密情報の受け渡し（値は環境変数から） |
+
+#### 1. VPS の初期設定
+
+Ubuntu 24.04、メモリ 2 GB 以上で作る。Xserver VPS の管理画面のパケットフィルターで、**22、80、443 だけ**を許可する。
+
+root でログインして、一般ユーザーを作り、Docker を入れる。`<公開鍵>` は Vagrant で使う ssh の公開鍵に置き換える。
+
+```
+adduser --disabled-password --gecos "" deploy
+usermod -aG sudo deploy
+mkdir -p /home/deploy/.ssh
+echo "<公開鍵>" > /home/deploy/.ssh/authorized_keys
+chown -R deploy:deploy /home/deploy/.ssh
+chmod 700 /home/deploy/.ssh
+chmod 600 /home/deploy/.ssh/authorized_keys
+passwd deploy
+
+apt-get update && apt-get -y upgrade
+apt-get install -y docker.io unattended-upgrades rclone ufw
+usermod -aG docker deploy
+dpkg-reconfigure -f noninteractive unattended-upgrades
+
+ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp
+ufw --force enable
+```
+
+**今の接続を切らずに**、別のターミナルで `ssh deploy@<IP>` と `sudo -v` が通ることを確認してから、ssh を公開鍵のみにする。
+
+```
+cat > /etc/ssh/sshd_config.d/99-hardening.conf <<'EOF'
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+EOF
+sshd -t && systemctl reload ssh
+```
+
+Docker が公開するポートは ufw を通らない。外に出るのは kamal-proxy の 80 と 443 だけで、DB と Rails はポートを公開しない設定にしてある。パケットフィルターも合わせて二重に守る。
+
+#### 2. ドメインとイメージ置き場
+
+- ドメイン（サブドメイン）の A レコードを、VPS の IP アドレスに向ける。証明書の取得に必要なので、デプロイの前に済ませる。
+- GitHub で、`write:packages` と `read:packages` を持つ個人アクセストークン（classic）を作る。
+
+#### 3. デプロイの準備（Vagrant）
+
+Kamal は、公式のコンテナイメージで Vagrant から実行する。Ruby は要らない。
+
+秘密情報は、リポジトリの外（`~/.zentoo-kamal.env`）に置く。Vagrant と共有しているリポジトリのフォルダには置かない。値はパスワード管理ツールにも保管する。**値に引用符を付けない**（`--env-file` はそのまま読む）。
+
+```
+touch ~/.zentoo-kamal.env
+chmod 600 ~/.zentoo-kamal.env
+```
+
+```
+ZENTOO_HOST=<VPS の IP アドレス>
+ZENTOO_DOMAIN=<サブドメイン>
+ZENTOO_REGISTRY_USER=<GitHub のユーザー名>
+KAMAL_REGISTRY_PASSWORD=<個人アクセストークン>
+SECRET_KEY_BASE=<openssl rand -hex 64 の結果>
+JWT_SECRET_KEY=<openssl rand -hex 32 の結果>
+DB_PASSWORD=<openssl rand -hex 32 の結果>
+SEED_USER_PASSWORD=<masa のパスワード>
+```
+
+次の関数を Vagrant の `~/.bashrc` に足して、読み込み直す。
+
+```
+kamal() {
+  docker run -it --rm \
+    --env-file "$HOME/.zentoo-kamal.env" \
+    -v "$(git rev-parse --show-toplevel):/workdir" \
+    -w /workdir/apps/api \
+    -v "$SSH_AUTH_SOCK:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    ghcr.io/basecamp/kamal:v2.12.0 "$@"
+}
+```
+
+ssh の鍵を ssh-agent に登録し、設定が読めることを確認する。
+
+```
+eval "$(ssh-agent -s)" && ssh-add
+kamal config
+kamal config -c config/deploy_web.yml
+```
+
+Xserver VPS は amd64。Vagrant が arm64（`uname -m` が `aarch64`）のときは、amd64 のビルドに必要なエミュレーションを入れる。
+
+```
+docker run --privileged --rm tonistiigi/binfmt --install amd64
+```
+
+#### 4. 初回デプロイ
+
+Rails → Next.js の順に実行する（Next.js は Rails の名前で接続するため）。`setup` は、PostgreSQL の起動、イメージのビルド、アプリの起動までを行う。
+
+```
+kamal setup
+kamal setup -c config/deploy_web.yml
+```
+
+`https://<サブドメイン>/login` が開いて、`masa` でログインできたら、`~/.zentoo-kamal.env` の `SEED_USER_PASSWORD` の行を消して、Rails をデプロイし直す。サーバーにパスワードを残さないため。
+
+```
+kamal deploy
+```
+
+そのあと、「開始残高の登録」と「動作確認のチェックリスト」に進む。
+
+#### 5. 2 回目以降のデプロイ
+
+コミットしてから、変えた方だけ実行する。Rails は git のコミットからビルドするので、**コミットしていない変更は入らない**。Next.js は作業ツリーからビルドするので、**コミットしていない変更も入る**。作業ツリーをきれいにしてから実行する。
+
+```
+kamal deploy
+kamal deploy -c config/deploy_web.yml
+```
+
+Rails の切り替えの間は、新旧のコンテナが短い時間だけ並んで動く。マイグレーションは新しいコンテナの起動時に走るので、古いコードが動かなくなるマイグレーションを入れるときは注意する。
+
+ログと、ひと通りの確認:
+
+```
+kamal logs
+kamal logs -c config/deploy_web.yml
+kamal accessory logs db
+```
+
+#### 6. 日次バックアップ
+
+`ops/backup_postgres.sh` を VPS の cron で毎日実行し、ダンプを rclone で VPS の外に保管する。ローカルに 7 日、外に 30 日残す。**中身は家計のデータなので、保管先では rclone の `crypt` で暗号化する**。
+
+Vagrant からスクリプトを送り、VPS の `deploy` ユーザーで rclone の保管先を設定する（保管先は rclone が対応するものなら何でもよい。名前は `zentoo-backup` とする）。
+
+```
+scp ops/backup_postgres.sh deploy@<IP>:~/backup_postgres.sh
+```
+
+```
+chmod 700 ~/backup_postgres.sh
+rclone config
+BACKUP_REMOTE=zentoo-backup:zentoo ~/backup_postgres.sh
+rclone ls zentoo-backup:zentoo
+```
+
+動いたら、`crontab -e` で登録する（サーバーの時刻は UTC。次は日本時間の 4 時）。
+
+```
+0 19 * * * BACKUP_REMOTE=zentoo-backup:zentoo $HOME/backup_postgres.sh >> $HOME/backup.log 2>&1
+```
+
+失敗しても通知は来ない。ときどき `~/backup.log` と保管先の日付を見る。
+
+**rclone の設定（`~/.config/rclone/rclone.conf`）は、パスワード管理ツールにも保管する**。VPS が消えると、これがないとバックアップを復号できない。
+
+#### 7. 復元の確認
+
+保管先のダンプを取り戻して、別の DB に復元する。本番の DB には触らない。初回と、ときどき実施する。`<ダンプ>` は `rclone ls` で確認したファイル名。
+
+```
+rclone copy zentoo-backup:zentoo/<ダンプ> /tmp/restore
+docker exec zentoo-api-db createdb -U zentoo restore_check
+docker exec -i zentoo-api-db pg_restore -U zentoo -d restore_check --no-owner < /tmp/restore/<ダンプ>
+docker exec zentoo-api-db psql -U zentoo -d restore_check -c "SELECT (SELECT count(*) FROM users) AS users, (SELECT count(*) FROM journals) AS journals"
+docker exec zentoo-api-db psql -U zentoo -d app_production -c "SELECT (SELECT count(*) FROM users) AS users, (SELECT count(*) FROM journals) AS journals"
+docker exec zentoo-api-db dropdb -U zentoo restore_check
+rm -rf /tmp/restore
+```
+
+2 つの件数が（ダンプのあとの登録分を除いて）合えば成功。本番を復元するときは、アプリを止めて（`kamal app stop`）から `pg_restore --clean --if-exists -d app_production` を使い、`kamal app boot` で戻す。
+
+### PaaS へ移すとき
+
+| VPS + Kamal | PaaS |
+|-------------|------|
+| `apps/api/Dockerfile`、`apps/web/Dockerfile` | そのまま使う |
+| `DB_HOST` など | マネージド DB の `DATABASE_URL` |
+| `RAILS_API_URL=http://zentoo-api:3000` | PaaS の内部ネットワークの URL |
+| kamal-proxy の HTTPS | PaaS の HTTPS。`Host` がそのまま Next.js に届くことを確認する |
+| `ops/backup_postgres.sh` | ダンプを取って移す。その後は PaaS のバックアップ |
