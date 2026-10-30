@@ -8,7 +8,7 @@
 
 # 進め方
 
-マイルストーン単位で進める。現在地と今後の予定は [milestones.md](milestones.md)、実装の現状は [inventory_2026-10-27.md](inventory_2026-10-27.md) を参照。
+マイルストーン単位で進める。現在地と今後の予定は [milestones.md](milestones.md)、本番環境の手順は [deployment.md](deployment.md)、実装の現状は [inventory_2026-10-27.md](inventory_2026-10-27.md) を参照。
 
 # 機能の大枠
 

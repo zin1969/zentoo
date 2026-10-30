@@ -96,7 +96,7 @@
 **本番のデータ**: 空の DB から始め、開発 DB のデータは移さない。seed（共通の費用科目・資本科目、祝日、ユーザーと各口座・カード）を入れたあと、開始資産・開始負債を画面から登録する。
 
 - [x] 本番用の Dockerfile（`apps/api/Dockerfile`、`apps/web/Dockerfile`）を作り、イメージのビルドと起動を確認する（本番は DB を 1 つにし、Solid Queue / Cache / Cable の DB を持たない）
-- [ ] 本番のシークレット管理（`SECRET_KEY_BASE`、`JWT_SECRET_KEY` を環境変数で渡す。`RAILS_MASTER_KEY` は使わない）と、初期データ（seed）の入れ方を手順書にする
+- [x] 本番のシークレット管理（`SECRET_KEY_BASE`、`JWT_SECRET_KEY` を環境変数で渡す。`RAILS_MASTER_KEY` は使わない）と、初期データ（seed）の入れ方を手順書にする（[deployment.md](deployment.md)。置き場所ごとの設定は、準備が済んでから追記する）
 - [ ] Kamal の設定（`deploy.yml` を実値にする。Rails は外部に公開せず Next.js からだけ呼ぶ）と、VPS・ドメイン・イメージ置き場の準備
 - [ ] PostgreSQL の運用（VPS 上のコンテナ）と、日次バックアップ（別の場所へ保管）・復元の確認
 - [ ] 本番で M1〜M4 の操作を一通り行う（スマホから確認）
