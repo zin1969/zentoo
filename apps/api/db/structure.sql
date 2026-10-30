@@ -1914,6 +1914,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029065000'),
 ('20261029064000'),
 ('20261029063000'),
 ('20261029062000'),

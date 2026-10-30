@@ -8,11 +8,6 @@ FactoryBot.define do
       user { nil }
     end
 
-    trait :root do
-      name { "root" }
-      parent { nil }
-    end
-
     trait :food do
       name { "食費" }
     end
