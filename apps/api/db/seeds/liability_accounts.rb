@@ -5,7 +5,9 @@ masa = User.find_by!(name: "masa")
 [
   "JAL",
   "enoteca",
+  "d card",
   "tcard",
+  "LIFE",
   "PayPay"
 ].each do |name|
   LiabilityAccount.find_or_create_by!(

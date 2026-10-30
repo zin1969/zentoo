@@ -17,7 +17,19 @@ definitions = [
     payment_day: 10
   },
   {
+    liability_name: "d card",
+    bank_account: mufg_yoga,
+    cutoff_day: 15,
+    payment_day: 10
+  },
+  {
     liability_name: "tcard",
+    bank_account: mufg_yoga,
+    cutoff_day: 10,
+    payment_day: 27
+  },
+  {
+    liability_name: "LIFE",
     bank_account: mufg_yoga,
     cutoff_day: 10,
     payment_day: 27
