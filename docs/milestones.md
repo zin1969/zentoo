@@ -86,8 +86,8 @@
 
 **準備**: 本番で実際に使い始める前に、未払いのカードの開始残高を登録できるようにする（M2 のカード払いと M3 の残高に関わるため。開始資産登録の負債版）。
 
-- [ ] 開始負債の登録（DB 関数 `create_opening_liability_balance_journal`。借方: 元入金、貸方: カード。引き落とし仕訳は、指定した引き落とし日で自動的に作る）
-- [ ] 開始負債の API（`POST /liability-opening-journals`）と画面（開始日・カード・未払いの金額・引き落とし日）、トップページの導線
+- [x] 開始負債の登録（DB 関数 `create_opening_liability_balance_journal`。借方: 元入金、貸方: カード。引き落とし仕訳は、指定した引き落とし日で自動的に作る）
+- [x] 開始負債の API（`POST /liability-opening-journals`）と画面（開始日・カード・未払いの金額・引き落とし日）、トップページの導線
 
 **方針**: 最初は単一 VPS に Kamal で置き、いずれ PaaS に移す。移しやすいよう、特定の置き場所に依存させない（設定は環境変数、DB 接続は `DATABASE_URL` またはホスト指定、イメージは Kamal 専用にしない）。Cookie は production で secure にしているので、HTTPS（ドメイン）が必須。
 
