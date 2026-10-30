@@ -76,33 +76,9 @@ test:
 # the values provided in this file. Alternatively, you can specify a connection
 # URL environment variable explicitly:
 #
-#   production:
-#     url: <%= ENV["MY_APP_DATABASE_URL"] %>
-#
-# Connection URLs for non-primary databases can also be configured using
-# environment variables. The variable name is formed by concatenating the
-# connection name with `_DATABASE_URL`. For example:
-#
-#   CACHE_DATABASE_URL="postgres://cacheuser:cachepass@localhost/cachedatabase"
-#
-# Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
-# for a full overview on how database connection configuration can be specified.
-#
+#   # 本番は DB を 1 つにする（このアプリは Active Job・Rails.cache・Action Cable を使わないため、
+# Solid Queue / Cache / Cable 用の DB は持たない）。接続先は DATABASE_URL（PaaS の標準）で指定でき、
+# 指定しない場合は DB_HOST / DB_PORT / DB_USER / DB_PASSWORD（と DB_NAME）を使う。
 production:
-  primary: &primary_production
-    <<: *default
-    database: app_production
-    username: app
-    password: <%= ENV["APP_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: app_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: app_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: app_production_cable
-    migrations_paths: db/cable_migrate
+  <<: *default
+  database: <%= ENV.fetch("DB_NAME", "app_production") %>
