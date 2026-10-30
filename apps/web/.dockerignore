@@ -1,8 +1,12 @@
+# 開発用・生成物をイメージに入れない
 node_modules
 .next
 .git
 .gitignore
+.env*
 Dockerfile
-docker-compose.yml
+Dockerfile.dev
 README.md
 tmp
+tsconfig.tsbuildinfo
+next-env.d.ts
