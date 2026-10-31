@@ -148,7 +148,7 @@ docker exec docker-compose-db-1 psql -U postgres -c "DROP DATABASE app_productio
 
 ## 置き場所ごとの設定
 
-### Xserver VPS + Kamal
+### さくらの VPS + Kamal
 
 構成は VPS 1 台。リポジトリは公開なので、IP アドレスと秘密情報はリポジトリに書かず、環境変数で渡す。
 
@@ -165,9 +165,14 @@ kamal-proxy (80, 443) ──▶ zentoo-web ──▶ zentoo-api ──▶ zentoo
 
 #### 1. VPS の初期設定
 
-Ubuntu 24.04、メモリ 2 GB 以上で作る。Xserver VPS の管理画面のパケットフィルターで、**22、80、443 だけ**を許可する。
+Ubuntu 24.04、メモリ 2 GB 以上で作る。さくらの VPS の管理画面のパケットフィルターで、**22、80、443 だけ**を許可する。
 
-root でログインして、一般ユーザーを作り、Docker を入れる。`<公開鍵>` は Vagrant で使う ssh の公開鍵に置き換える。
+`ubuntu` ユーザーでログインして root になり、デプロイ用のユーザーを作り、Docker を入れる。`<公開鍵>` は Vagrant で使う ssh の公開鍵に置き換える。
+
+```
+ssh ubuntu@<IP>
+sudo -i
+```
 
 ```
 adduser --disabled-password --gecos "" deploy
@@ -191,12 +196,22 @@ ufw --force enable
 **今の接続を切らずに**、別のターミナルで `ssh deploy@<IP>` と `sudo -v` が通ることを確認してから、ssh を公開鍵のみにする。
 
 ```
-cat > /etc/ssh/sshd_config.d/99-hardening.conf <<'EOF'
+cat > /etc/ssh/sshd_config.d/00-hardening.conf <<'EOF'
 PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 EOF
 sshd -t && systemctl reload ssh
+sshd -T | grep -E '^(permitrootlogin|passwordauthentication|kbdinteractiveauthentication) '
+```
+
+3 行とも `no` なら成功。sshd は最初に読んだ値を使うので、`50-cloud-init.conf` などより先に読まれるファイル名にしてある。
+
+別のターミナルで `ssh deploy@<IP>` が通ることをもう一度確認してから、使わなくなった `ubuntu` ユーザーのログインを止める。
+
+```
+passwd -l ubuntu
+rm -f /home/ubuntu/.ssh/authorized_keys
 ```
 
 Docker が公開するポートは ufw を通らない。外に出るのは kamal-proxy の 80 と 443 だけで、DB と Rails はポートを公開しない設定にしてある。パケットフィルターも合わせて二重に守る。
@@ -250,7 +265,7 @@ kamal config
 kamal config -c config/deploy_web.yml
 ```
 
-Xserver VPS は amd64。Vagrant が arm64（`uname -m` が `aarch64`）のときは、amd64 のビルドに必要なエミュレーションを入れる。
+さくらの VPS は amd64。Vagrant が arm64（`uname -m` が `aarch64`）のときは、amd64 のビルドに必要なエミュレーションを入れる。
 
 ```
 docker run --privileged --rm tonistiigi/binfmt --install amd64
