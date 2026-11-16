@@ -34,9 +34,11 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - 追加で完了したもの: 開始負債の登録、ダミー費用科目 `root` の廃止（親なし = トップレベル）。
 - **M5「外から使える」を進行中**。
   - 完了: 本番用 Dockerfile（API と Web）、シークレット管理と seed の手順書（`docs/deployment.md`）。
-  - 作成済みで実機は未確認: Kamal の設定（`apps/api/config/deploy.yml`、`deploy_web.yml`）、VPS 初期設定の手順書、バックアップ（`ops/backup_postgres.sh`）。`kamal config` もまだ通していない。
-  - 未完了: VPS・ドメイン・イメージ置き場の準備、デプロイ、バックアップと復元の確認、本番での通し確認。
-- `cb634f5` までは push 済みで、最後にコードが変わったコミットの api-ci / web-ci は緑（2026-10-30 に GitHub Actions で確認）。Kamal の設定のコミットは未 push。
+  - 完了: さくらの VPS の初期設定、Kamal でのデプロイ（2026-11-16。HTTPS でログインを確認し、`SEED_USER_PASSWORD` は消して再デプロイ済み）。
+  - 作成済みで実機は未確認: バックアップ（`ops/backup_postgres.sh`）。
+  - 未完了: バックアップの保管先の決定と日次バックアップ・復元の確認、開始残高の登録、本番での通し確認。
+- イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
+- push 済みかどうかは `git status` で確認する。
 
 ## 決めたこと
 
@@ -55,11 +57,12 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 
 ### M5（次にやること）
 
-次は、ユーザーが `docs/deployment.md` の「さくらの VPS + Kamal」を順に実行する。IP アドレス・ドメイン・秘密情報はリポジトリに書かない（公開リポジトリ。Vagrant の `~/.zentoo-kamal.env` に置く）。
+本番は動いている。手順は `docs/deployment.md` の「さくらの VPS + Kamal」。IP アドレス・ドメイン・秘密情報はリポジトリに書かない（公開リポジトリ。Vagrant の `~/.zentoo-kamal.env` に置く）。
 
 - [x] VPS の契約とパケットフィルター。
-- [ ] VPS の初期設定、DNS、GitHub のトークン。
-- [ ] `kamal config` の確認と初回デプロイ。設定を実機で直す可能性がある（特に proxy なしの Rails の起動待ちと、`deploy_web.yml` のビルドのパス）。
+- [x] VPS の初期設定、DNS、GitHub のトークン。
+- [x] `kamal config` の確認と初回デプロイ。
+- [ ] 開始資産・開始負債の登録（ユーザーが画面から）。
 - [ ] バックアップの保管先を決めて（rclone）、日次バックアップと復元を確認。
 - [ ] 本番でスマホから M1〜M4 を通し確認（チェックリストは `docs/deployment.md`）。
 - [ ] `docs/milestones.md` の M5 を更新する。
