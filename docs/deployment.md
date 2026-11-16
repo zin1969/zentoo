@@ -334,7 +334,14 @@ kamal accessory logs db
 
 `ops/backup_postgres.sh` を VPS の cron で毎日実行し、ダンプを rclone で VPS の外に保管する。ローカルに 7 日、外に 30 日残す。**中身は家計のデータなので、保管先では rclone の `crypt` で暗号化する**。
 
-Vagrant からスクリプトを送り、VPS の `deploy` ユーザーで rclone の保管先を設定する（保管先は rclone が対応するものなら何でもよい。名前は `zentoo-backup` とする）。
+Vagrant からスクリプトを送り、VPS の `deploy` ユーザーで rclone の保管先を設定する。保管先は Google Drive。rclone には 2 つのリモートを作る。
+
+| 名前 | 種類 | 内容 |
+|------|------|------|
+| `gdrive` | Google Drive | 接続先。権限は `drive.file`（rclone が作ったファイルだけ） |
+| `zentoo-backup` | crypt | `gdrive:zentoo-backup` を暗号化して使う。スクリプトはこちらに書く |
+
+VPS にはブラウザがないので、Google の認証は Mac で行う（`brew install rclone` のあと、VPS の `rclone config` が表示する `rclone authorize "drive" "..."` を Mac で実行し、出てきたトークンを VPS に貼る）。crypt のパスワード 2 つはパスワード管理ツールに保管する。これがないとバックアップを復号できない。
 
 ```
 scp ops/backup_postgres.sh deploy@<IP>:~/backup_postgres.sh
