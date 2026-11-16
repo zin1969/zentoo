@@ -29,8 +29,10 @@ env:
 aliases:
   logs: app logs -f
 
+# Vagrant（arm64）からのエミュレーションでは Next.js のビルドが落ちるため、VPS（amd64）の上でビルドする
 builder:
   arch: amd64
+  remote: ssh://deploy@<%= ENV.fetch("ZENTOO_HOST") %>
   context: ../web
   dockerfile: ../web/Dockerfile
 

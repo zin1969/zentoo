@@ -216,6 +216,17 @@ rm -f /home/ubuntu/.ssh/authorized_keys
 
 Docker が公開するポートは ufw を通らない。外に出るのは kamal-proxy の 80 と 443 だけで、DB と Rails はポートを公開しない設定にしてある。パケットフィルターも合わせて二重に守る。
 
+イメージは VPS の上でビルドする（「3. デプロイの準備」）。メモリ 2 GB ではビルド中に足りなくなるので、スワップを 2 GB 足す。`swapon --show` に何か出るなら、すでにあるので不要。
+
+```
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+free -h
+```
+
 #### 2. ドメインとイメージ置き場
 
 - ドメイン（サブドメイン）の A レコードを、VPS の IP アドレスに向ける。証明書の取得に必要なので、デプロイの前に済ませる。
@@ -252,6 +263,7 @@ kamal() {
     -v "$(git rev-parse --show-toplevel):/workdir" \
     -w /workdir/apps/api \
     -v "$SSH_AUTH_SOCK:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent \
+    -v "$HOME/.ssh/known_hosts:/root/.ssh/known_hosts:ro" \
     -v /var/run/docker.sock:/var/run/docker.sock \
     ghcr.io/basecamp/kamal:v2.12.0 "$@"
 }
@@ -265,10 +277,13 @@ kamal config
 kamal config -c config/deploy_web.yml
 ```
 
-さくらの VPS は amd64。Vagrant が arm64（`uname -m` が `aarch64`）のときは、amd64 のビルドに必要なエミュレーションを入れる。
+イメージは VPS（amd64）の上でビルドする（`builder.remote`）。Vagrant は arm64 で、エミュレーション（QEMU）では Next.js のビルドが `Segmentation fault` で落ちるため。ビルドの接続には Vagrant の `~/.ssh/known_hosts` を使うので、先に Vagrant から一度 `ssh deploy@<IP>` しておく。
+
+ビルドと ghcr.io への登録だけを試す（VPS のアプリには何も起きない）。
 
 ```
-docker run --privileged --rm tonistiigi/binfmt --install amd64
+kamal build push
+kamal build push -c config/deploy_web.yml
 ```
 
 #### 4. 初回デプロイ

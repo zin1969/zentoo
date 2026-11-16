@@ -42,8 +42,10 @@ aliases:
   logs: app logs -f
   dbc: app exec --interactive --reuse "bin/rails dbconsole --include-password"
 
+# Vagrant（arm64）からのエミュレーションでは Next.js のビルドが落ちるため、VPS（amd64）の上でビルドする
 builder:
   arch: amd64
+  remote: ssh://deploy@<%= ENV.fetch("ZENTOO_HOST") %>
 
 ssh:
   user: deploy
