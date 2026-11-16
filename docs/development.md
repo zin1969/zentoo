@@ -44,7 +44,7 @@ docker-compose -f docker-compose/docker-compose.yaml run --rm api bin/rails db:s
 CI（`.github/workflows/ci.yml`）と同じ内容を手元で確認する場合。
 
 ```
-docker-compose -f docker-compose/docker-compose.yaml run --rm --service-ports -e CI=true api rspec
+docker-compose -f docker-compose/docker-compose.yaml run --rm -e CI=true api rspec
 docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/rubocop
 docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/brakeman --no-pager
 docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/bundler-audit
