@@ -264,6 +264,7 @@ kamal() {
     -w /workdir/apps/api \
     -v "$SSH_AUTH_SOCK:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent \
     -v "$HOME/.ssh/known_hosts:/root/.ssh/known_hosts:ro" \
+    -v "$HOME/.zentoo-kamal-docker:/root/.docker" \
     -v /var/run/docker.sock:/var/run/docker.sock \
     ghcr.io/basecamp/kamal:v2.12.0 "$@"
 }
@@ -278,6 +279,13 @@ kamal config -c config/deploy_web.yml
 ```
 
 イメージは VPS（amd64）の上でビルドする（`builder.remote`）。Vagrant は arm64 で、エミュレーション（QEMU）では Next.js のビルドが `Segmentation fault` で落ちるため。ビルドの接続には Vagrant の `~/.ssh/known_hosts` を使うので、先に Vagrant から一度 `ssh deploy@<IP>` しておく。
+
+VPS でビルドするとき、Kamal は ghcr.io にログインしない（2.12.0）。ログイン情報は kamal のコンテナが消えると失われるので、`~/.zentoo-kamal-docker` に残す。トークンがそのまま保存されるので、ほかの人と共有しない。
+
+```
+mkdir -m 700 ~/.zentoo-kamal-docker
+kamal registry login
+```
 
 ビルドと ghcr.io への登録だけを試す（VPS のアプリには何も起きない）。
 
