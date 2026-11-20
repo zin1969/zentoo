@@ -144,4 +144,62 @@ RSpec.describe Journals::ReplaceJournalEntry do
       expect(Journal.exists?(journal_id)).to be(true)
     end
   end
+
+  describe "a direct debit date changed by hand" do
+    let!(:journal_id) { register(credit: card_payment) }
+
+    def direct_debit_of(id)
+      link = DirectDebitJournal.find_by!(original_id: id)
+      [ Journal.find(link.direct_debit_id), link ]
+    end
+
+    before do
+      direct_debit, = direct_debit_of(journal_id)
+      Journals::UpdateDirectDebitDate.new.update_direct_debit_date!(
+        journal_id: direct_debit.id, payment_date: Date.new(2025, 12, 27), user_id: user.id
+      )
+    end
+
+    it "is kept when the journal is still paid by the same card" do
+      new_id = replace(journal_id, entry(credit: card_payment, amount: 5_000))
+
+      direct_debit, link = direct_debit_of(new_id)
+      expect(direct_debit.journal_dt).to eq(Date.new(2025, 12, 27))
+      expect(direct_debit.credits.sole.amount.to_i).to eq(5_000)
+      expect(link.payment_date_overridden).to be(true)
+    end
+
+    it "is recalculated when the purchase date moves after it" do
+      new_id = replace(journal_id, entry(credit: card_payment, date: "2025-12-28"))
+
+      direct_debit, link = direct_debit_of(new_id)
+      expect(direct_debit.journal_dt).to eq(Date.new(2026, 1, 27))
+      expect(link.payment_date_overridden).to be(false)
+    end
+
+    it "is recalculated when the journal is paid by another card" do
+      jal = create(:liability_account, :jal, user: user)
+      create(:credit_card, :jal, user: user, liability_account: jal, bank_account: bank)
+
+      new_id = replace(journal_id, entry(credit: { element_type: 2, payment_method_type: 3, account_id: jal.id }))
+
+      direct_debit, link = direct_debit_of(new_id)
+      expect(direct_debit.journal_dt).to eq(Date.new(2025, 12, 10))
+      expect(link.payment_date_overridden).to be(false)
+    end
+
+    it "is dropped when the journal becomes a cash payment" do
+      new_id = replace(journal_id, entry(credit: cash_payment))
+
+      expect(DirectDebitJournal.where(original_id: new_id)).to be_empty
+    end
+
+    it "does not leak into a later journal in the same transaction" do
+      replace(journal_id, entry(credit: card_payment))
+      later_id = register(credit: card_payment)
+
+      direct_debit, = direct_debit_of(later_id)
+      expect(direct_debit.journal_dt).to eq(Date.new(2025, 11, 27))
+    end
+  end
 end
