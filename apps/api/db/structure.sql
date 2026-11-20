@@ -819,7 +819,13 @@ CREATE FUNCTION public.replace_journal_entry(journal_id integer, journal_data js
     AS $$
 DECLARE
   v_user_id INT;
+  v_new_journal_id INT;
+  v_carry_payment_date DATE;
+  v_carry_card_id INT;
   ELEMENT_EXPENSES CONSTANT INT := 5;
+  ELEMENT_LIABILITIES CONSTANT INT := 2;
+  PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
+  DIRECT_DEBIT_PAYMENT_DATE_SETTING CONSTANT TEXT := 'app.direct_debit_payment_date';
 BEGIN
   v_user_id := (journal_data->>'user_id')::INT;
 
@@ -870,11 +876,117 @@ BEGIN
     RAISE EXCEPTION 'shopping journal must debit expenses only';
   END IF;
 
+  -- 引き落とし日を手で変えていたら、その日とカードを覚えておく。
+  -- カード払いが 1 つだけの仕訳に限る（複数あると、どの引き落としの日付か決められない）
+  SELECT dj.journal_dt, dd.account_id
+    INTO v_carry_payment_date, v_carry_card_id
+    FROM direct_debit_journals ddj
+    JOIN journals dj ON dj.id = ddj.direct_debit_id
+    JOIN debits dd ON dd.journal_id = dj.id
+   WHERE ddj.original_id = replace_journal_entry.journal_id
+     AND ddj.payment_date_overridden
+     AND (
+       SELECT COUNT(*)
+         FROM direct_debit_journals other
+        WHERE other.original_id = replace_journal_entry.journal_id
+     ) = 1
+  ;
+
+  -- 修正後も同じカード 1 枚での支払いで、買った日が引き落とし日より後にならないときだけ引き継ぐ。
+  -- それ以外は、締め日・支払日からの自動の計算に戻す
+  IF v_carry_payment_date IS NOT NULL AND NOT (
+    (journal_data->>'date')::DATE <= v_carry_payment_date
+    AND (
+      SELECT COUNT(*) = 1 AND BOOL_AND(x.account_id = v_carry_card_id)
+        FROM jsonb_to_recordset(journal_data->'credits')
+          AS x(element_type INT, payment_method_type INT, account_id INT)
+       WHERE x.element_type = ELEMENT_LIABILITIES
+         AND x.payment_method_type = PAYMENT_METHOD_CREDIT_CARD
+    )
+  ) THEN
+    v_carry_payment_date := NULL;
+  END IF;
+
   -- 元の仕訳（と引き落とし仕訳）を消して、登録と同じ確認をしながら作り直す。
   -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
   PERFORM delete_journal(replace_journal_entry.journal_id, v_user_id);
 
-  RETURN insert_journal_entry(journal_data);
+  IF v_carry_payment_date IS NOT NULL THEN
+    -- credits_after_insert トリガーに、引き落とし日として使わせる
+    PERFORM set_config(DIRECT_DEBIT_PAYMENT_DATE_SETTING, v_carry_payment_date::TEXT, TRUE);
+  END IF;
+
+  v_new_journal_id := insert_journal_entry(journal_data);
+
+  IF v_carry_payment_date IS NOT NULL THEN
+    -- 同じトランザクションの後続の仕訳に影響しないよう、指定を消す
+    PERFORM set_config(DIRECT_DEBIT_PAYMENT_DATE_SETTING, '', TRUE);
+
+    -- 引き継いだ日も手で変えた日なので、次に修正したときも引き継ぐ
+    UPDATE direct_debit_journals ddj
+       SET payment_date_overridden = TRUE
+     WHERE ddj.original_id = v_new_journal_id
+    ;
+  END IF;
+
+  RETURN v_new_journal_id;
+END;
+$$;
+
+
+--
+-- Name: update_direct_debit_date(integer, date, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_direct_debit_date(journal_id integer, payment_date date, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_original_date DATE;
+BEGIN
+  -- 他ユーザーの仕訳と存在しない仕訳は区別しない。
+  -- 同時に修正・削除されないよう、行をロックする
+  PERFORM 1
+     FROM journals j
+    WHERE j.id = update_direct_debit_date.journal_id
+      AND j.user_id = update_direct_debit_date.user_id
+      FOR UPDATE
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'journal not found: %', journal_id;
+  END IF;
+
+  -- 日付だけを変えられるのは、カード払いから自動で作られた引き落とし仕訳だけ
+  SELECT oj.journal_dt
+    INTO v_original_date
+    FROM direct_debit_journals ddj
+    JOIN journals oj ON oj.id = ddj.original_id
+   WHERE ddj.direct_debit_id = update_direct_debit_date.journal_id
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'journal is not a direct debit journal: %', journal_id;
+  END IF;
+
+  -- 買う前（開始負債なら開始日より前）に引き落とされることはない。
+  -- それ以外は明細の日付をそのまま使い、営業日にはずらさない
+  IF payment_date < v_original_date THEN
+    RAISE EXCEPTION 'payment date must not be before journal date: payment_date=%, journal_date=%', payment_date, v_original_date;
+  END IF;
+
+  UPDATE journals j
+     SET journal_dt = update_direct_debit_date.payment_date
+   WHERE j.id = update_direct_debit_date.journal_id
+  ;
+
+  -- 元のお買い物を修正したときに、この日付を引き継げるよう記録する
+  UPDATE direct_debit_journals ddj
+     SET payment_date_overridden = TRUE
+   WHERE ddj.direct_debit_id = update_direct_debit_date.journal_id
+  ;
+
+  RETURN journal_id;
 END;
 $$;
 
@@ -1095,7 +1207,8 @@ CREATE TABLE public.direct_debit_journals (
     direct_debit_id bigint,
     user_id bigint,
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    payment_date_overridden boolean DEFAULT false NOT NULL
 );
 
 
@@ -2046,6 +2159,9 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261120142000'),
+('20261120141000'),
+('20261120140000'),
 ('20261120130000'),
 ('20261120120000'),
 ('20261029065000'),
