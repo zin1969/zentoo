@@ -134,7 +134,7 @@
 
 - [x] 手で変えた印の列と、引き落とし日を変える DB 関数（`update_direct_debit_date`）
 - [x] お買い物の修正（`replace_journal_entry`）で、手で変えた引き落とし日を引き継ぐ
-- [ ] 引き落とし日の変更の API（`PUT /direct-debit-journals/{id}`。作成済み）と、仕訳一覧の引き落とし仕訳からの変更（日付の入力）。手で変えた引き落とし仕訳には印を出す
+- [x] 引き落とし日の変更の API（`PUT /direct-debit-journals/{id}`）と、仕訳一覧の引き落とし仕訳からの変更（日付の入力）。手で変えた引き落とし仕訳には印を出す
 - [x] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
 - [ ] 本番にデプロイし、スマホで確認する（デプロイ前に手動でバックアップ）
 

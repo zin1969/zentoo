@@ -24,6 +24,8 @@ export type Journal = {
   credits: JournalCredit[];
   // この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID
   original_journal_id: number | null;
+  // 引き落とし仕訳の日付を手で変えたか（引き落とし仕訳以外は false）
+  payment_date_overridden: boolean;
   // この仕訳がカード払いの場合、引き落とし仕訳の ID
   direct_debit_journal_id: number | null;
 };
@@ -71,4 +73,12 @@ export function isEditableJournal(journal: Journal) {
 // カード払いの仕訳を削除すると、自動で作られた引き落とし仕訳も一緒に削除される
 export async function deleteJournal(id: number) {
   await apiFetch<null>(`/journals/${id}`, { method: "DELETE" });
+}
+
+// カード払いの引き落とし仕訳の日付だけを変える。id は引き落とし仕訳の ID
+export async function updateDirectDebitDate(id: number, paymentDate: string) {
+  await apiFetch<{ journal_id: number }>(`/direct-debit-journals/${id}`, {
+    method: "PUT",
+    body: { payment_date: paymentDate }
+  });
 }

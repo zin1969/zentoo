@@ -11,6 +11,7 @@ import {
   type Journal,
   type JournalPage
 } from "@/lib/journals/journals";
+import DirectDebitDateEditor from "./DirectDebitDateEditor";
 
 type Loaded = {
   key: string;
@@ -80,6 +81,7 @@ function DirectDebitBadge({ journal }: { journal: Journal }) {
     return (
       <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
         カード引き落とし（元の仕訳 #{journal.original_journal_id}）
+        {journal.payment_date_overridden && "・日付を変更済み"}
       </span>
     );
   }
@@ -99,9 +101,10 @@ type JournalCardProps = {
   journal: Journal;
   deleting: boolean;
   onDelete: (journal: Journal) => void;
+  onChanged: () => void;
 };
 
-function JournalCard({ journal, deleting, onDelete }: JournalCardProps) {
+function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProps) {
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/20">
       <div className="flex items-baseline justify-between gap-2">
@@ -137,7 +140,11 @@ function JournalCard({ journal, deleting, onDelete }: JournalCardProps) {
         </div>
       </div>
 
-      {/* 引き落とし仕訳は自動で作られたものなので、元のカード払いの仕訳から修正・削除する */}
+      {/* 引き落とし仕訳は自動で作られたものなので、日付だけを変えられる。修正・削除は元のカード払いの仕訳から */}
+      {journal.original_journal_id !== null && (
+        <DirectDebitDateEditor journal={journal} onChanged={onChanged} />
+      )}
+
       {!journal.original_journal_id && (
         <div className="flex justify-end gap-2">
           {isEditableJournal(journal) && (
@@ -167,7 +174,7 @@ export default function JournalList() {
   const [range, setRange] = useState(currentMonthRange);
   const [page, setPage] = useState(1);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
-  // 削除のあとに、同じ期間・ページを読み直すための番号
+  // 削除や引き落とし日の変更のあとに、同じ期間・ページを読み直すための番号
   const [reloadCount, setReloadCount] = useState(0);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -286,6 +293,7 @@ export default function JournalList() {
                   journal={journal}
                   deleting={deletingId === journal.id}
                   onDelete={handleDelete}
+                  onChanged={() => setReloadCount((n) => n + 1)}
                 />
               ))}
             </ul>
