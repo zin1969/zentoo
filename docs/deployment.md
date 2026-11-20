@@ -362,7 +362,9 @@ rclone ls zentoo-backup:zentoo
 
 失敗しても通知は来ない。ときどき `~/backup.log` と保管先の日付を見る。
 
-**rclone の設定（`~/.config/rclone/rclone.conf`）は、パスワード管理ツールにも保管する**。VPS が消えると、これがないとバックアップを復号できない。
+`~/.config/rclone/rclone.conf` は保管しない。中には Google のトークンと、元に戻せる形の crypt のパスワードが入っているので、**画面に表示したり、どこかに貼ったりしない**。VPS が消えたときは、保管した crypt のパスワード 2 つで `zentoo-backup` を作り直し、Google の認証をやり直せば、バックアップを取り戻せる。
+
+トークンやパスワードが漏れたときは、https://myaccount.google.com/connections で rclone のアクセスを削除してから `rclone config reconnect gdrive:` で認証し直す。crypt のパスワードが漏れたときは、`rclone purge gdrive:zentoo-backup` と `rclone config delete zentoo-backup` のあと、新しいパスワードで作り直す（それまでのバックアップは読めなくなる）。
 
 #### 7. 復元の確認
 
