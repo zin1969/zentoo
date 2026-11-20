@@ -46,6 +46,8 @@ paths:
     $ref: './paths/journals.yaml#/liability-opening-journals'
   /cash-deposit-journals:
     $ref: './paths/journals.yaml#/cash-deposit-journals'
+  /direct-debit-journals/{id}:
+    $ref: './paths/journals.yaml#/direct-debit-journal'
   /account-balances:
     $ref: './paths/reports.yaml#/account-balances'
   /monthly-expenses:
@@ -78,6 +80,8 @@ components:
       $ref: './schemas/journals.yaml#/JournalCreatedResponse'
     InsertJournalEntryRequest:
       $ref: './schemas/journals.yaml#/InsertJournalEntryRequest'
+    UpdateDirectDebitDateRequest:
+      $ref: './schemas/journals.yaml#/UpdateDirectDebitDateRequest'
     JournalList:
       $ref: './schemas/journals.yaml#/JournalList'
     Journal:

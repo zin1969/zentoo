@@ -18,6 +18,8 @@ ErrorResponse:
         - direct_debit_journal_not_editable
         - journal_not_editable
         - expense_debits_required
+        - not_direct_debit_journal
+        - payment_date_before_journal_date
     errors:
       type: array
       items:

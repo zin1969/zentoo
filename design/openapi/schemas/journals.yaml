@@ -92,6 +92,16 @@ JournalCreatedResponse:
       type: string
       description: 次のリクエストに使う JWT
 
+UpdateDirectDebitDateRequest:
+  type: object
+  required:
+    - payment_date
+  properties:
+    payment_date:
+      type: string
+      format: date
+      description: 新しい引き落とし日。元の仕訳の日付（買った日。開始負債なら開始日）より前にはできない。土日・祝日でも営業日にずらさない
+
 InsertJournalEntryRequest:
   type: object
   description: |
@@ -177,6 +187,7 @@ Journal:
     - debits
     - credits
     - original_journal_id
+    - payment_date_overridden
     - direct_debit_journal_id
   properties:
     id:
@@ -221,6 +232,9 @@ Journal:
     original_journal_id:
       type: [integer, 'null']
       description: この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID
+    payment_date_overridden:
+      type: boolean
+      description: 引き落とし仕訳の日付を手で変えたか（`PUT /direct-debit-journals/{id}`）。引き落とし仕訳以外は false
     direct_debit_journal_id:
       type: [integer, 'null']
       description: この仕訳がカード払いの場合、引き落とし仕訳の ID

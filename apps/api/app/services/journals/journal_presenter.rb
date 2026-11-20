@@ -6,6 +6,9 @@ module Journals
     module_function
 
     def present(journal, result)
+      # この仕訳が引き落とし仕訳の場合の、元のカード払い仕訳との紐付け
+      direct_debit_link = result.direct_debit_links.find { |link| link.direct_debit_id == journal.id }
+
       {
         id: journal.id,
         journal_date: journal.journal_dt,
@@ -29,7 +32,9 @@ module Journals
           }
         end,
         # この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID
-        original_journal_id: result.direct_debit_links.find { |link| link.direct_debit_id == journal.id }&.original_id,
+        original_journal_id: direct_debit_link&.original_id,
+        # 引き落とし仕訳の日付を手で変えたか（引き落とし仕訳以外は false）
+        payment_date_overridden: direct_debit_link&.payment_date_overridden || false,
         # この仕訳がカード払いの場合、引き落とし仕訳の ID
         direct_debit_journal_id: result.direct_debit_links.find { |link| link.original_id == journal.id }&.direct_debit_id
       }

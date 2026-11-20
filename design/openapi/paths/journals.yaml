@@ -373,3 +373,58 @@ liability-opening-journals:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+
+direct-debit-journal:
+  put:
+    tags: [journals]
+    summary: カードの引き落とし日の変更
+    description: |
+      カード払い（お買い物・開始負債）から自動で作られた引き落とし仕訳の日付だけを変える。金額・科目・口座は変えない。
+      締め日の近くで買うと、カード会社の計上日の都合で引き落としが翌月になることがあるため、カードの明細の日付に合わせる。
+      内部で PostgreSQL 関数 `update_direct_debit_date` を呼び出す。変えた仕訳は `payment_date_overridden` が true になり、
+      元のお買い物を修正しても、同じカード 1 枚での支払いのままで、修正後の買った日より前にならなければ、変えた日を引き継ぐ。
+      401 以外では新しい `next_token` を返す。
+    operationId: updateDirectDebitDate
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 引き落とし仕訳の ID（元のカード払い仕訳の ID ではない）
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/UpdateDirectDebitDateRequest'
+    responses:
+      '200':
+        description: 変更成功（`journal_id` は引き落とし仕訳の ID で、変わらない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 仕訳が存在しない、または他ユーザーの仕訳（`journal_not_found`。両者は区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: |
+          バリデーションエラー（`errors`）、引き落とし仕訳ではない（`not_direct_debit_journal`）、
+          元の仕訳の日付より前（`payment_date_before_journal_date`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

@@ -49,6 +49,7 @@ GET /journals
         { "element_type": 1, "payment_method_type": 2, "account_id": 2, "account_name": "三菱UFJ銀行 用賀出張所", "amount": 14000 }
       ],
       "original_journal_id": 14,
+      "payment_date_overridden": false,
       "direct_debit_journal_id": null
     }
   ],
@@ -60,6 +61,7 @@ GET /journals
 
 - `account_name`: 科目の名前。科目を引けない場合は `null`
 - `original_journal_id`: この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID。それ以外は `null`
+- `payment_date_overridden`: 引き落とし仕訳の日付を手で変えた場合は `true`（[引き落とし日の変更 API](direct_debit_journals.md)）。引き落とし仕訳以外は `false`
 - `direct_debit_journal_id`: この仕訳がカード払いの場合、引き落とし仕訳の ID。それ以外は `null`
 
 ### Validation Error (422 Unprocessable Entity)
