@@ -49,6 +49,48 @@ journals:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
 
+journal:
+  delete:
+    tags: [journals]
+    summary: 仕訳の削除
+    description: |
+      認証済みユーザーの仕訳を削除する。仕訳は DB から完全に消え、元に戻せない。
+      クレジットカード払いの仕訳（開始負債を含む）を削除すると、自動で作られた引き落とし仕訳も一緒に削除する。
+      引き落とし仕訳だけを削除することはできない（元の仕訳を削除する）。
+      成功時は本文を返さない。新しいトークンは、成功・失敗（401 を除く）ともにレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: deleteJournal
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 削除する仕訳の ID
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 仕訳が存在しない、または他ユーザーの仕訳（`journal_not_found`。両者は区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 引き落とし仕訳は単独で削除できない（`direct_debit_journal_not_deletable`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
 asset-opening-journals:
   post:
     tags: [journals]

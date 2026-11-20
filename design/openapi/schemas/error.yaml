@@ -13,6 +13,8 @@ ErrorResponse:
         - account_not_found
         - credit_card_setting_not_found
         - unbalanced_journal
+        - journal_not_found
+        - direct_debit_journal_not_deletable
     errors:
       type: array
       items:

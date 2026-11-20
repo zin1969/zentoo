@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   post "/login", to: "sessions#create"
 
   get "/journals", to: "journals/journals#index"
+  delete "/journals/:id", to: "journals/journals#destroy", constraints: { id: /\d+/ }
   get "/account-balances", to: "reports/account_balances#index"
   get "/monthly-expenses", to: "reports/monthly_expenses#index"
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"

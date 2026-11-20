@@ -34,6 +34,8 @@ paths:
     $ref: './paths/accounts.yaml#/expense-accounts'
   /journals:
     $ref: './paths/journals.yaml#/journals'
+  /journals/{id}:
+    $ref: './paths/journals.yaml#/journal'
   /asset-opening-journals:
     $ref: './paths/journals.yaml#/asset-opening-journals'
   /journal-entries:
