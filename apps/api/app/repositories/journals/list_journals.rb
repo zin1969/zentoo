@@ -28,6 +28,19 @@ module Journals
       )
     end
 
+    # 認証済みユーザーの仕訳を 1 件取得する。他ユーザーの仕訳と存在しない仕訳は区別せず nil を返す
+    def find(user_id:, journal_id:)
+      journal = Journal.where(user_id: user_id).includes(:debits, :credits).find_by(id: journal_id)
+      return nil unless journal
+
+      Result.new(
+        journals: [ journal ],
+        total_count: 1,
+        account_names: account_names_for([ journal ]),
+        direct_debit_links: direct_debit_links_for([ journal ], user_id)
+      )
+    end
+
     private
 
     # { [element_type, account_id] => name }

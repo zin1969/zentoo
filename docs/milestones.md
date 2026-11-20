@@ -115,8 +115,8 @@
 
 - [x] 削除の DB 関数（`delete_journal`。元の仕訳と、紐付く引き落とし仕訳をまとめて消す）
 - [x] 削除の API（`DELETE /journals/{id}`）と、仕訳一覧の削除ボタン（確認つき。実機の確認は本番デプロイ時にまとめて行う）
-- [ ] 修正の DB 関数（`replace_journal_entry`。お買い物の仕訳を作り直す。引き落とし仕訳も作り直す）
-- [ ] 修正の API（`PUT /journal-entries/{id}`）と修正画面（仕訳一覧から開く、登録と同じフォーム）
+- [x] 修正の DB 関数（`replace_journal_entry`。お買い物の仕訳を作り直す。引き落とし仕訳も作り直す）
+- [ ] 修正の API（`PUT /journal-entries/{id}`、修正画面の初期値用に `GET /journals/{id}`）と修正画面（仕訳一覧から開く、登録と同じフォーム）
 - [ ] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
 - [ ] 本番にデプロイし、スマホで削除と修正を確認する（デプロイ前にバックアップがあることを確認）
 

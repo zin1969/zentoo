@@ -40,6 +40,8 @@ paths:
     $ref: './paths/journals.yaml#/asset-opening-journals'
   /journal-entries:
     $ref: './paths/journals.yaml#/journal-entries'
+  /journal-entries/{id}:
+    $ref: './paths/journals.yaml#/journal-entry'
   /liability-opening-journals:
     $ref: './paths/journals.yaml#/liability-opening-journals'
   /cash-deposit-journals:

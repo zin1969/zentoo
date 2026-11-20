@@ -3,10 +3,12 @@
 module Journals
   class JournalsController < ApplicationController
     include Authenticatable
+    include JournalIdParam
 
-    # DB 関数の引数は INT なので、これより大きい ID の仕訳は存在しない
-    MAX_JOURNAL_ID = 2_147_483_647
-    private_constant :MAX_JOURNAL_ID
+    # 存在しない仕訳と他ユーザーの仕訳は区別しない
+    rescue_from Journals::JournalNotFoundError do
+      render json: { error: "journal_not_found" }, status: :not_found
+    end
 
     # 参照 API なので本文に next_token は載せない（新しいトークンは X-Next-Token ヘッダで返る）
     def index
@@ -24,19 +26,16 @@ module Journals
       )
     end
 
+    # 修正画面の初期値に使う。形は一覧の 1 件と同じ
+    def show
+      render json: Journals::ShowJournalService.new.call(journal_id: journal_id_param, user_id: current_user.id)
+    end
+
     # 削除も、新しいトークンは X-Next-Token ヘッダで返す（成功時は本文なし）
     def destroy
-      journal_id = Integer(params[:id])
-
-      raise Journals::JournalNotFoundError unless journal_id.between?(1, MAX_JOURNAL_ID)
-
-      Journals::DeleteJournalService.new.call(journal_id: journal_id, user_id: current_user.id)
+      Journals::DeleteJournalService.new.call(journal_id: journal_id_param, user_id: current_user.id)
 
       head :no_content
-
-    rescue Journals::JournalNotFoundError
-      # 存在しない仕訳と他ユーザーの仕訳は区別しない
-      render json: { error: "journal_not_found" }, status: :not_found
 
     rescue Journals::DirectDebitJournalNotDeletableError
       render json: { error: "direct_debit_journal_not_deletable" }, status: :unprocessable_content

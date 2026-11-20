@@ -15,6 +15,9 @@ ErrorResponse:
         - unbalanced_journal
         - journal_not_found
         - direct_debit_journal_not_deletable
+        - direct_debit_journal_not_editable
+        - journal_not_editable
+        - expense_debits_required
     errors:
       type: array
       items:
