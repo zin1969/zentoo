@@ -3,7 +3,20 @@
 import { clearToken, getToken, setToken } from "@/lib/cookies/tokenCookie";
 import { originGuardResponse } from "@/lib/csrf/originGuard";
 import { apiFetch } from "@/lib/rails/apiFetch";
+import { proxyAuthedGet } from "@/lib/rails/proxyAuthedGet";
 import { log } from "@/lib/logging/logger";
+
+// 修正画面の初期値に使う仕訳を 1 件取得する
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  // Rails のパスに埋め込むので、数字以外は中継しない
+  if (!/^\d+$/.test(id)) {
+    return Response.json({ error: "journal_not_found" }, { status: 404 });
+  }
+
+  return proxyAuthedGet(`/journals/${id}`, "journal");
+}
 
 // 仕訳の削除を Rails に中継する。成功時の Rails は本文を返さない（204）ので、
 // 新しいトークンは本文の next_token ではなく X-Next-Token ヘッダで受け取る。

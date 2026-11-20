@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createJournalEntry } from "../actions/createJournalEntry";
+import { updateJournalEntry } from "../actions/updateJournalEntry";
 import { ExpenseAccount, getExpenseAccounts } from "@/lib/masters/expenseAccounts";
 import { getAssetAccounts } from "@/lib/masters/assetAccounts";
 import { getLiabilityAccounts } from "@/lib/masters/liabilityAccounts";
 import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
+import type { Journal } from "@/lib/journals/journals";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -35,6 +37,7 @@ type PaymentAccount = {
 };
 
 const DEPOSIT_PAYMENT_METHOD_TYPE = 2;
+const ASSET_ELEMENT_TYPE = 1;
 
 function paymentKey(account: Pick<PaymentAccount, "category" | "id">) {
   return `${account.category}-${account.id}`;
@@ -54,6 +57,27 @@ function emptyCreditLine(): CreditLine {
   return { key: nextKey(), paymentKey: "", amount: "" };
 }
 
+// 修正のときは、元の仕訳の内容をフォームの初期値にする
+function debitLinesFrom(journal: Journal): DebitLine[] {
+  return journal.debits.map((debit) => ({
+    key: nextKey(),
+    itemName: debit.item_name ?? "",
+    expenseAccountId: String(debit.account_id),
+    amount: String(debit.amount)
+  }));
+}
+
+function creditLinesFrom(journal: Journal): CreditLine[] {
+  return journal.credits.map((credit) => ({
+    key: nextKey(),
+    paymentKey: paymentKey({
+      category: credit.element_type === ASSET_ELEMENT_TYPE ? "asset" : "liability",
+      id: credit.account_id
+    }),
+    amount: String(credit.amount)
+  }));
+}
+
 // 認証切れ（BFF がトークン Cookie を破棄済み）の場合は、ログイン画面へ誘導する。
 function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
@@ -63,7 +87,7 @@ function sumAmounts(amounts: string[]) {
   return amounts.reduce((total, a) => total + (Number(a) || 0), 0);
 }
 
-function extractErrorMessage(error: unknown): string {
+function extractErrorMessage(error: unknown, isEdit: boolean): string {
   if (error instanceof ApiError) {
     const data: ApiErrorBody = error.data ?? {};
 
@@ -86,17 +110,41 @@ function extractErrorMessage(error: unknown): string {
     if (data?.error === "credit_card_setting_not_found") {
       return "クレジットカードの引き落とし設定が見つかりません。";
     }
+
+    if (data?.error === "journal_not_found") {
+      return "修正する仕訳が見つかりません。すでに削除されている可能性があります。";
+    }
+
+    if (
+      data?.error === "journal_not_editable" ||
+      data?.error === "direct_debit_journal_not_editable" ||
+      data?.error === "expense_debits_required"
+    ) {
+      return "この仕訳は修正できません。削除して登録し直してください。";
+    }
   }
 
-  return "登録に失敗しました。時間をおいて再度お試しください。";
+  return isEdit
+    ? "修正に失敗しました。時間をおいて再度お試しください。"
+    : "登録に失敗しました。時間をおいて再度お試しください。";
 }
 
-export default function JournalEntryForm() {
+type JournalEntryFormProps = {
+  // 渡されたときは修正。元の仕訳の内容で開き、送信すると作り直して仕訳一覧に戻る
+  journal?: Journal;
+};
+
+export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}) {
+  const isEdit = journal !== undefined;
   const router = useRouter();
-  const [date, setDate] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [debitLines, setDebitLines] = useState<DebitLine[]>([emptyDebitLine()]);
-  const [creditLines, setCreditLines] = useState<CreditLine[]>([emptyCreditLine()]);
+  const [date, setDate] = useState(journal?.journal_date ?? "");
+  const [storeName, setStoreName] = useState(journal?.store_name ?? "");
+  const [debitLines, setDebitLines] = useState<DebitLine[]>(() =>
+    journal ? debitLinesFrom(journal) : [emptyDebitLine()]
+  );
+  const [creditLines, setCreditLines] = useState<CreditLine[]>(() =>
+    journal ? creditLinesFrom(journal) : [emptyCreditLine()]
+  );
 
   const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccount[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
@@ -157,7 +205,7 @@ export default function JournalEntryForm() {
     setErrorMessage(null);
 
     try {
-      await createJournalEntry({
+      const body = {
         date,
         store_name: storeName,
         debits: debitLines.map((line) => ({
@@ -176,7 +224,15 @@ export default function JournalEntryForm() {
             amount: Number(line.amount)
           };
         })
-      });
+      };
+
+      if (journal) {
+        await updateJournalEntry(journal.id, body);
+        router.push("/journals");
+        return;
+      }
+
+      await createJournalEntry(body);
 
       setStatus("success");
       setDate("");
@@ -190,11 +246,13 @@ export default function JournalEntryForm() {
       }
 
       setStatus("error");
-      setErrorMessage(extractErrorMessage(error));
+      setErrorMessage(extractErrorMessage(error, isEdit));
     }
   };
 
   const isSubmitting = status === "submitting";
+  const actionLabel = isEdit ? "修正" : "登録";
+  const submitLabel = isSubmitting ? `${actionLabel}中...` : actionLabel;
   const inputClass =
     "rounded-md border border-black/15 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-black/20";
   const lineInputClass =
@@ -448,7 +506,7 @@ export default function JournalEntryForm() {
         disabled={isSubmitting || !isBalanced}
         className="mt-2 inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? "登録中..." : "登録"}
+        {submitLabel}
       </button>
     </form>
   );

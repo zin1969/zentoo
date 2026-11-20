@@ -53,6 +53,21 @@ export async function getJournals({ from, to, page }: JournalQuery = {}) {
   return apiFetch<JournalPage>(query ? `/journals?${query}` : "/journals");
 }
 
+export async function getJournal(id: number) {
+  return apiFetch<Journal>(`/journals/${id}`);
+}
+
+const EXPENSE_ELEMENT_TYPE = 5;
+
+// 修正できるのはお買い物の仕訳（借方がすべて費用）だけ。引き落とし仕訳は自動で作られたものなので直せない
+export function isEditableJournal(journal: Journal) {
+  return (
+    !journal.original_journal_id &&
+    journal.debits.length > 0 &&
+    journal.debits.every((debit) => debit.element_type === EXPENSE_ELEMENT_TYPE)
+  );
+}
+
 // カード払いの仕訳を削除すると、自動で作られた引き落とし仕訳も一緒に削除される
 export async function deleteJournal(id: number) {
   await apiFetch<null>(`/journals/${id}`, { method: "DELETE" });

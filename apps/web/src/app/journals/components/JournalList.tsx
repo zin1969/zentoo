@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/apiFetch";
-import { deleteJournal, getJournals, type Journal, type JournalPage } from "@/lib/journals/journals";
+import {
+  deleteJournal,
+  getJournals,
+  isEditableJournal,
+  type Journal,
+  type JournalPage
+} from "@/lib/journals/journals";
 
 type Loaded = {
   key: string;
@@ -130,9 +137,17 @@ function JournalCard({ journal, deleting, onDelete }: JournalCardProps) {
         </div>
       </div>
 
-      {/* 引き落とし仕訳は自動で作られたものなので、元のカード払いの仕訳から削除する */}
+      {/* 引き落とし仕訳は自動で作られたものなので、元のカード払いの仕訳から修正・削除する */}
       {!journal.original_journal_id && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {isEditableJournal(journal) && (
+            <Link
+              href={`/journal-entries/${journal.id}/edit`}
+              className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
+            >
+              修正
+            </Link>
+          )}
           <button
             type="button"
             disabled={deleting}
