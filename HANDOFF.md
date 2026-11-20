@@ -35,8 +35,8 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - **M5「外から使える」を進行中**。
   - 完了: 本番用 Dockerfile（API と Web）、シークレット管理と seed の手順書（`docs/deployment.md`）。
   - 完了: さくらの VPS の初期設定、Kamal でのデプロイ（2026-11-16。HTTPS でログインを確認し、`SEED_USER_PASSWORD` は消して再デプロイ済み）。
-  - 作成済みで実機は未確認: バックアップ（`ops/backup_postgres.sh`）。
-  - 未完了: 日次バックアップ・復元の確認（保管先は Google Drive に決定。rclone の設定から）、開始残高の登録、本番での通し確認。
+  - 完了: 日次バックアップ（2026-11-20。VPS の cron で日本時間 4 時に `ops/backup_postgres.sh`、Google Drive に rclone の crypt で暗号化して保管）と復元の確認。crypt のパスワード 2 つはユーザーがパスワード管理ツールに保管。`rclone.conf` は保管も表示もしない。
+  - 未完了: 開始残高の登録、本番での通し確認。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
 - push 済みかどうかは `git status` で確認する。
 
@@ -63,7 +63,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - [x] VPS の初期設定、DNS、GitHub のトークン。
 - [x] `kamal config` の確認と初回デプロイ。
 - [ ] 開始資産・開始負債の登録（ユーザーが画面から）。
-- [ ] 日次バックアップと復元の確認。保管先は Google Drive（rclone の `gdrive` と、それを暗号化する `zentoo-backup`）。次回は `docs/deployment.md` の「6. 日次バックアップ」の rclone の設定から（スクリプトの送付、Mac に rclone、VPS で `rclone config`）。
+- [x] 日次バックアップと復元の確認。保管先は Google Drive（rclone の `gdrive` と、それを暗号化する `zentoo-backup`）。
 - [ ] 本番でスマホから M1〜M4 を通し確認（チェックリストは `docs/deployment.md`）。
 - [ ] `docs/milestones.md` の M5 を更新する。
 
