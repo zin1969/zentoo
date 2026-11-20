@@ -52,3 +52,8 @@ export async function getJournals({ from, to, page }: JournalQuery = {}) {
 
   return apiFetch<JournalPage>(query ? `/journals?${query}` : "/journals");
 }
+
+// カード払いの仕訳を削除すると、自動で作られた引き落とし仕訳も一緒に削除される
+export async function deleteJournal(id: number) {
+  await apiFetch<null>(`/journals/${id}`, { method: "DELETE" });
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/apiFetch";
-import { getJournals, type Journal, type JournalPage } from "@/lib/journals/journals";
+import { deleteJournal, getJournals, type Journal, type JournalPage } from "@/lib/journals/journals";
 
 type Loaded = {
   key: string;
@@ -40,6 +40,34 @@ function errorMessage(error: unknown) {
   return "仕訳の取得に失敗しました。時間をおいて再度お試しください。";
 }
 
+function deleteErrorMessage(error: unknown) {
+  if (error instanceof ApiError && error.status === 404) {
+    return "この仕訳は見つかりませんでした。すでに削除されている可能性があります。";
+  }
+
+  if (error instanceof ApiError && error.data?.error === "direct_debit_journal_not_deletable") {
+    return "引き落とし仕訳だけは削除できません。元のカード払いの仕訳を削除してください。";
+  }
+
+  return "仕訳の削除に失敗しました。時間をおいて再度お試しください。";
+}
+
+// 仕訳は DB から完全に消えるので、内容が分かる形で確認する
+function deleteConfirmMessage(journal: Journal) {
+  const total = journal.debits.reduce((sum, debit) => sum + debit.amount, 0);
+  const lines = [
+    "この仕訳を削除しますか？削除すると元に戻せません。",
+    "",
+    `${journal.journal_date} ${journal.store_name ?? ""} ${formatYen(total)}`
+  ];
+
+  if (journal.direct_debit_journal_id) {
+    lines.push("", `カードの引き落とし仕訳（#${journal.direct_debit_journal_id}）も一緒に削除されます。`);
+  }
+
+  return lines.join("\n");
+}
+
 function DirectDebitBadge({ journal }: { journal: Journal }) {
   if (journal.original_journal_id) {
     return (
@@ -60,7 +88,13 @@ function DirectDebitBadge({ journal }: { journal: Journal }) {
   return null;
 }
 
-function JournalCard({ journal }: { journal: Journal }) {
+type JournalCardProps = {
+  journal: Journal;
+  deleting: boolean;
+  onDelete: (journal: Journal) => void;
+};
+
+function JournalCard({ journal, deleting, onDelete }: JournalCardProps) {
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/20">
       <div className="flex items-baseline justify-between gap-2">
@@ -95,6 +129,20 @@ function JournalCard({ journal }: { journal: Journal }) {
           ))}
         </div>
       </div>
+
+      {/* 引き落とし仕訳は自動で作られたものなので、元のカード払いの仕訳から削除する */}
+      {!journal.original_journal_id && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={() => onDelete(journal)}
+            className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-800 dark:text-red-300"
+          >
+            {deleting ? "削除中..." : "削除"}
+          </button>
+        </div>
+      )}
     </li>
   );
 }
@@ -104,8 +152,12 @@ export default function JournalList() {
   const [range, setRange] = useState(currentMonthRange);
   const [page, setPage] = useState(1);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  // 削除のあとに、同じ期間・ページを読み直すための番号
+  const [reloadCount, setReloadCount] = useState(0);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const key = `${range.from}|${range.to}|${page}`;
+  const key = `${range.from}|${range.to}|${page}|${reloadCount}`;
   const loading = loaded?.key !== key;
 
   useEffect(() => {
@@ -135,9 +187,33 @@ export default function JournalList() {
   const data = loaded?.key === key ? loaded.data : undefined;
   const totalPages = data ? Math.max(1, Math.ceil(data.total_count / data.per_page)) : 1;
 
+  const handleDelete = async (journal: Journal) => {
+    if (!window.confirm(deleteConfirmMessage(journal))) return;
+
+    setDeletingId(journal.id);
+    setDeleteError(null);
+
+    try {
+      await deleteJournal(journal.id);
+      setReloadCount((n) => n + 1);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        router.replace("/login");
+        return;
+      }
+
+      setDeleteError(deleteErrorMessage(error));
+      // すでに削除されていた場合に備えて、一覧を最新にする
+      setReloadCount((n) => n + 1);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const changeRange = (patch: Partial<typeof range>) => {
     setRange((current) => ({ ...current, ...patch }));
     setPage(1);
+    setDeleteError(null);
   };
 
   const inputClass =
@@ -171,6 +247,12 @@ export default function JournalList() {
         </p>
       )}
 
+      {deleteError && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+          {deleteError}
+        </p>
+      )}
+
       {loading && <p className="text-sm text-black/50 dark:text-white/50">読み込み中...</p>}
 
       {data && (
@@ -184,7 +266,12 @@ export default function JournalList() {
           ) : (
             <ul className="flex flex-col gap-3">
               {data.journals.map((journal) => (
-                <JournalCard key={journal.id} journal={journal} />
+                <JournalCard
+                  key={journal.id}
+                  journal={journal}
+                  deleting={deletingId === journal.id}
+                  onDelete={handleDelete}
+                />
               ))}
             </ul>
           )}
