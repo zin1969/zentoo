@@ -70,7 +70,9 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 
 - 祝日データは 2027 年分まで（`apps/api/db/seeds/020_holidays.rb`）。2028 年以降は追加する。
 - Rails のコンテナは 1 つだけ動かす（起動のたびにマイグレーションが走る）。
-- 本番を起動する CI のチェック（`RAILS_ENV=production rails zeitwerk:check` など）、GitHub Actions の Node 20 の廃止対応、Ruby 3.4.7 のそろえ方は、必要になったら検討する。
+- 本番を起動する CI のチェック（`RAILS_ENV=production rails zeitwerk:check` など）、GitHub Actions の Node 20 の廃止対応は、必要になったら検討する。
+- Ruby のバージョンは 3 か所でそろえる: `apps/api/.ruby-version`（CI も読む）、`apps/api/Dockerfile`、`apps/api/Dockerfile.dev`。2026-11-21 に、Brakeman 8.1.1 が 3.4.7 の脆弱性（CVE-2026-132825）を検出したため 3.4.13 に上げた。
+- `bin/brakeman` は `--ensure-latest` 付き（Rails の既定）。Brakeman の新しい版が出ると、指摘が無くても CI が失敗する。`bundle update brakeman --conservative` で上げる。
 
 ## 落とし穴（過去にハマったもの）
 

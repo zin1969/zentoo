@@ -8,7 +8,7 @@
 # 起動時に bin/docker-entrypoint が db:prepare を実行する（DB の作成とマイグレーション）。
 # DB が空の初回起動では seed も実行されるため、そのときだけ SEED_USER_PASSWORD（ログインユーザーのパスワード）が必須。
 
-ARG RUBY_VERSION=3.4.7
+ARG RUBY_VERSION=3.4.13
 FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 WORKDIR /rails
