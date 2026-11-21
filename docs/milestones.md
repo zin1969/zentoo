@@ -177,7 +177,7 @@
 - [x] 通帳の行を作る DB 関数（`get_bank_account_ledger`。繰越、カードの引き落としのまとめ、残高の積み上げ）
 - [x] 通帳の API（`GET /bank-account-ledgers/{id}`。期間、繰越、行、カードの行の内訳、予定かどうか）
 - [x] 通帳の画面（口座の選択、期間、予定と不足の印、カードの行の内訳）と、トップページの導線
-- [ ] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
+- [x] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
 - [ ] 本番にデプロイし、スマホで確認する
 
 **完了条件**: 本番で、預金口座の通帳を開くと、実際の残高の動きと引き落とし予定が日付順に並び、残高が足りなくなる予定が分かる。

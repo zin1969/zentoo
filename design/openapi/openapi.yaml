@@ -60,6 +60,8 @@ paths:
     $ref: './paths/reports.yaml#/account-balances'
   /monthly-expenses:
     $ref: './paths/reports.yaml#/monthly-expenses'
+  /bank-account-ledgers/{id}:
+    $ref: './paths/reports.yaml#/bank-account-ledger'
 
 components:
   securitySchemes:
@@ -112,3 +114,9 @@ components:
       $ref: './schemas/reports.yaml#/MonthlyExpense'
     MonthlyExpenses:
       $ref: './schemas/reports.yaml#/MonthlyExpenses'
+    LedgerItem:
+      $ref: './schemas/reports.yaml#/LedgerItem'
+    LedgerEntry:
+      $ref: './schemas/reports.yaml#/LedgerEntry'
+    BankAccountLedger:
+      $ref: './schemas/reports.yaml#/BankAccountLedger'

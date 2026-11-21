@@ -76,3 +76,62 @@ monthly-expenses:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+
+bank-account-ledger:
+  get:
+    tags: [reports]
+    summary: 預金口座の通帳
+    description: |
+      認証済みユーザーの預金口座の、期間内の出入金を、銀行の通帳のように日付順で返す。未来の引き落とし予定も含む。
+      1 行目は繰越（期間の初日の前日までの残高）で、各行の残高は繰越から積み上げる。
+      カードの引き落としは、同じ日・同じカードの分を 1 行にまとめ、元のお買い物の内訳（`items`）を付ける。
+      内部で PostgreSQL 関数 `get_bank_account_ledger` を呼び出す。
+      参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: getBankAccountLedger
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 預金口座の ID
+        schema:
+          type: integer
+          minimum: 1
+      - name: from
+        in: query
+        description: 期間の開始日（この日を含む）。省略すると先月の初め（日本時間）
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        description: 期間の終了日（この日を含む）。省略すると、口座の最後の予定日（今月末より前なら今月末）。`from` より前は指定できない
+        schema:
+          type: string
+          format: date
+    responses:
+      '200':
+        description: 通帳
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/reports.yaml#/BankAccountLedger'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 口座が存在しない、他ユーザーの口座、または預金ではない口座（`asset_account_not_found`。区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 期間の指定が不正（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

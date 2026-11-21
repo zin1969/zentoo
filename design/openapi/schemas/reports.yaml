@@ -76,3 +76,97 @@ MonthlyExpenses:
       description: 金額の大きい順
       items:
         $ref: '#/MonthlyExpense'
+
+LedgerItem:
+  type: object
+  description: カードの行にまとめた、元のお買い物 1 件
+  required: [journal_id, journal_date, store_name, amount]
+  properties:
+    journal_id:
+      type: integer
+    journal_date:
+      type: string
+      format: date
+    store_name:
+      type: [string, 'null']
+    amount:
+      type: integer
+      description: そのお買い物のうち、このカードで払った額（現金と分けて払った場合はカードの分だけ）
+
+LedgerEntry:
+  type: object
+  required:
+    - row_type
+    - date
+    - description
+    - deposit
+    - withdrawal
+    - balance
+    - scheduled
+    - card_account_id
+    - journal_ids
+    - items
+  properties:
+    row_type:
+      type: string
+      enum: [carried_over, journal, card_payment]
+      description: carried_over = 繰越（1 行目）、journal = 1 つの仕訳、card_payment = 同じ日・同じカードの引き落としのまとめ
+    date:
+      type: string
+      format: date
+      description: 日付。繰越は期間の初日の前日
+    description:
+      type: [string, 'null']
+      description: 摘要。仕訳は明細の項目名（開始残高・預入など）か店舗名、カードの行はカードの名前、繰越は「繰越」
+    deposit:
+      type: integer
+      description: 入金
+    withdrawal:
+      type: integer
+      description: 出金
+    balance:
+      type: integer
+      description: この行のあとの残高。マイナスは残高の不足
+    scheduled:
+      type: boolean
+      description: 今日（日本時間）より後の、まだ引き落とされていない予定
+    card_account_id:
+      type: [integer, 'null']
+      description: カードの行の、カード（負債科目）の ID。それ以外は null
+    journal_ids:
+      type: array
+      items:
+        type: integer
+      description: カードの行は元のお買い物の仕訳の ID、仕訳の行はその仕訳の ID、繰越は空
+    items:
+      type: array
+      items:
+        $ref: '#/LedgerItem'
+      description: カードの行の、元のお買い物の内訳。それ以外は空
+
+BankAccountLedger:
+  type: object
+  required: [account, from, to, today, entries]
+  properties:
+    account:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    from:
+      type: string
+      format: date
+    to:
+      type: string
+      format: date
+    today:
+      type: string
+      format: date
+      description: 今日（日本時間）。これより後の行が予定
+    entries:
+      type: array
+      items:
+        $ref: '#/LedgerEntry'
