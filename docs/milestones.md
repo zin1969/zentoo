@@ -167,3 +167,4 @@
 - `docs/rules/nextjs_rails_bff_target_architecture.md` の内容（CloudFront / WAF、Expand/Contract 運用、ファイルアップロード）
 - 祝日データの毎年の追加（2028 年以降。登録が切れた年は土日だけで営業日を判定してしまう）
 - Web 側の自動テスト導入（M2 以降で必要性を判断）
+- 管理画面の口座の一覧を、種別（現金・預金・電子マネー）で絞り込む（M8 の確認時に要望。口座が増えてきたら）
