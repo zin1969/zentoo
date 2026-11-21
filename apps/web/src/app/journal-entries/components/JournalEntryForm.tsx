@@ -17,6 +17,9 @@ const EXPENSE_ELEMENT_TYPE = 5;
 type DebitLine = {
   key: string;
   itemName: string;
+  // 選んだ親の科目。空なら、選んだ科目（expenseAccountId）からたどる（修正で開いたとき）
+  parentId: string;
+  // 登録する科目。子科目か、親の科目そのもの（「〇〇のまま」）
   expenseAccountId: string;
   amount: string;
 };
@@ -50,7 +53,7 @@ function nextKey() {
 }
 
 function emptyDebitLine(): DebitLine {
-  return { key: nextKey(), itemName: "", expenseAccountId: "", amount: "" };
+  return { key: nextKey(), itemName: "", parentId: "", expenseAccountId: "", amount: "" };
 }
 
 function emptyCreditLine(): CreditLine {
@@ -62,6 +65,7 @@ function debitLinesFrom(journal: Journal): DebitLine[] {
   return journal.debits.map((debit) => ({
     key: nextKey(),
     itemName: debit.item_name ?? "",
+    parentId: "",
     expenseAccountId: String(debit.account_id),
     amount: String(debit.amount)
   }));
@@ -182,6 +186,25 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
   const debitTotal = sumAmounts(debitLines.map((l) => l.amount));
   const creditTotal = sumAmounts(creditLines.map((l) => l.amount));
   const isBalanced = debitTotal > 0 && debitTotal === creditTotal;
+
+  // 親の科目を選んでから、その子科目を選ぶ。親に子科目が無ければ、親の科目で登録する
+  const hasAccount = (id: number | null) => id !== null && expenseAccounts.some((a) => a.id === id);
+  const topLevelExpenseAccounts = expenseAccounts.filter((a) => !hasAccount(a.parent_id));
+  const childrenOf = (parentId: string) => expenseAccounts.filter((a) => String(a.parent_id) === parentId);
+
+  const parentIdOf = (line: DebitLine) => {
+    if (line.parentId) return line.parentId;
+
+    const account = expenseAccounts.find((a) => String(a.id) === line.expenseAccountId);
+    if (!account) return "";
+
+    return String(hasAccount(account.parent_id) ? account.parent_id : account.id);
+  };
+
+  const selectParent = (key: string, parentId: string) => {
+    // 子科目があれば、子科目か「〇〇のまま」を選び直してもらう
+    updateDebitLine(key, { parentId, expenseAccountId: childrenOf(parentId).length > 0 ? "" : parentId });
+  };
 
   const updateDebitLine = (key: string, patch: Partial<DebitLine>) => {
     setDebitLines((lines) => lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -350,13 +373,14 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
               </div>
               <div className="flex items-center gap-2">
                 <select
-                  value={line.expenseAccountId}
-                  onChange={(e) => updateDebitLine(line.key, { expenseAccountId: e.target.value })}
+                  aria-label="勘定科目"
+                  value={parentIdOf(line)}
+                  onChange={(e) => selectParent(line.key, e.target.value)}
                   required
                   className={`${lineInputClass} min-w-0 flex-1`}
                 >
                   <option value="">勘定科目を選択</option>
-                  {expenseAccounts.map((a) => (
+                  {topLevelExpenseAccounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
                     </option>
@@ -376,6 +400,26 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
                   />
                 </div>
               </div>
+              {childrenOf(parentIdOf(line)).length > 0 && (
+                <select
+                  aria-label="子科目"
+                  value={line.expenseAccountId}
+                  onChange={(e) => updateDebitLine(line.key, { expenseAccountId: e.target.value })}
+                  required
+                  className={`${lineInputClass} min-w-0`}
+                >
+                  <option value="">子科目を選択</option>
+                  {/* 合う子科目が無いときに、登録を中断して科目を足さなくて済むよう、親のままでも登録できる */}
+                  <option value={parentIdOf(line)}>
+                    （{expenseAccounts.find((a) => String(a.id) === parentIdOf(line))?.name}のまま）
+                  </option>
+                  {childrenOf(parentIdOf(line)).map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           ))}
         </div>
