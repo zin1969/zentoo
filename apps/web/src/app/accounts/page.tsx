@@ -1,6 +1,7 @@
 import HomeLink from "../components/HomeLink";
 import LogoutButton from "../components/LogoutButton";
 import AssetAccountsSection from "./components/AssetAccountsSection";
+import CreditCardsSection from "./components/CreditCardsSection";
 
 export default function Page() {
   return (
@@ -11,6 +12,7 @@ export default function Page() {
       </div>
       <h1 className="text-xl font-semibold text-foreground">口座・カード・科目の管理</h1>
       <AssetAccountsSection />
+      <CreditCardsSection />
     </main>
   );
 }

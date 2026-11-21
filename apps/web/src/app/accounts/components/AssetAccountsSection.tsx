@@ -12,6 +12,15 @@ import {
   type AssetAccount,
   type AssetAccountInput
 } from "@/lib/masters/assetAccounts";
+import {
+  buttonClass,
+  dangerButtonClass,
+  errorClass,
+  inputClass,
+  noteClass,
+  primaryButtonClass,
+  sectionClass
+} from "./styles";
 
 const MAX_NAME_LENGTH = 50;
 
@@ -39,13 +48,6 @@ function errorMessage(error: unknown) {
 
   return "保存に失敗しました。時間をおいて再度お試しください。";
 }
-
-const inputClass =
-  "min-w-0 rounded-md border border-black/15 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-black/20";
-const buttonClass =
-  "rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/15";
-const primaryButtonClass =
-  "rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60";
 
 type AccountFormProps = {
   initial: AssetAccountInput;
@@ -170,11 +172,11 @@ export default function AssetAccountsSection() {
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/20">
+    <section className={sectionClass}>
       <h2 className="text-base font-semibold text-foreground">口座（現金・預金・電子マネー）</h2>
 
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+        <p className={errorClass}>
           {error}
         </p>
       )}
@@ -200,7 +202,7 @@ export default function AssetAccountsSection() {
                 <div className="flex items-center gap-2">
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm text-foreground">{account.name}</span>
-                    <span className="text-xs text-black/50 dark:text-white/50">
+                    <span className={noteClass}>
                       {assetTypeLabel(account.payment_method_type)}
                       {account.in_use && "・使用中"}
                     </span>
@@ -221,7 +223,7 @@ export default function AssetAccountsSection() {
                     type="button"
                     onClick={() => remove(account)}
                     disabled={busy || account.in_use}
-                    className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-800 dark:text-red-300"
+                    className={dangerButtonClass}
                   >
                     削除
                   </button>
@@ -241,7 +243,7 @@ export default function AssetAccountsSection() {
           busy={busy}
           onSubmit={(input) => run(() => createAssetAccount(input), () => setAddFormKey((n) => n + 1))}
         />
-        <p className="text-xs text-black/50 dark:text-white/50">
+        <p className={noteClass}>
           開始残高は「開始資産登録」で登録します。使っている口座は、名前だけ変えられます。
         </p>
       </div>
