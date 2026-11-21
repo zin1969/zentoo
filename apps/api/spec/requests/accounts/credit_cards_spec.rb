@@ -90,7 +90,8 @@ RSpec.describe 'Managing credit cards', type: :request do
     it 'returns 404 for a bank account that is not a deposit account of the user' do
       other_bank = create(:asset_account, :mufg_yoga, user: create(:user))
 
-      [ cash.id, other_bank.id, 0 ].each do |bank_account_id|
+      # 0 などの不正な値は、入力の検証で 422 になる（下の 'returns 422 with errors' を参照）
+      [ cash.id, other_bank.id, 999_999_999 ].each do |bank_account_id|
         expect do
           post '/credit-cards', params: params.merge(bank_account_id: bank_account_id).to_json, headers: headers
         end.not_to change(LiabilityAccount, :count)
