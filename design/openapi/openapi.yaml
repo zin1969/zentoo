@@ -28,10 +28,18 @@ paths:
     $ref: './paths/auth.yaml#/login'
   /asset-accounts:
     $ref: './paths/accounts.yaml#/asset-accounts'
+  /asset-accounts/{id}:
+    $ref: './paths/accounts.yaml#/asset-account'
   /liability-accounts:
     $ref: './paths/accounts.yaml#/liability-accounts'
   /expense-accounts:
     $ref: './paths/accounts.yaml#/expense-accounts'
+  /expense-accounts/{id}:
+    $ref: './paths/accounts.yaml#/expense-account'
+  /credit-cards:
+    $ref: './paths/accounts.yaml#/credit-cards'
+  /credit-cards/{id}:
+    $ref: './paths/accounts.yaml#/credit-card'
   /journals:
     $ref: './paths/journals.yaml#/journals'
   /journals/{id}:
@@ -70,6 +78,16 @@ components:
       $ref: './schemas/accounts.yaml#/LiabilityAccount'
     ExpenseAccount:
       $ref: './schemas/accounts.yaml#/ExpenseAccount'
+    AssetAccountRequest:
+      $ref: './schemas/accounts.yaml#/AssetAccountRequest'
+    CreditCard:
+      $ref: './schemas/accounts.yaml#/CreditCard'
+    CreditCardRequest:
+      $ref: './schemas/accounts.yaml#/CreditCardRequest'
+    ExpenseAccountRequest:
+      $ref: './schemas/accounts.yaml#/ExpenseAccountRequest'
+    AccountSavedResponse:
+      $ref: './schemas/accounts.yaml#/AccountSavedResponse'
     CreateOpeningAssetBalanceJournalRequest:
       $ref: './schemas/journals.yaml#/CreateOpeningAssetBalanceJournalRequest'
     CreateOpeningLiabilityBalanceJournalRequest:

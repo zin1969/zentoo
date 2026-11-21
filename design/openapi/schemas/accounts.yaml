@@ -5,6 +5,7 @@ AssetAccount:
     - name
     - element_type
     - payment_method_type
+    - in_use
   properties:
     id:
       type: integer
@@ -20,6 +21,9 @@ AssetAccount:
       type: integer
       enum: [1, 2, 3]
       description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
+    in_use:
+      type: boolean
+      description: 仕訳で使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる（削除と種別の変更ができない）
 
 LiabilityAccount:
   type: object
@@ -49,6 +53,9 @@ ExpenseAccount:
   required:
     - id
     - name
+    - parent_id
+    - in_use
+    - has_children
   properties:
     id:
       type: integer
@@ -56,3 +63,114 @@ ExpenseAccount:
       type: string
       examples:
         - 食費
+    parent_id:
+      type: [integer, 'null']
+      description: 親の科目の ID（トップレベルの科目は null）
+    in_use:
+      type: boolean
+      description: 仕訳（全ユーザー）で使われている。true の科目は名前だけ変えられる（削除と親の付け替えができない）
+    has_children:
+      type: boolean
+      description: 子科目がある。true の科目は削除できず、親も設定できない
+
+AssetAccountRequest:
+  type: object
+  required:
+    - name
+    - asset_type
+  properties:
+    name:
+      type: string
+      maxLength: 50
+      description: 前後の空白は取り除く。本人の口座の中で重ならないこと
+    asset_type:
+      type: integer
+      enum: [1, 2, 3]
+      description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー（一覧の `payment_method_type` と同じ値）。現金の口座は 1 つだけ
+
+CreditCard:
+  type: object
+  required:
+    - id
+    - name
+    - cutoff_day
+    - payment_day
+    - bank_account_id
+    - bank_account_name
+    - in_use
+  properties:
+    id:
+      type: integer
+      description: 負債科目（クレジットカード払い）の ID。支払い方法の `account_id` と同じ
+    name:
+      type: string
+      examples:
+        - JAL
+    cutoff_day:
+      type: [integer, 'null']
+      description: 締め日（1〜31）。引き落とし設定の無いカードは null
+    payment_day:
+      type: [integer, 'null']
+      description: 支払日（1〜31）。引き落とし設定の無いカードは null
+    bank_account_id:
+      type: [integer, 'null']
+      description: 引き落とし口座（預金口座）の ID。引き落とし設定の無いカードは null
+    bank_account_name:
+      type: [string, 'null']
+    in_use:
+      type: boolean
+      description: 仕訳で使われている。true のカードは削除できない（名前と設定は変えられる）
+
+CreditCardRequest:
+  type: object
+  required:
+    - name
+    - cutoff_day
+    - payment_day
+    - bank_account_id
+  properties:
+    name:
+      type: string
+      maxLength: 50
+      description: 前後の空白は取り除く。本人の負債科目の中で重ならないこと
+    cutoff_day:
+      type: integer
+      minimum: 1
+      maximum: 31
+      description: 締め日。月に無い日は月末として扱う
+    payment_day:
+      type: integer
+      minimum: 1
+      maximum: 31
+      description: 支払日。月に無い日は月末として扱い、土日・祝日は翌営業日にずらす
+    bank_account_id:
+      type: integer
+      minimum: 1
+      description: 引き落とし口座。本人の預金口座だけ
+
+ExpenseAccountRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      maxLength: 50
+      description: 前後の空白は取り除く。同じ親の中で重ならないこと
+    parent_id:
+      type: [integer, 'null']
+      minimum: 1
+      description: 親の科目の ID。親の無い科目だけ親にできる。省略または null でトップレベルの科目になる
+
+AccountSavedResponse:
+  type: object
+  required:
+    - id
+    - next_token
+  properties:
+    id:
+      type: integer
+      description: 追加・変更した科目の ID
+    next_token:
+      type: string
+      description: 次のリクエストに使う JWT

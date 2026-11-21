@@ -21,6 +21,129 @@ asset-accounts:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+  post:
+    tags: [accounts]
+    summary: 口座の追加
+    description: |
+      認証済みユーザーの口座（現金・預金・電子マネー）を追加する。
+      現金の口座は 1 つだけ（現金の預け入れが、現金の口座が 1 つに決まることを前提にしているため）。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: createAssetAccount
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/AssetAccountRequest'
+    responses:
+      '201':
+        description: 追加した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、名前の重複（`duplicate_account_name`）、2 つ目の現金の口座（`cash_account_already_exists`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+asset-account:
+  put:
+    tags: [accounts]
+    summary: 口座の変更
+    description: |
+      口座の名前と種別を変える。仕訳で使われている口座と、カードの引き落とし口座になっている口座は、名前だけ変えられる。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: updateAssetAccount
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 口座の ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/AssetAccountRequest'
+    responses:
+      '200':
+        description: 変更した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 口座が存在しない、または他ユーザーの口座（`asset_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、使用中の口座の種別の変更（`asset_account_in_use`）、名前の重複（`duplicate_account_name`）、2 つ目の現金の口座（`cash_account_already_exists`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  delete:
+    tags: [accounts]
+    summary: 口座の削除
+    description: |
+      使われていない口座を削除する。仕訳で使われている口座と、カードの引き落とし口座になっている口座は削除できない。
+      成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
+    operationId: deleteAssetAccount
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 口座の ID
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 口座が存在しない、または他ユーザーの口座（`asset_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 使用中の口座（`asset_account_in_use`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
 
 liability-accounts:
   get:
@@ -65,6 +188,284 @@ expense-accounts:
                 $ref: '../schemas/accounts.yaml#/ExpenseAccount'
       '401':
         description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  post:
+    tags: [accounts]
+    summary: 費用科目の追加
+    description: |
+      全ユーザー共通（`user_id` が NULL）の費用科目を追加する。親子の 2 階層で、親にできるのは親の無い科目だけ。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: createExpenseAccount
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/ExpenseAccountRequest'
+    responses:
+      '201':
+        description: 追加した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、親が不正（`invalid_parent`）、同じ親の中で名前の重複（`duplicate_account_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+expense-account:
+  put:
+    tags: [accounts]
+    summary: 費用科目の変更
+    description: |
+      費用科目の名前と親を変える。仕訳（全ユーザー）で使われている科目は、名前だけ変えられる。子科目のある科目には親を設定できない（3 階層にしないため）。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: updateExpenseAccount
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 費用科目の ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/ExpenseAccountRequest'
+    responses:
+      '200':
+        description: 変更した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 科目が存在しない、または他ユーザーの科目（`expense_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、使用中の科目の親の付け替え（`expense_account_in_use`）、子科目のある科目への親の設定（`expense_account_has_children`）、親が不正（`invalid_parent`）、名前の重複（`duplicate_account_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  delete:
+    tags: [accounts]
+    summary: 費用科目の削除
+    description: |
+      使われていない、子科目の無い費用科目を削除する。
+      成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
+    operationId: deleteExpenseAccount
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 費用科目の ID
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 科目が存在しない、または他ユーザーの科目（`expense_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 使用中の科目（`expense_account_in_use`）、子科目のある科目（`expense_account_has_children`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+credit-cards:
+  get:
+    tags: [accounts]
+    summary: クレジットカードの一覧
+    description: |
+      認証済みユーザーのクレジットカード（負債科目のうちクレジットカード払い）と、その引き落とし設定を返す。
+      引き落とし設定の無いカードも、設定を null にして返す。
+      新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（本文に `next_token` は含めない）。
+    operationId: listCreditCards
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: クレジットカードの配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/accounts.yaml#/CreditCard'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  post:
+    tags: [accounts]
+    summary: クレジットカードの追加
+    description: |
+      クレジットカード（負債科目）と、その引き落とし設定（締め日・支払日・引き落とし口座）を一緒に登録する。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: createCreditCard
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/CreditCardRequest'
+    responses:
+      '201':
+        description: 追加した（`id` は負債科目の ID）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 引き落とし口座が本人の預金口座ではない（`bank_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、名前の重複（`duplicate_account_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+credit-card:
+  put:
+    tags: [accounts]
+    summary: クレジットカードの変更
+    description: |
+      カードの名前と引き落とし設定を変える。仕訳で使われているカードも変えられる。引き落とし設定が無ければ作る。
+      登録済みの引き落とし仕訳は変えない（新しい設定は、これから登録するカード払いから使う）。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: updateCreditCard
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 負債科目（クレジットカード払い）の ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/CreditCardRequest'
+    responses:
+      '200':
+        description: 変更した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: カードが存在しない、他ユーザーのカード、クレジットカードではない負債科目（`credit_card_not_found`）、または引き落とし口座が本人の預金口座ではない（`bank_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、名前の重複（`duplicate_account_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  delete:
+    tags: [accounts]
+    summary: クレジットカードの削除
+    description: |
+      使われていないカードを、引き落とし設定と一緒に削除する。
+      成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
+    operationId: deleteCreditCard
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 負債科目（クレジットカード払い）の ID
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: カードが存在しない、または他ユーザーのカード（`credit_card_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 仕訳で使われているカード（`credit_card_in_use`）
         content:
           application/json:
             schema:

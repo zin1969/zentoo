@@ -1,6 +1,6 @@
 # 勘定科目マスタ API
 
-認証済みユーザーの勘定科目を取得する REST API
+認証済みユーザーの勘定科目を取得する REST API。追加・変更・削除は [口座・カード・費用科目の管理 API](account_management.md)
 
 ---
 
@@ -33,11 +33,12 @@ GET /expense-accounts
 
 ```json
 [
-  { "id": 1, "name": "現金", "element_type": 1, "payment_method_type": 1 }
+  { "id": 1, "name": "現金", "element_type": 1, "payment_method_type": 1, "in_use": true }
 ]
 ```
 
-`payment_method_type`: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
+- `payment_method_type`: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
+- `in_use`: 仕訳で使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる
 
 `GET /liability-accounts`
 
@@ -53,9 +54,14 @@ GET /expense-accounts
 
 ```json
 [
-  { "id": 1, "name": "食費" }
+  { "id": 1, "name": "食費", "parent_id": null, "in_use": false, "has_children": true },
+  { "id": 5, "name": "外食費", "parent_id": 1, "in_use": true, "has_children": false }
 ]
 ```
+
+- `parent_id`: 親の科目の ID（トップレベルの科目は null）
+- `in_use`: 仕訳（全ユーザー）で使われている。true の科目は名前だけ変えられる
+- `has_children`: 子科目がある。true の科目は削除できない
 
 ### Authentication Error (401 Unauthorized)
 

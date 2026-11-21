@@ -20,6 +20,16 @@ ErrorResponse:
         - expense_debits_required
         - not_direct_debit_journal
         - payment_date_before_journal_date
+        - asset_account_in_use
+        - duplicate_account_name
+        - cash_account_already_exists
+        - credit_card_not_found
+        - credit_card_in_use
+        - bank_account_not_found
+        - expense_account_not_found
+        - expense_account_in_use
+        - expense_account_has_children
+        - invalid_parent
     errors:
       type: array
       items:
