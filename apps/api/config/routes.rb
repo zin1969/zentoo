@@ -22,6 +22,9 @@ Rails.application.routes.draw do
   put "/direct-debit-journals/:id", to: "journals/direct_debit_journals#update", constraints: { id: /\d+/ }
 
   get "/asset-accounts", to: "accounts/asset_accounts#index"
+  post "/asset-accounts", to: "accounts/asset_accounts#create"
+  put "/asset-accounts/:id", to: "accounts/asset_accounts#update", constraints: { id: /\d+/ }
+  delete "/asset-accounts/:id", to: "accounts/asset_accounts#destroy", constraints: { id: /\d+/ }
   get "/expense-accounts", to: "accounts/expense_accounts#index"
   get "/liability-accounts", to: "accounts/liability_accounts#index"
 end
