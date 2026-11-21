@@ -14,6 +14,7 @@ Rails.application.routes.draw do
   delete "/journals/:id", to: "journals/journals#destroy", constraints: { id: /\d+/ }
   get "/account-balances", to: "reports/account_balances#index"
   get "/monthly-expenses", to: "reports/monthly_expenses#index"
+  get "/bank-account-ledgers/:id", to: "reports/bank_account_ledgers#show", constraints: { id: /\d+/ }
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"
   post "/liability-opening-journals", to: "journals/liability_opening_journals#create"
   post "/journal-entries", to: "journals/journal_entries#create"

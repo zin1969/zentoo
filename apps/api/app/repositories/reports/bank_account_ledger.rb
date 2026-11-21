@@ -32,5 +32,15 @@ module Reports
 
       raise
     end
+
+    # 口座が動く最後の日（未来の引き落とし予定を含む）。動きが無ければ nil
+    def last_entry_date(user_id:, asset_account_id:)
+      [ Debit, Credit ].filter_map do |model|
+        model.joins(:journal)
+             .where(journals: { user_id: user_id }, account_id: asset_account_id)
+             .where("#{model.table_name}.element_type = ?", ElementType::ASSETS)
+             .maximum("journals.journal_dt")
+      end.max
+    end
   end
 end
