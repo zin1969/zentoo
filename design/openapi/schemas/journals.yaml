@@ -266,3 +266,36 @@ IncomeJournalRequest:
       type: [string, 'null']
       maxLength: 100
       description: 摘要（支払元など）。空なら収益科目の名前を入れる
+
+TransferJournalRequest:
+  type: object
+  required:
+    - journal_date
+    - from_type
+    - from_account_id
+    - to_account_id
+    - amount
+  properties:
+    journal_date:
+      type: string
+      format: date
+    from_type:
+      type: string
+      enum: [asset, credit_card]
+      description: 出す元が口座（`asset`）か、クレジットカード（`credit_card`。電子マネーへのチャージだけ）か
+    from_account_id:
+      type: integer
+      minimum: 1
+      description: 出す元の口座、またはカード（負債科目）の ID
+    to_account_id:
+      type: integer
+      minimum: 1
+      description: 入れる先の口座（本人の口座。出す元と同じにはできない）
+    amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    description:
+      type: [string, 'null']
+      maxLength: 100
+      description: 摘要。空なら組み合わせから決める（預金 → 現金は「引き出し」、現金 → 預金は「預入」、電子マネーへは「チャージ」、それ以外は「振替」）

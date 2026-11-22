@@ -281,7 +281,7 @@ journal-entry:
 cash-deposit-journals:
   post:
     tags: [journals]
-    summary: 現金の預け入れ仕訳の登録
+    summary: 現金の預け入れ仕訳の登録（Web の画面は振替にまとめた。現金 → 預金の振替と同じ）
     description: |
       現金を預金口座に預け入れる仕訳（借方: 預金口座、貸方: 現金）を登録する。
       預け入れ先は、認証済みユーザーの預金口座のみ。貸方の現金科目は、ユーザーの現金科目が 1 つだけのときに限って、それを使う。
@@ -520,6 +520,106 @@ income-journal:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
         description: バリデーションエラー（`errors`）、収入の仕訳ではない（`journal_not_editable`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+transfer-journals:
+  post:
+    tags: [journals]
+    summary: 振替の登録（引き出し・振替・チャージ）
+    description: |
+      振替の仕訳（借方: 入れる先の口座、貸方: 出す元の口座かクレジットカード）を登録する。
+      ATM での引き出し（預金 → 現金）、預け入れ（現金 → 預金）、口座間の振替、電子マネーへのチャージ（現金・預金・カードから）に使う。
+      クレジットカードから入れられるのは電子マネーだけで、お買い物のカード払いと同じく、引き落とし仕訳を自動で作る。
+      摘要（`description`）が空なら、組み合わせから「引き出し」「預入」「チャージ」「振替」を入れる。
+      内部で PostgreSQL 関数 `create_transfer_journal` を呼び出す。
+      401 以外では新しい `next_token` を返す。
+    operationId: createTransferJournal
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/TransferJournalRequest'
+    responses:
+      '201':
+        description: 登録成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 出す元（`from_account_not_found`）か入れる先（`to_account_not_found`）が存在しない、または他ユーザーのもの
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: |
+          バリデーションエラー（`errors`）、出す元と入れる先が同じ口座（`same_account`）、
+          カードから電子マネー以外への振替（`credit_card_charge_requires_e_money`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+transfer-journal:
+  put:
+    tags: [journals]
+    summary: 振替の修正
+    description: |
+      振替の仕訳（借方が口座 1 つ、貸方が口座かクレジットカード 1 つ。以前の「現金の預け入れ」も含む）を、新しい内容で作り直す。本文は振替の登録と同じ。
+      内部で PostgreSQL 関数 `replace_transfer_journal` を呼び出し、元の仕訳（とカードからのチャージの引き落とし仕訳）を削除して、登録と同じ確認をしながら登録し直す。
+      失敗した場合は、元の仕訳がそのまま残る。**仕訳の ID は変わる**。カードからのチャージの引き落とし日は、自動の計算に戻る。
+      401 以外では新しい `next_token` を返す。
+    operationId: replaceTransferJournal
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 修正する仕訳の ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/TransferJournalRequest'
+    responses:
+      '200':
+        description: 修正成功（`journal_id` は作り直した仕訳の新しい ID）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 仕訳（`journal_not_found`）・出す元（`from_account_not_found`）・入れる先（`to_account_not_found`）が存在しない、または他ユーザーのもの
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 登録と同じエラーと、振替の仕訳ではない（`journal_not_editable`）
         content:
           application/json:
             schema:

@@ -64,6 +64,10 @@ paths:
     $ref: './paths/journals.yaml#/income-journals'
   /income-journals/{id}:
     $ref: './paths/journals.yaml#/income-journal'
+  /transfer-journals:
+    $ref: './paths/journals.yaml#/transfer-journals'
+  /transfer-journals/{id}:
+    $ref: './paths/journals.yaml#/transfer-journal'
   /account-balances:
     $ref: './paths/reports.yaml#/account-balances'
   /monthly-expenses:
@@ -114,6 +118,8 @@ components:
       $ref: './schemas/journals.yaml#/UpdateDirectDebitDateRequest'
     IncomeJournalRequest:
       $ref: './schemas/journals.yaml#/IncomeJournalRequest'
+    TransferJournalRequest:
+      $ref: './schemas/journals.yaml#/TransferJournalRequest'
     JournalList:
       $ref: './schemas/journals.yaml#/JournalList'
     Journal:

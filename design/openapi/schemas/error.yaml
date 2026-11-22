@@ -33,6 +33,10 @@ ErrorResponse:
         - revenue_account_not_found
         - revenue_account_in_use
         - revenue_account_has_children
+        - from_account_not_found
+        - to_account_not_found
+        - same_account
+        - credit_card_charge_requires_e_money
     errors:
       type: array
       items:
