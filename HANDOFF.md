@@ -40,7 +40,8 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - 収入は「収入登録」（`/income-journals`）で登録・修正できる（借方: 入金先の口座、貸方: 収益科目）。収益科目（`revenue_accounts`）は費用科目と同じく共通・親子 2 階層で、管理画面から管理する。月次の画面は「月次の収支」（収入・支出・収支）。
 - 引き出し・預け入れ・口座間の振替・電子マネーへのチャージは「振替」（`/transfer-journals`）で登録・修正できる。カードからのチャージは引き落とし仕訳を自動で作る。Web の「現金の預け入れ」画面は振替にまとめた（Rails の `POST /cash-deposit-journals` は残している）。
 - お買い物の明細にタグ（目的）を付けられる（`tags` はユーザーごと、明細とは多対多の `debit_tags`）。画面は明細ごとに 1 つで、お買い物登録でその場で作る。「タグの集計」（`/tag-reports`）で 1 年分を月ごとに見られる（DB 関数 `get_tag_monthly_totals`・`get_tag_items`）。
-- お買い物登録で、外税のレシートを「税抜（外税）」に切り替えて、明細ごとの税抜の金額と税率（10% / 8% / その他の数値）で登録できる（2026-11-22 完了）。消費税は税率ごとの合計から切り捨てで計算し、手で直せる。明細の `amount` は税込のままで、表示のために `tax_rate`・`tax_excluded_amount` を保存する（計算は `apps/web/src/lib/journals/consumptionTax.ts`）。修正では税抜の状態で開く。次のマイルストーンはまだ決めていない。
+- お買い物登録で、外税のレシートを「税抜（外税）」に切り替えて、明細ごとの税抜の金額と税率（10% / 8% / その他の数値）で登録できる（2026-11-22 完了）。消費税は税率ごとの合計から切り捨てで計算し、手で直せる。明細の `amount` は税込のままで、表示のために `tax_rate`・`tax_excluded_amount` を保存する（計算は `apps/web/src/lib/journals/consumptionTax.ts`）。修正では税抜の状態で開く。
+- **次は M13「毎月の決まった支払いを、確かめてから登録できる」**（2026-11-22 に決定、未着手）。方針とタスクは `docs/milestones.md`。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
 - push 済みかどうかは `git status` で確認する。
 
