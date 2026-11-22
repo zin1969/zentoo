@@ -7,6 +7,8 @@ DECLARE
   v_new_journal_id INT;
   v_carry_payment_date DATE;
   v_carry_card_id INT;
+  v_occurrence_entry_ids BIGINT[];
+  v_occurrence_dates DATE[];
   ELEMENT_EXPENSES CONSTANT INT := 5;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
@@ -92,6 +94,14 @@ BEGIN
     v_carry_payment_date := NULL;
   END IF;
 
+  -- 決まった支払いから登録した仕訳なら、その回の記録を新しい仕訳に付け替える。
+  -- 記録は元の仕訳の削除で一緒に消える（外部キーの ON DELETE CASCADE）ので、先に控えておく
+  SELECT ARRAY_AGG(o.recurring_entry_id), ARRAY_AGG(o.scheduled_date)
+    INTO v_occurrence_entry_ids, v_occurrence_dates
+    FROM recurring_entry_occurrences o
+   WHERE o.journal_id = replace_journal_entry.journal_id
+  ;
+
   -- 元の仕訳（と引き落とし仕訳）を消して、登録と同じ確認をしながら作り直す。
   -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
   PERFORM delete_journal(replace_journal_entry.journal_id, v_user_id);
@@ -102,6 +112,13 @@ BEGIN
   END IF;
 
   v_new_journal_id := insert_journal_entry(journal_data);
+
+  IF v_occurrence_entry_ids IS NOT NULL THEN
+    INSERT INTO recurring_entry_occurrences (recurring_entry_id, scheduled_date, journal_id)
+    SELECT x.entry_id, x.scheduled_date, v_new_journal_id
+      FROM UNNEST(v_occurrence_entry_ids, v_occurrence_dates) AS x(entry_id, scheduled_date)
+    ;
+  END IF;
 
   IF v_carry_payment_date IS NOT NULL THEN
     -- 同じトランザクションの後続の仕訳に影響しないよう、指定を消す

@@ -1029,6 +1029,63 @@ $$;
 
 
 --
+-- Name: get_recurring_dates(integer, integer, integer, integer, date, date, date, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_recurring_dates(interval_unit integer, interval_count integer, day_of_month integer, weekday integer, start_date date, end_date date, from_date date, to_date date) RETURNS SETOF date
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_from DATE;
+  v_to DATE;
+  v_start_month INT;
+  v_first_step INT;
+  v_last_step INT;
+  INTERVAL_UNIT_MONTH CONSTANT INT := 1;
+BEGIN
+  -- 週単位（interval_unit = 2）は、このあとのタスクで足す
+  IF interval_unit <> INTERVAL_UNIT_MONTH THEN
+    RAISE EXCEPTION 'interval_unit not supported yet: %', interval_unit;
+  END IF;
+
+  -- 開始日より前・終了日より後の回は出さない
+  v_from := GREATEST(from_date, start_date);
+  v_to := LEAST(to_date, COALESCE(end_date, to_date));
+
+  IF v_from > v_to THEN
+    RETURN;
+  END IF;
+
+  -- 予定のある月は、開始日の月から interval_count ヶ月ごと。月を「年 × 12 + 月」の通し番号で数え、
+  -- 期間にかかる回（step）だけを作る。月に無い日（2 月 30 日など）は月末にするので、31 日は月末になる
+  v_start_month := EXTRACT(YEAR FROM start_date)::INT * 12 + EXTRACT(MONTH FROM start_date)::INT - 1;
+  v_first_step := GREATEST(
+    0,
+    (EXTRACT(YEAR FROM v_from)::INT * 12 + EXTRACT(MONTH FROM v_from)::INT - 1 - v_start_month) / interval_count
+  );
+  v_last_step :=
+    (EXTRACT(YEAR FROM v_to)::INT * 12 + EXTRACT(MONTH FROM v_to)::INT - 1 - v_start_month) / interval_count;
+
+  RETURN QUERY
+  SELECT d.d_date
+    FROM GENERATE_SERIES(v_first_step, v_last_step) AS s(step)
+   CROSS JOIN LATERAL (
+     SELECT (v_start_month + s.step * interval_count) / 12 AS m_year,
+            (v_start_month + s.step * interval_count) % 12 + 1 AS m_month
+   ) m
+   CROSS JOIN LATERAL (
+     SELECT LEAST(
+              MAKE_DATE(m.m_year, m.m_month, 1) + (day_of_month - 1),
+              get_last_date_of_month(m.m_year, m.m_month)
+            ) AS d_date
+   ) d
+   WHERE d.d_date BETWEEN v_from AND v_to
+   ORDER BY d.d_date;
+END;
+$$;
+
+
+--
 -- Name: get_tag_items(integer, integer, date, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1290,6 +1347,9 @@ CREATE FUNCTION public.replace_income_journal(journal_id integer, journal_date d
     LANGUAGE plpgsql
     AS $$
 DECLARE
+  v_new_journal_id INT;
+  v_occurrence_entry_ids BIGINT[];
+  v_occurrence_dates DATE[];
   ELEMENT_REVENUE CONSTANT INT := 4;
 BEGIN
   -- 他ユーザーの仕訳と存在しない仕訳は区別しない。
@@ -1320,11 +1380,30 @@ BEGIN
     RAISE EXCEPTION 'journal is not an income journal: %', journal_id;
   END IF;
 
+  -- 決まった支払いから登録した仕訳なら、その回の記録を新しい仕訳に付け替える。
+  -- 記録は元の仕訳の削除で一緒に消える（外部キーの ON DELETE CASCADE）ので、先に控えておく
+  SELECT ARRAY_AGG(o.recurring_entry_id), ARRAY_AGG(o.scheduled_date)
+    INTO v_occurrence_entry_ids, v_occurrence_dates
+    FROM recurring_entry_occurrences o
+   WHERE o.journal_id = replace_income_journal.journal_id
+  ;
+
   -- 元の仕訳を消して、登録と同じ確認をしながら作り直す。
   -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
   PERFORM delete_journal(replace_income_journal.journal_id, replace_income_journal.user_id);
 
-  RETURN create_income_journal(journal_date, asset_account_id, revenue_account_id, amount, description, user_id);
+  v_new_journal_id := create_income_journal(
+    journal_date, asset_account_id, revenue_account_id, amount, description, user_id
+  );
+
+  IF v_occurrence_entry_ids IS NOT NULL THEN
+    INSERT INTO recurring_entry_occurrences (recurring_entry_id, scheduled_date, journal_id)
+    SELECT x.entry_id, x.scheduled_date, v_new_journal_id
+      FROM UNNEST(v_occurrence_entry_ids, v_occurrence_dates) AS x(entry_id, scheduled_date)
+    ;
+  END IF;
+
+  RETURN v_new_journal_id;
 END;
 $$;
 
@@ -1341,6 +1420,8 @@ DECLARE
   v_new_journal_id INT;
   v_carry_payment_date DATE;
   v_carry_card_id INT;
+  v_occurrence_entry_ids BIGINT[];
+  v_occurrence_dates DATE[];
   ELEMENT_EXPENSES CONSTANT INT := 5;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
@@ -1426,6 +1507,14 @@ BEGIN
     v_carry_payment_date := NULL;
   END IF;
 
+  -- 決まった支払いから登録した仕訳なら、その回の記録を新しい仕訳に付け替える。
+  -- 記録は元の仕訳の削除で一緒に消える（外部キーの ON DELETE CASCADE）ので、先に控えておく
+  SELECT ARRAY_AGG(o.recurring_entry_id), ARRAY_AGG(o.scheduled_date)
+    INTO v_occurrence_entry_ids, v_occurrence_dates
+    FROM recurring_entry_occurrences o
+   WHERE o.journal_id = replace_journal_entry.journal_id
+  ;
+
   -- 元の仕訳（と引き落とし仕訳）を消して、登録と同じ確認をしながら作り直す。
   -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
   PERFORM delete_journal(replace_journal_entry.journal_id, v_user_id);
@@ -1436,6 +1525,13 @@ BEGIN
   END IF;
 
   v_new_journal_id := insert_journal_entry(journal_data);
+
+  IF v_occurrence_entry_ids IS NOT NULL THEN
+    INSERT INTO recurring_entry_occurrences (recurring_entry_id, scheduled_date, journal_id)
+    SELECT x.entry_id, x.scheduled_date, v_new_journal_id
+      FROM UNNEST(v_occurrence_entry_ids, v_occurrence_dates) AS x(entry_id, scheduled_date)
+    ;
+  END IF;
 
   IF v_carry_payment_date IS NOT NULL THEN
     -- 同じトランザクションの後続の仕訳に影響しないよう、指定を消す
@@ -2079,6 +2175,91 @@ ALTER SEQUENCE public.liability_accounts_id_seq OWNED BY public.liability_accoun
 
 
 --
+-- Name: recurring_entries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.recurring_entries (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    name text NOT NULL,
+    kind integer NOT NULL,
+    store_name text,
+    item_name text,
+    amount integer NOT NULL,
+    debit_account_id integer NOT NULL,
+    credit_element_type integer NOT NULL,
+    credit_account_id integer NOT NULL,
+    interval_unit integer NOT NULL,
+    interval_count integer NOT NULL,
+    day_of_month integer,
+    weekday integer,
+    start_date date NOT NULL,
+    end_date date,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT recurring_entry_amount CHECK ((amount > 0)),
+    CONSTRAINT recurring_entry_credit_element_type CHECK ((((kind = 1) AND (credit_element_type = ANY (ARRAY[1, 2]))) OR ((kind = 2) AND (credit_element_type = 4)))),
+    CONSTRAINT recurring_entry_interval_count CHECK (((interval_count >= 1) AND (interval_count <= 12))),
+    CONSTRAINT recurring_entry_kind CHECK ((kind = ANY (ARRAY[1, 2]))),
+    CONSTRAINT recurring_entry_period CHECK (((end_date IS NULL) OR (end_date >= start_date))),
+    CONSTRAINT recurring_entry_schedule CHECK ((((interval_unit = 1) AND ((day_of_month >= 1) AND (day_of_month <= 31)) AND (weekday IS NULL)) OR ((interval_unit = 2) AND ((weekday >= 0) AND (weekday <= 6)) AND (day_of_month IS NULL))))
+);
+
+
+--
+-- Name: recurring_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.recurring_entries_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: recurring_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.recurring_entries_id_seq OWNED BY public.recurring_entries.id;
+
+
+--
+-- Name: recurring_entry_occurrences; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.recurring_entry_occurrences (
+    id bigint NOT NULL,
+    recurring_entry_id bigint NOT NULL,
+    scheduled_date date NOT NULL,
+    journal_id bigint,
+    skipped boolean DEFAULT false NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT recurring_entry_occurrence_journal_or_skipped CHECK (((journal_id IS NOT NULL) <> skipped))
+);
+
+
+--
+-- Name: recurring_entry_occurrences_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.recurring_entry_occurrences_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: recurring_entry_occurrences_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.recurring_entry_occurrences_id_seq OWNED BY public.recurring_entry_occurrences.id;
+
+
+--
 -- Name: revenue_accounts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2314,6 +2495,20 @@ ALTER TABLE ONLY public.liability_accounts ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: recurring_entries id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_entries ALTER COLUMN id SET DEFAULT nextval('public.recurring_entries_id_seq'::regclass);
+
+
+--
+-- Name: recurring_entry_occurrences id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_entry_occurrences ALTER COLUMN id SET DEFAULT nextval('public.recurring_entry_occurrences_id_seq'::regclass);
+
+
+--
 -- Name: revenue_accounts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2462,6 +2657,22 @@ ALTER TABLE ONLY public.liability_accounts
 
 
 --
+-- Name: recurring_entries recurring_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_entries
+    ADD CONSTRAINT recurring_entries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: recurring_entry_occurrences recurring_entry_occurrences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_entry_occurrences
+    ADD CONSTRAINT recurring_entry_occurrences_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: revenue_accounts revenue_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2499,6 +2710,13 @@ ALTER TABLE ONLY public.tags
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_on_recurring_entry_id_scheduled_date_df82a645e3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_recurring_entry_id_scheduled_date_df82a645e3 ON public.recurring_entry_occurrences USING btree (recurring_entry_id, scheduled_date);
 
 
 --
@@ -2663,6 +2881,20 @@ CREATE INDEX index_liability_accounts_on_user_id ON public.liability_accounts US
 
 
 --
+-- Name: index_recurring_entries_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_entries_on_user_id ON public.recurring_entries USING btree (user_id);
+
+
+--
+-- Name: index_recurring_entry_occurrences_on_journal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_entry_occurrences_on_journal_id ON public.recurring_entry_occurrences USING btree (journal_id);
+
+
+--
 -- Name: index_revenue_accounts_on_common_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2775,6 +3007,13 @@ CREATE TRIGGER trigger_update_updated_at_of_liability_accounts BEFORE UPDATE ON 
 
 
 --
+-- Name: recurring_entries trigger_update_updated_at_of_recurring_entries; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_update_updated_at_of_recurring_entries BEFORE UPDATE ON public.recurring_entries FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_with_current_timestamp();
+
+
+--
 -- Name: revenue_accounts trigger_update_updated_at_of_revenue_accounts; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2835,6 +3074,14 @@ ALTER TABLE ONLY public.journals
 
 
 --
+-- Name: recurring_entry_occurrences fk_rails_230a6fb304; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_entry_occurrences
+    ADD CONSTRAINT fk_rails_230a6fb304 FOREIGN KEY (recurring_entry_id) REFERENCES public.recurring_entries(id) ON DELETE CASCADE;
+
+
+--
 -- Name: direct_debit_journals fk_rails_29f8d7e878; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2880,6 +3127,14 @@ ALTER TABLE ONLY public.credit_cards
 
 ALTER TABLE ONLY public.equity_accounts
     ADD CONSTRAINT fk_rails_7ac996d2ab FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: recurring_entries fk_rails_83fbf3e277; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_entries
+    ADD CONSTRAINT fk_rails_83fbf3e277 FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -2979,6 +3234,14 @@ ALTER TABLE ONLY public.tags
 
 
 --
+-- Name: recurring_entry_occurrences fk_rails_eb4d853172; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_entry_occurrences
+    ADD CONSTRAINT fk_rails_eb4d853172 FOREIGN KEY (journal_id) REFERENCES public.journals(id) ON DELETE CASCADE;
+
+
+--
 -- Name: direct_debit_journals fk_rails_f395144e79; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2993,6 +3256,9 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261122122000'),
+('20261122121000'),
+('20261122120000'),
 ('20261121127000'),
 ('20261121126000'),
 ('20261121125000'),
