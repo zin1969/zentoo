@@ -1211,6 +1211,16 @@ BEGIN
     RAISE EXCEPTION 'tags are only for expense debits';
   END IF;
 
+  -- 4.7 外税で登録した明細の税率・税抜の金額は、お買い物の費用の明細にだけ持たせる（表示のため。金額は amount の税込）
+  IF EXISTS (
+    SELECT 1
+      FROM jsonb_array_elements(journal_data->'debits') AS e(value)
+     WHERE e.value->>'tax_rate' IS NOT NULL
+       AND (e.value->>'element_type')::INT IS DISTINCT FROM ELEMENT_EXPENSES
+  ) THEN
+    RAISE EXCEPTION 'tax is only for expense debits';
+  END IF;
+
   -- 5. 親仕訳データを作成
   INSERT INTO journals (
     journal_dt, store_name, user_id
@@ -1228,13 +1238,15 @@ BEGIN
      ORDER BY e.ord
   LOOP
     INSERT INTO debits (
-      journal_id, element_type, account_id, item_name, amount, user_id
+      journal_id, element_type, account_id, item_name, amount, tax_rate, tax_excluded_amount, user_id
     ) VALUES (
       new_journal_id,
       (v_debit.value->>'element_type')::INT,
       (v_debit.value->>'account_id')::INT,
       v_debit.value->>'item_name',
       (v_debit.value->>'amount')::INT,
+      (v_debit.value->>'tax_rate')::INT,
+      (v_debit.value->>'tax_excluded_amount')::INT,
       v_user_id
     )
     RETURNING id INTO v_debit_id;
@@ -1778,7 +1790,12 @@ CREATE TABLE public.debits (
     user_id bigint,
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT debit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5])))
+    tax_rate integer,
+    tax_excluded_amount integer,
+    CONSTRAINT debit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5]))),
+    CONSTRAINT debit_tax_columns_together CHECK (((tax_rate IS NULL) = (tax_excluded_amount IS NULL))),
+    CONSTRAINT debit_tax_excluded_amount_range CHECK (((tax_excluded_amount IS NULL) OR ((tax_excluded_amount >= 0) AND (tax_excluded_amount <= amount)))),
+    CONSTRAINT debit_tax_rate_range CHECK (((tax_rate IS NULL) OR ((tax_rate >= 0) AND (tax_rate <= 100))))
 );
 
 
@@ -2976,6 +2993,8 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261121127000'),
+('20261121126000'),
 ('20261121125000'),
 ('20261121124000'),
 ('20261121123000'),
