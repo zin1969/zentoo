@@ -243,7 +243,7 @@
 - [x] タグのテーブル（`tags`、`debit_tags`）と、お買い物の登録・修正でのタグの保存（`insert_journal_entry`）
 - [x] タグの API（一覧・追加・名前の変更・削除）と、仕訳一覧・仕訳 1 件の明細のタグ
 - [x] お買い物登録・修正の画面で、明細ごとのタグの選択（候補の表示とその場での作成）と、仕訳一覧のタグの表示
-- [ ] タグの集計の DB 関数（月ごとの合計、月の明細）と API
+- [x] タグの集計の DB 関数（`get_tag_monthly_totals`、`get_tag_items`）と API（`GET /tag-reports/{id}`、`GET /tag-reports/{id}/items`）
 - [ ] タグの集計画面と、トップページの導線
 - [ ] 管理画面のタグの欄（名前の変更・削除）
 - [ ] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新

@@ -15,6 +15,8 @@ Rails.application.routes.draw do
   get "/account-balances", to: "reports/account_balances#index"
   get "/monthly-expenses", to: "reports/monthly_expenses#index"
   get "/bank-account-ledgers/:id", to: "reports/bank_account_ledgers#show", constraints: { id: /\d+/ }
+  get "/tag-reports/:id", to: "reports/tag_reports#show", constraints: { id: /\d+/ }
+  get "/tag-reports/:id/items", to: "reports/tag_reports#items", constraints: { id: /\d+/ }
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"
   post "/liability-opening-journals", to: "journals/liability_opening_journals#create"
   post "/journal-entries", to: "journals/journal_entries#create"
