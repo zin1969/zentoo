@@ -14,7 +14,7 @@ module Journals
       scope = scope.where(journal_dt: ..to) if to
 
       journals = scope
-                 .includes(:debits, :credits)
+                 .includes(:credits, debits: :tags)
                  .order(journal_dt: :desc, id: :desc)
                  .offset((page - 1) * per_page)
                  .limit(per_page)
@@ -30,7 +30,7 @@ module Journals
 
     # 認証済みユーザーの仕訳を 1 件取得する。他ユーザーの仕訳と存在しない仕訳は区別せず nil を返す
     def find(user_id:, journal_id:)
-      journal = Journal.where(user_id: user_id).includes(:debits, :credits).find_by(id: journal_id)
+      journal = Journal.where(user_id: user_id).includes(:credits, debits: :tags).find_by(id: journal_id)
       return nil unless journal
 
       Result.new(

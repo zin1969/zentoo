@@ -35,6 +35,11 @@ Rails.application.routes.draw do
   put "/expense-accounts/:id", to: "accounts/expense_accounts#update", constraints: { id: /\d+/ }
   delete "/expense-accounts/:id", to: "accounts/expense_accounts#destroy", constraints: { id: /\d+/ }
 
+  get "/tags", to: "tags#index"
+  post "/tags", to: "tags#create"
+  put "/tags/:id", to: "tags#update", constraints: { id: /\d+/ }
+  delete "/tags/:id", to: "tags#destroy", constraints: { id: /\d+/ }
+
   get "/revenue-accounts", to: "accounts/revenue_accounts#index"
   post "/revenue-accounts", to: "accounts/revenue_accounts#create"
   put "/revenue-accounts/:id", to: "accounts/revenue_accounts#update", constraints: { id: /\d+/ }

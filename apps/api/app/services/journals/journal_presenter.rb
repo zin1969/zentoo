@@ -19,7 +19,9 @@ module Journals
             account_id: debit.account_id,
             account_name: account_name(result, debit),
             item_name: debit.item_name,
-            amount: debit.amount.to_i
+            amount: debit.amount.to_i,
+            # 明細に付いているタグ（お買い物の費用の明細だけ）
+            tags: debit.tags.sort_by(&:id).map { |tag| { id: tag.id, name: tag.name } }
           }
         end,
         credits: journal.credits.sort_by(&:id).map do |credit|
