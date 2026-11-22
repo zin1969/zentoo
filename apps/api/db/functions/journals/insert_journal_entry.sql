@@ -12,6 +12,8 @@ DECLARE
   v_sum_credit INT := 0;
   v_entry RECORD;
   v_available BOOLEAN;
+  v_debit RECORD;
+  v_debit_id BIGINT;
   ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   ELEMENT_EQUITY CONSTANT INT := 3;
@@ -72,6 +74,31 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- 4.6 明細ごとのタグ（tag_ids）を確認する。タグは本人のものだけ、費用の明細にだけ付けられる。
+  -- 他人のタグと存在しないタグは区別しない
+  IF EXISTS (
+    SELECT 1
+      FROM jsonb_array_elements(journal_data->'debits') AS e(value)
+     CROSS JOIN LATERAL jsonb_array_elements_text(
+       CASE WHEN jsonb_typeof(e.value->'tag_ids') = 'array' THEN e.value->'tag_ids' ELSE '[]'::JSONB END
+     ) AS t(tag_id)
+     WHERE NOT EXISTS (
+       SELECT 1 FROM tags tg WHERE tg.id = t.tag_id::BIGINT AND tg.user_id = v_user_id
+     )
+  ) THEN
+    RAISE EXCEPTION 'tag not found';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+      FROM jsonb_array_elements(journal_data->'debits') AS e(value)
+     WHERE jsonb_typeof(e.value->'tag_ids') = 'array'
+       AND jsonb_array_length(e.value->'tag_ids') > 0
+       AND (e.value->>'element_type')::INT IS DISTINCT FROM ELEMENT_EXPENSES
+  ) THEN
+    RAISE EXCEPTION 'tags are only for expense debits';
+  END IF;
+
   -- 5. 親仕訳データを作成
   INSERT INTO journals (
     journal_dt, store_name, user_id
@@ -82,24 +109,30 @@ BEGIN
   )
   RETURNING id INTO new_journal_id;
 
-  -- 6. 借方（debits）のインサート
-  INSERT INTO debits (
-    journal_id, element_type, account_id, item_name, amount, user_id
-  )
-  SELECT
-    new_journal_id,
-    element_type,
-    account_id,
-    item_name,
-    amount,
-    v_user_id
-  FROM jsonb_to_recordset(journal_data->'debits')
-    AS debits(
-         element_type INT,
-         account_id INT,
-         item_name TEXT,
-         amount INT
-       );
+  -- 6. 借方（debits）のインサート。明細ごとのタグも入れるので、1 行ずつ送られた順に入れる
+  FOR v_debit IN
+    SELECT e.value
+      FROM jsonb_array_elements(journal_data->'debits') WITH ORDINALITY AS e(value, ord)
+     ORDER BY e.ord
+  LOOP
+    INSERT INTO debits (
+      journal_id, element_type, account_id, item_name, amount, user_id
+    ) VALUES (
+      new_journal_id,
+      (v_debit.value->>'element_type')::INT,
+      (v_debit.value->>'account_id')::INT,
+      v_debit.value->>'item_name',
+      (v_debit.value->>'amount')::INT,
+      v_user_id
+    )
+    RETURNING id INTO v_debit_id;
+
+    INSERT INTO debit_tags (debit_id, tag_id)
+    SELECT DISTINCT v_debit_id, t.tag_id::BIGINT
+      FROM jsonb_array_elements_text(
+        CASE WHEN jsonb_typeof(v_debit.value->'tag_ids') = 'array' THEN v_debit.value->'tag_ids' ELSE '[]'::JSONB END
+      ) AS t(tag_id);
+  END LOOP;
 
   -- 7. 貸方（credits）のインサート
   INSERT INTO credits (

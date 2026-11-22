@@ -8,4 +8,5 @@ class User < ApplicationRecord
   has_many :asset_accounts
   has_many :equity_accounts
   has_many :credit_cards
+  has_many :tags
 end

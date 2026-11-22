@@ -44,6 +44,10 @@ module Journals
         InsertJournalEntry::AccountNotFound.new
       when /credit_card setting not found/
         InsertJournalEntry::CreditCardSettingNotFound.new
+      when /tag not found/
+        InsertJournalEntry::TagNotFound.new
+      when /tags are only for expense debits/
+        InsertJournalEntry::TagsOnlyForExpenseDebits.new
       else
         error
       end

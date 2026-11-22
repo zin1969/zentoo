@@ -5,6 +5,8 @@ module Journals
     class UnbalancedJournal < StandardError; end
     class AccountNotFound < StandardError; end
     class CreditCardSettingNotFound < StandardError; end
+    class TagNotFound < StandardError; end
+    class TagsOnlyForExpenseDebits < StandardError; end
 
     def initialize(base: ActiveRecord::Base)
       @base = base
@@ -35,6 +37,10 @@ module Journals
         AccountNotFound.new
       when /credit_card setting not found/
         CreditCardSettingNotFound.new
+      when /tag not found/
+        TagNotFound.new
+      when /tags are only for expense debits/
+        TagsOnlyForExpenseDebits.new
       else
         error
       end
