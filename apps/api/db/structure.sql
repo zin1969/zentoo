@@ -98,6 +98,85 @@ $$;
 
 
 --
+-- Name: create_income_journal(date, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_income_journal(journal_date date, asset_account_id integer, revenue_account_id integer, amount integer, description text, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_revenue_name TEXT;
+  new_journal_id INT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_REVENUE CONSTANT INT := 4;
+  NO_PAYMENT_METHOD CONSTANT INT := 0;
+BEGIN
+  IF amount <= 0 THEN
+    RAISE EXCEPTION 'amount must be greater than 0';
+  END IF;
+
+  -- 入金先は本人の口座ならどれでもよい（預金・現金・電子マネー）。他人の口座と存在しない口座は区別しない
+  IF NOT EXISTS (
+    SELECT 1
+      FROM asset_accounts aa
+     WHERE aa.id = create_income_journal.asset_account_id
+       AND aa.user_id = create_income_journal.user_id
+  ) THEN
+    RAISE EXCEPTION 'asset_account not found: %', asset_account_id;
+  END IF;
+
+  -- 収益科目は共通科目か本人の科目
+  SELECT ra.name
+    INTO v_revenue_name
+    FROM revenue_accounts ra
+   WHERE ra.id = create_income_journal.revenue_account_id
+     AND (ra.user_id IS NULL OR ra.user_id = create_income_journal.user_id)
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'revenue_account not found: %', revenue_account_id;
+  END IF;
+
+  -- 摘要（支払元など）は通帳の摘要に出るので、空なら収益科目の名前を入れる
+  INSERT INTO journals (
+    journal_dt, store_name, user_id
+  ) VALUES (
+    journal_date,
+    COALESCE(NULLIF(BTRIM(description), ''), v_revenue_name),
+    user_id
+  )
+  RETURNING id INTO new_journal_id;
+
+  -- 借方: 入金先の口座
+  INSERT INTO debits (
+    journal_id, element_type, account_id, item_name, amount, user_id
+  ) VALUES (
+    new_journal_id,
+    ELEMENT_ASSETS,
+    asset_account_id,
+    NULL,
+    amount,
+    user_id
+  );
+
+  -- 貸方: 収益科目（資産・負債以外の貸方は、支払方法を持たない）
+  INSERT INTO credits (
+    journal_id, element_type, payment_method_type, account_id, amount, user_id
+  ) VALUES (
+    new_journal_id,
+    ELEMENT_REVENUE,
+    NO_PAYMENT_METHOD,
+    revenue_account_id,
+    amount,
+    user_id
+  );
+
+  RETURN new_journal_id;
+END;
+$$;
+
+
+--
 -- Name: create_opening_asset_balance_journal(date, integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -922,6 +1001,53 @@ BEGIN
        );
 
   RETURN new_journal_id;
+END;
+$$;
+
+
+--
+-- Name: replace_income_journal(integer, date, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.replace_income_journal(journal_id integer, journal_date date, asset_account_id integer, revenue_account_id integer, amount integer, description text, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  ELEMENT_REVENUE CONSTANT INT := 4;
+BEGIN
+  -- 他ユーザーの仕訳と存在しない仕訳は区別しない。
+  -- 同時に修正・削除されないよう、行をロックする
+  PERFORM 1
+     FROM journals j
+    WHERE j.id = replace_income_journal.journal_id
+      AND j.user_id = replace_income_journal.user_id
+      FOR UPDATE
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'journal not found: %', journal_id;
+  END IF;
+
+  -- 修正できるのは収入の仕訳（貸方がすべて収益）だけ
+  IF NOT EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_income_journal.journal_id
+     )
+     OR EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_income_journal.journal_id
+          AND c.element_type <> ELEMENT_REVENUE
+     ) THEN
+    RAISE EXCEPTION 'journal is not an income journal: %', journal_id;
+  END IF;
+
+  -- 元の仕訳を消して、登録と同じ確認をしながら作り直す。
+  -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
+  PERFORM delete_journal(replace_income_journal.journal_id, replace_income_journal.user_id);
+
+  RETURN create_income_journal(journal_date, asset_account_id, revenue_account_id, amount, description, user_id);
 END;
 $$;
 
@@ -2367,6 +2493,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261121121000'),
 ('20261121120000'),
 ('20261120150000'),
 ('20261120142000'),
