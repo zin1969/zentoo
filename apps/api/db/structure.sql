@@ -399,6 +399,128 @@ $$;
 
 
 --
+-- Name: create_transfer_journal(date, integer, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_transfer_journal(journal_date date, from_element_type integer, from_account_id integer, to_account_id integer, amount integer, description text, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_to_type INT;
+  v_from_type INT;
+  v_payment_method INT;
+  v_label TEXT;
+  new_journal_id INT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_LIABILITIES CONSTANT INT := 2;
+  ASSET_TYPE_CASH CONSTANT INT := 1;
+  ASSET_TYPE_DEPOSIT CONSTANT INT := 2;
+  ASSET_TYPE_E_MONEY CONSTANT INT := 3;
+  LIABILITY_TYPE_CREDIT_CARD CONSTANT INT := 3;
+  PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
+BEGIN
+  IF amount <= 0 THEN
+    RAISE EXCEPTION 'amount must be greater than 0';
+  END IF;
+
+  -- 入れる先は本人の口座。他ユーザーの口座と存在しない口座は区別しない
+  SELECT aa.asset_type
+    INTO v_to_type
+    FROM asset_accounts aa
+   WHERE aa.id = create_transfer_journal.to_account_id
+     AND aa.user_id = create_transfer_journal.user_id
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'to account not found: %', to_account_id;
+  END IF;
+
+  IF from_element_type = ELEMENT_ASSETS THEN
+    -- 口座から: 支払方法は口座の種別（現金・預金・電子マネー）
+    SELECT aa.asset_type
+      INTO v_from_type
+      FROM asset_accounts aa
+     WHERE aa.id = create_transfer_journal.from_account_id
+       AND aa.user_id = create_transfer_journal.user_id
+    ;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'from account not found: %', from_account_id;
+    END IF;
+
+    IF from_account_id = to_account_id THEN
+      RAISE EXCEPTION 'from and to accounts must differ: %', from_account_id;
+    END IF;
+
+    v_payment_method := v_from_type;
+  ELSIF from_element_type = ELEMENT_LIABILITIES THEN
+    -- クレジットカードから: 入れられるのは電子マネーだけ（チャージ）
+    IF NOT EXISTS (
+      SELECT 1
+        FROM liability_accounts la
+       WHERE la.id = create_transfer_journal.from_account_id
+         AND la.user_id = create_transfer_journal.user_id
+         AND la.liability_type = LIABILITY_TYPE_CREDIT_CARD
+    ) THEN
+      RAISE EXCEPTION 'from account not found: %', from_account_id;
+    END IF;
+
+    IF v_to_type <> ASSET_TYPE_E_MONEY THEN
+      RAISE EXCEPTION 'credit card can only charge e-money: %', to_account_id;
+    END IF;
+
+    v_payment_method := PAYMENT_METHOD_CREDIT_CARD;
+  ELSE
+    RAISE EXCEPTION 'from account not found: %', from_account_id;
+  END IF;
+
+  -- 摘要は通帳に出るので、空なら組み合わせから決める
+  v_label := CASE
+    WHEN v_to_type = ASSET_TYPE_E_MONEY THEN 'チャージ'
+    WHEN v_from_type = ASSET_TYPE_DEPOSIT AND v_to_type = ASSET_TYPE_CASH THEN '引き出し'
+    WHEN v_from_type = ASSET_TYPE_CASH AND v_to_type = ASSET_TYPE_DEPOSIT THEN '預入'
+    ELSE '振替'
+  END;
+
+  INSERT INTO journals (
+    journal_dt, store_name, user_id
+  ) VALUES (
+    journal_date,
+    COALESCE(NULLIF(BTRIM(description), ''), v_label),
+    user_id
+  )
+  RETURNING id INTO new_journal_id;
+
+  -- 借方: 入れる先の口座
+  INSERT INTO debits (
+    journal_id, element_type, account_id, item_name, amount, user_id
+  ) VALUES (
+    new_journal_id,
+    ELEMENT_ASSETS,
+    to_account_id,
+    NULL,
+    amount,
+    user_id
+  );
+
+  -- 貸方: 出す元。カードからのチャージは、credits_after_insert トリガーが引き落とし仕訳を作る
+  INSERT INTO credits (
+    journal_id, element_type, payment_method_type, account_id, amount, user_id
+  ) VALUES (
+    new_journal_id,
+    from_element_type,
+    v_payment_method,
+    from_account_id,
+    amount,
+    user_id
+  );
+
+  RETURN new_journal_id;
+END;
+$$;
+
+
+--
 -- Name: credits_after_insert_fn(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1202,6 +1324,72 @@ BEGIN
   END IF;
 
   RETURN v_new_journal_id;
+END;
+$$;
+
+
+--
+-- Name: replace_transfer_journal(integer, date, integer, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.replace_transfer_journal(journal_id integer, journal_date date, from_element_type integer, from_account_id integer, to_account_id integer, amount integer, description text, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_LIABILITIES CONSTANT INT := 2;
+  PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
+BEGIN
+  -- 他ユーザーの仕訳と存在しない仕訳は区別しない。
+  -- 同時に修正・削除されないよう、行をロックする
+  PERFORM 1
+     FROM journals j
+    WHERE j.id = replace_transfer_journal.journal_id
+      AND j.user_id = replace_transfer_journal.user_id
+      FOR UPDATE
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'journal not found: %', journal_id;
+  END IF;
+
+  -- 修正できるのは振替の仕訳だけ: 借方が口座 1 つ、貸方が口座かクレジットカード 1 つ。
+  -- 引き落とし仕訳（借方がカード）は、この形にならないので含まれない
+  IF (
+       SELECT COUNT(*)
+         FROM debits d
+        WHERE d.journal_id = replace_transfer_journal.journal_id
+     ) <> 1
+     OR NOT EXISTS (
+       SELECT 1
+         FROM debits d
+        WHERE d.journal_id = replace_transfer_journal.journal_id
+          AND d.element_type = ELEMENT_ASSETS
+     )
+     OR (
+       SELECT COUNT(*)
+         FROM credits c
+        WHERE c.journal_id = replace_transfer_journal.journal_id
+     ) <> 1
+     OR NOT EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_transfer_journal.journal_id
+          AND (
+            c.element_type = ELEMENT_ASSETS
+            OR (c.element_type = ELEMENT_LIABILITIES AND c.payment_method_type = PAYMENT_METHOD_CREDIT_CARD)
+          )
+     ) THEN
+    RAISE EXCEPTION 'journal is not a transfer journal: %', journal_id;
+  END IF;
+
+  -- 元の仕訳（とカードからのチャージの引き落とし仕訳）を消して、登録と同じ確認をしながら作り直す。
+  -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
+  PERFORM delete_journal(replace_transfer_journal.journal_id, replace_transfer_journal.user_id);
+
+  RETURN create_transfer_journal(
+    journal_date, from_element_type, from_account_id, to_account_id, amount, description, user_id
+  );
 END;
 $$;
 
@@ -2523,6 +2711,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261121123000'),
 ('20261121122000'),
 ('20261121121000'),
 ('20261121120000'),
