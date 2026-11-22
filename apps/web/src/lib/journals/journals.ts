@@ -79,6 +79,24 @@ export function isIncomeJournal(journal: Journal) {
   );
 }
 
+const ASSET_ELEMENT_TYPE = 1;
+const LIABILITY_ELEMENT_TYPE = 2;
+const CREDIT_CARD_PAYMENT_METHOD_TYPE = 3;
+
+// 振替の仕訳（借方が口座 1 つ、貸方が口座かクレジットカード 1 つ）。振替の修正画面で直す。
+// 以前の「現金の預け入れ」もこの形。引き落とし仕訳（借方がカード）は含まれない
+export function isTransferJournal(journal: Journal) {
+  const [debit, ...otherDebits] = journal.debits;
+  const [credit, ...otherCredits] = journal.credits;
+  if (!debit || !credit || otherDebits.length > 0 || otherCredits.length > 0) return false;
+
+  return (
+    debit.element_type === ASSET_ELEMENT_TYPE &&
+    (credit.element_type === ASSET_ELEMENT_TYPE ||
+      (credit.element_type === LIABILITY_ELEMENT_TYPE && credit.payment_method_type === CREDIT_CARD_PAYMENT_METHOD_TYPE))
+  );
+}
+
 // カード払いの仕訳を削除すると、自動で作られた引き落とし仕訳も一緒に削除される
 export async function deleteJournal(id: number) {
   await apiFetch<null>(`/journals/${id}`, { method: "DELETE" });

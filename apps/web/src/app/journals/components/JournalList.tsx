@@ -9,6 +9,7 @@ import {
   getJournals,
   isEditableJournal,
   isIncomeJournal,
+  isTransferJournal,
   type Journal,
   type JournalPage
 } from "@/lib/journals/journals";
@@ -98,10 +99,11 @@ function DirectDebitBadge({ journal }: { journal: Journal }) {
   return null;
 }
 
-// お買い物と収入は、それぞれの修正画面で直す。それ以外の仕訳は、削除して登録し直す
+// お買い物・収入・振替は、それぞれの修正画面で直す。それ以外の仕訳は、削除して登録し直す
 function editHref(journal: Journal) {
   if (isEditableJournal(journal)) return `/journal-entries/${journal.id}/edit`;
   if (isIncomeJournal(journal)) return `/income-journals/${journal.id}/edit`;
+  if (isTransferJournal(journal)) return `/transfer-journals/${journal.id}/edit`;
 
   return null;
 }

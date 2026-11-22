@@ -1,6 +1,6 @@
 import HomeLink from "../components/HomeLink";
 import LogoutButton from "../components/LogoutButton";
-import CashDepositForm from "./components/CashDepositForm";
+import TransferJournalForm from "./components/TransferJournalForm";
 
 export default function Page() {
   return (
@@ -9,8 +9,8 @@ export default function Page() {
         <HomeLink />
         <LogoutButton />
       </div>
-      <h1 className="text-xl font-semibold text-foreground">現金の預け入れ</h1>
-      <CashDepositForm />
+      <h1 className="text-xl font-semibold text-foreground">振替（引き出し・チャージ）</h1>
+      <TransferJournalForm />
     </main>
   );
 }

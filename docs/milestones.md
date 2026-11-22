@@ -219,7 +219,7 @@
 
 - [x] 振替の登録・修正の DB 関数（`create_transfer_journal`、`replace_transfer_journal`）
 - [x] 振替の登録・修正の API（`POST /transfer-journals`、`PUT /transfer-journals/{id}`）
-- [ ] 振替の画面（出す元・入れる先・金額・摘要）と修正画面、仕訳一覧の「修正」、トップページの導線（「現金の預け入れ」を置き換え）
+- [x] 振替の画面（出す元・入れる先・金額・摘要）と修正画面、仕訳一覧の「修正」、トップページの導線（「現金の預け入れ」を置き換え）
 - [ ] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
 - [ ] 本番にデプロイし、スマホで確認する（デプロイ前に手動でバックアップ）
 
