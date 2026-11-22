@@ -11,7 +11,7 @@ const MENU = [
   { href: "/monthly-expenses", title: "月次の収支", description: "月ごとの収入・支出を科目別に、収支と一緒に確認する" },
   { href: "/asset-opening-journals", title: "開始資産登録", description: "口座・現金の開始残高を登録する" },
   { href: "/liability-opening-journals", title: "開始負債登録", description: "未払いのカードの残高を登録する" },
-  { href: "/accounts", title: "口座・カード・科目の管理", description: "口座・クレジットカード・費用科目を追加・変更する" }
+  { href: "/accounts", title: "口座・カード・科目の管理", description: "口座・クレジットカード・費用科目・収益科目を追加・変更する" }
 ];
 
 export default function Home() {
