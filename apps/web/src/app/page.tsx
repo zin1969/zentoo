@@ -9,9 +9,10 @@ const MENU = [
   { href: "/account-balances", title: "残高", description: "口座・現金・カードの残高を確認する" },
   { href: "/bank-account-ledgers", title: "通帳", description: "預金口座の出入金と、これからの引き落とし予定を確認する" },
   { href: "/monthly-expenses", title: "月次の収支", description: "月ごとの収入・支出を科目別に、収支と一緒に確認する" },
+  { href: "/tag-reports", title: "タグの集計", description: "タグ（目的）ごとの支出を、1 年分の月ごとに確認する" },
   { href: "/asset-opening-journals", title: "開始資産登録", description: "口座・現金の開始残高を登録する" },
   { href: "/liability-opening-journals", title: "開始負債登録", description: "未払いのカードの残高を登録する" },
-  { href: "/accounts", title: "口座・カード・科目の管理", description: "口座・クレジットカード・費用科目・収益科目を追加・変更する" }
+  { href: "/accounts", title: "口座・カード・科目・タグの管理", description: "口座・クレジットカード・費用科目・収益科目を追加・変更し、タグの名前を整理する" }
 ];
 
 export default function Home() {
