@@ -1,8 +1,8 @@
-# app/forms/expense_account_form.rb
+# app/forms/two_level_account_form.rb
 
-# 費用科目の追加・変更（POST /expense-accounts、PUT /expense-accounts/:id）のリクエストを検証する。
+# 親子 2 階層の科目の追加・変更（POST・PUT /expense-accounts、/revenue-accounts）のリクエストを検証する。
 # parent_id を省略するか null にすると、親の無い（トップレベルの）科目になる。
-class ExpenseAccountForm
+class TwoLevelAccountForm
   include ActiveModel::Model
   include ActiveModel::Attributes
 

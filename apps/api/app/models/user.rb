@@ -3,6 +3,7 @@ class User < ApplicationRecord
   has_secure_password validations: false
 
   has_many :expense_accounts
+  has_many :revenue_accounts
   has_many :liability_accounts
   has_many :asset_accounts
   has_many :equity_accounts

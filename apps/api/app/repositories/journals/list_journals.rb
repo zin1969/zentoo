@@ -52,6 +52,7 @@ module Journals
         ElementType::ASSETS => AssetAccount,
         ElementType::LIABILITIES => LiabilityAccount,
         ElementType::EQUITY => EquityAccount,
+        ElementType::REVENUE => RevenueAccount,
         ElementType::EXPENSES => ExpenseAccount
       }.each_with_object({}) do |(element_type, model), names|
         ids = ids_by_element[element_type]

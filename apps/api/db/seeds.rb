@@ -36,6 +36,7 @@ Store.find_or_create_by!(name: "まいばすけっと")
 
 # Accounts
 load Rails.root.join("db/seeds/expense_accounts.rb")
+load Rails.root.join("db/seeds/revenue_accounts.rb")
 load Rails.root.join("db/seeds/liability_accounts.rb")
 load Rails.root.join("db/seeds/asset_accounts.rb")
 load Rails.root.join("db/seeds/equity_accounts.rb")
