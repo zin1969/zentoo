@@ -100,7 +100,7 @@ module Accounts
 
     # 共通科目なので、全ユーザーの仕訳を見る
     def in_use_ids(ids)
-      AccountUsage.used_in_journals(element_type: @element_type, ids: ids)
+      AccountUsage.used(element_type: @element_type, ids: ids)
     end
   end
 end

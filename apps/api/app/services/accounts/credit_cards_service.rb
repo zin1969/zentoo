@@ -84,7 +84,7 @@ module Accounts
     end
 
     def in_use_ids(user, ids)
-      AccountUsage.used_in_journals(element_type: ElementType::LIABILITIES, ids: ids, user_id: user.id)
+      AccountUsage.used(element_type: ElementType::LIABILITIES, ids: ids, user_id: user.id)
     end
   end
 end

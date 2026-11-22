@@ -9,4 +9,5 @@ class User < ApplicationRecord
   has_many :equity_accounts
   has_many :credit_cards
   has_many :tags
+  has_many :recurring_entries
 end

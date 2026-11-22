@@ -42,6 +42,11 @@ Rails.application.routes.draw do
   put "/tags/:id", to: "tags#update", constraints: { id: /\d+/ }
   delete "/tags/:id", to: "tags#destroy", constraints: { id: /\d+/ }
 
+  get "/recurring-entries", to: "recurring_entries#index"
+  post "/recurring-entries", to: "recurring_entries#create"
+  put "/recurring-entries/:id", to: "recurring_entries#update", constraints: { id: /\d+/ }
+  delete "/recurring-entries/:id", to: "recurring_entries#destroy", constraints: { id: /\d+/ }
+
   get "/revenue-accounts", to: "accounts/revenue_accounts#index"
   post "/revenue-accounts", to: "accounts/revenue_accounts#create"
   put "/revenue-accounts/:id", to: "accounts/revenue_accounts#update", constraints: { id: /\d+/ }

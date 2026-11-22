@@ -74,9 +74,9 @@ module Accounts
       in_use_ids(user, [ account.id ]).include?(account.id)
     end
 
-    # 仕訳で使われている口座と、カードの引き落とし口座になっている口座
+    # 仕訳か決まった支払いで使われている口座と、カードの引き落とし口座になっている口座
     def in_use_ids(user, ids)
-      AccountUsage.used_in_journals(element_type: ElementType::ASSETS, ids: ids, user_id: user.id) |
+      AccountUsage.used(element_type: ElementType::ASSETS, ids: ids, user_id: user.id) |
         user.credit_cards.where(bank_account_id: ids).distinct.pluck(:bank_account_id)
     end
   end
