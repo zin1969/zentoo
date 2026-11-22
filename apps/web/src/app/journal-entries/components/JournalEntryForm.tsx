@@ -9,14 +9,18 @@ import { getAssetAccounts } from "@/lib/masters/assetAccounts";
 import { getLiabilityAccounts } from "@/lib/masters/liabilityAccounts";
 import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
 import type { Journal } from "@/lib/journals/journals";
+import { createTag, getTags, type Tag } from "@/lib/masters/tags";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
 const EXPENSE_ELEMENT_TYPE = 5;
+const MAX_TAG_NAME_LENGTH = 30;
 
 type DebitLine = {
   key: string;
   itemName: string;
+  // タグの名前（任意）。当面は明細ごとに 1 つ。無い名前は、登録の前にその場で作る
+  tagName: string;
   // 選んだ親の科目。空なら、選んだ科目（expenseAccountId）からたどる（修正で開いたとき）
   parentId: string;
   // 登録する科目。子科目か、親の科目そのもの（「〇〇のまま」）
@@ -53,7 +57,7 @@ function nextKey() {
 }
 
 function emptyDebitLine(): DebitLine {
-  return { key: nextKey(), itemName: "", parentId: "", expenseAccountId: "", amount: "" };
+  return { key: nextKey(), itemName: "", tagName: "", parentId: "", expenseAccountId: "", amount: "" };
 }
 
 function emptyCreditLine(): CreditLine {
@@ -65,6 +69,7 @@ function debitLinesFrom(journal: Journal): DebitLine[] {
   return journal.debits.map((debit) => ({
     key: nextKey(),
     itemName: debit.item_name ?? "",
+    tagName: debit.tags[0]?.name ?? "",
     parentId: "",
     expenseAccountId: String(debit.account_id),
     amount: String(debit.amount)
@@ -111,6 +116,10 @@ function extractErrorMessage(error: unknown, isEdit: boolean): string {
       return "選択した勘定科目が見つかりません。画面を再読み込みしてください。";
     }
 
+    if (data?.error === "tag_not_found") {
+      return "タグが見つかりません。画面を再読み込みしてください。";
+    }
+
     if (data?.error === "credit_card_setting_not_found") {
       return "クレジットカードの引き落とし設定が見つかりません。";
     }
@@ -151,6 +160,7 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
   );
 
   const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccount[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
 
   const [status, setStatus] = useState<Status>("idle");
@@ -165,6 +175,10 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
 
       setErrorMessage(message);
     };
+
+    getTags()
+      .then(setTags)
+      .catch(handleMasterError("タグの取得に失敗しました。時間をおいて再度お試しください。"));
 
     getExpenseAccounts()
       .then(setExpenseAccounts)
@@ -222,12 +236,40 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
     setCreditLines((lines) => (lines.length > 1 ? lines.filter((l) => l.key !== key) : lines));
   };
 
+  // タグの名前を ID にする。無い名前は、お買い物を登録する前にその場で作る
+  const resolveTagIds = async () => {
+    const ids = new Map(tags.map((tag) => [tag.name, tag.id]));
+    const names = new Set(debitLines.map((line) => line.tagName.trim()).filter((name) => name !== ""));
+
+    for (const name of names) {
+      if (ids.has(name)) continue;
+
+      try {
+        const created = await createTag(name);
+        ids.set(name, created.id);
+        setTags((current) => [...current, { id: created.id, name: created.name, usage_count: 0 }]);
+      } catch (error) {
+        // 別の画面で同じ名前のタグが作られていたら、それを使う
+        if (!(error instanceof ApiError && error.data?.error === "duplicate_tag_name")) throw error;
+
+        const latest = await getTags();
+        setTags(latest);
+        const existing = latest.find((tag) => tag.name === name);
+        if (!existing) throw error;
+        ids.set(name, existing.id);
+      }
+    }
+
+    return ids;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("submitting");
     setErrorMessage(null);
 
     try {
+      const tagIds = await resolveTagIds();
       const body = {
         date,
         store_name: storeName,
@@ -235,7 +277,8 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
           element_type: EXPENSE_ELEMENT_TYPE,
           account_id: Number(line.expenseAccountId),
           amount: Number(line.amount),
-          item_name: line.itemName
+          item_name: line.itemName,
+          tag_ids: line.tagName.trim() ? [tagIds.get(line.tagName.trim())] : []
         })),
         credits: creditLines.map((line) => {
           const account = paymentAccounts.find((a) => paymentKey(a) === line.paymentKey);
@@ -420,8 +463,24 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
                   ))}
                 </select>
               )}
+              {/* 何のために使ったか。候補に無い名前は、登録のときに新しいタグとして作る */}
+              <input
+                type="text"
+                aria-label="タグ"
+                placeholder="タグ（任意。勉強・娯楽など）"
+                list="journal-entry-tags"
+                value={line.tagName}
+                maxLength={MAX_TAG_NAME_LENGTH}
+                onChange={(e) => updateDebitLine(line.key, { tagName: e.target.value })}
+                className={`${lineInputClass} min-w-0`}
+              />
             </div>
           ))}
+          <datalist id="journal-entry-tags">
+            {tags.map((tag) => (
+              <option key={tag.id} value={tag.name} />
+            ))}
+          </datalist>
         </div>
 
         <div className="flex items-baseline justify-between pt-0.5">

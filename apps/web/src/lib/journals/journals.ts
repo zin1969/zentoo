@@ -6,6 +6,8 @@ export type JournalDebit = {
   account_name: string | null;
   item_name: string | null;
   amount: number;
+  // 明細に付いているタグ（お買い物の費用の明細だけ）
+  tags: { id: number; name: string }[];
 };
 
 export type JournalCredit = {

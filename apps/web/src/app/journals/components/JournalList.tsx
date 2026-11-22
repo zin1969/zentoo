@@ -138,6 +138,18 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
               {debit.item_name && (
                 <span className="text-xs text-black/50 dark:text-white/50">{debit.item_name}</span>
               )}
+              {debit.tags.length > 0 && (
+                <span className="flex flex-wrap gap-1">
+                  {debit.tags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="rounded bg-violet-100 px-1.5 py-0.5 text-xs text-violet-800 dark:bg-violet-900/30 dark:text-violet-300"
+                    >
+                      #{tag.name}
+                    </span>
+                  ))}
+                </span>
+              )}
               <span className="text-right tabular-nums">{formatYen(debit.amount)}</span>
             </div>
           ))}
