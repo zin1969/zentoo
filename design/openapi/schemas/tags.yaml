@@ -1,0 +1,103 @@
+Tag:
+  type: object
+  description: 明細に付ける「何のために使ったか」（勉強・娯楽など）。ユーザーごと
+  required: [id, name, usage_count]
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+      examples:
+        - 勉強
+    usage_count:
+      type: integer
+      description: タグが付いている明細の数
+
+TagRef:
+  type: object
+  required: [id, name]
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+
+TagRequest:
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+      maxLength: 30
+      description: 前後の空白は取り除く。本人のタグの中で重ならないこと
+
+TagSavedResponse:
+  type: object
+  required: [id, name, next_token]
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+    next_token:
+      type: string
+      description: 次のリクエストに使う JWT
+
+TagReport:
+  type: object
+  required: [tag, year, total, months]
+  properties:
+    tag:
+      $ref: '#/TagRef'
+    year:
+      type: integer
+    total:
+      type: integer
+      description: 年の合計
+    months:
+      type: array
+      description: 1〜12 月の合計（明細の無い月は 0）
+      items:
+        type: object
+        required: [month, amount]
+        properties:
+          month:
+            type: integer
+            minimum: 1
+            maximum: 12
+          amount:
+            type: integer
+
+TagReportItems:
+  type: object
+  required: [tag, month, total, items]
+  properties:
+    tag:
+      $ref: '#/TagRef'
+    month:
+      type: string
+      description: 対象月（`YYYY-MM`）
+    total:
+      type: integer
+    items:
+      type: array
+      description: タグが付いた費用の明細（仕訳日・明細の順）
+      items:
+        type: object
+        required: [journal_id, journal_date, store_name, item_name, account_id, account_name, amount]
+        properties:
+          journal_id:
+            type: integer
+          journal_date:
+            type: string
+            format: date
+          store_name:
+            type: [string, 'null']
+          item_name:
+            type: [string, 'null']
+          account_id:
+            type: integer
+          account_name:
+            type: [string, 'null']
+          amount:
+            type: integer

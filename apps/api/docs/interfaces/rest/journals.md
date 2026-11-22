@@ -43,7 +43,7 @@ GET /journals
       "journal_date": "2026-10-27",
       "store_name": "フェザー・ステップ",
       "debits": [
-        { "element_type": 2, "account_id": 3, "account_name": "tcard", "item_name": "革靴", "amount": 14000 }
+        { "element_type": 2, "account_id": 3, "account_name": "tcard", "item_name": "革靴", "amount": 14000, "tags": [] }
       ],
       "credits": [
         { "element_type": 1, "payment_method_type": 2, "account_id": 2, "account_name": "三菱UFJ銀行 用賀出張所", "amount": 14000 }
@@ -60,6 +60,7 @@ GET /journals
 ```
 
 - `account_name`: 科目の名前。科目を引けない場合は `null`
+- `tags`（借方）: 明細に付いているタグ（`{ "id", "name" }` の配列。お買い物の費用の明細だけ。付いていなければ空配列）
 - `original_journal_id`: この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID。それ以外は `null`
 - `payment_date_overridden`: 引き落とし仕訳の日付を手で変えた場合は `true`（[引き落とし日の変更 API](direct_debit_journals.md)）。引き落とし仕訳以外は `false`
 - `direct_debit_journal_id`: この仕訳がカード払いの場合、引き落とし仕訳の ID。それ以外は `null`

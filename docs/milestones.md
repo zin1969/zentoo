@@ -246,7 +246,7 @@
 - [x] タグの集計の DB 関数（`get_tag_monthly_totals`、`get_tag_items`）と API（`GET /tag-reports/{id}`、`GET /tag-reports/{id}/items`）
 - [x] タグの集計画面と、トップページの導線
 - [x] 管理画面のタグの欄（名前の変更・削除）
-- [ ] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
+- [x] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
 - [ ] 本番にデプロイし、スマホで確認する（デプロイ前に手動でバックアップ）
 
 **完了条件**: 本番で、お買い物の明細にタグを付けて登録・修正でき、タグの集計画面で 1 年分の月ごとの合計と月の明細が見られる。

@@ -141,6 +141,13 @@ InsertJournalEntryRequest:
             type: integer
           item_name:
             type: string
+          tag_ids:
+            type: array
+            maxItems: 10
+            items:
+              type: integer
+              minimum: 1
+            description: 明細に付けるタグ（本人のタグの ID）。費用の明細にだけ付けられる。省略すると付けない
     credits:
       type: array
       minItems: 1
@@ -201,7 +208,7 @@ Journal:
       type: array
       items:
         type: object
-        required: [element_type, account_id, account_name, amount]
+        required: [element_type, account_id, account_name, amount, tags]
         properties:
           element_type:
             type: integer
@@ -213,6 +220,11 @@ Journal:
             type: [string, 'null']
           amount:
             type: integer
+          tags:
+            type: array
+            description: 明細に付いているタグ（お買い物の費用の明細だけ）
+            items:
+              $ref: '../schemas/tags.yaml#/TagRef'
     credits:
       type: array
       items:

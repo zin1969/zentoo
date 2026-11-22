@@ -31,7 +31,7 @@ POST /journal-entries
   "date": "2026-07-19",
   "store_name": "ピザーラ",
   "debits": [
-    { "element_type": 5, "account_id": 10051, "amount": 1000, "item_name": "ピザ" }
+    { "element_type": 5, "account_id": 10051, "amount": 1000, "item_name": "ピザ", "tag_ids": [3] }
   ],
   "credits": [
     { "element_type": 1, "payment_method_type": 1, "account_id": 5, "amount": 1000 }
@@ -42,6 +42,7 @@ POST /journal-entries
 - `element_type`: 1 = 資産, 2 = 負債, 3 = 資本, 5 = 費用
 - `payment_method_type`（貸方）: 資産科目は 1 = 現金, 2 = 預貯金, 3 = 電子マネー。負債科目は 1 = 借入金, 2 = キャッシング, 3 = クレジットカード払い
 - 借方の合計と貸方の合計は一致していること
+- `tag_ids`（借方。任意）: 明細に付けるタグの ID（10 個まで）。本人のタグだけ、費用の明細にだけ付けられる。存在しないタグ・他ユーザーのタグは `tag_not_found`（404）、費用以外の明細へのタグは `tags_only_for_expense_debits`（422）。タグは [タグ API](tags.md) で作る
 
 ## クレジットカード払いの引き落とし仕訳
 

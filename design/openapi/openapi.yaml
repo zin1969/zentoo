@@ -22,6 +22,8 @@ tags:
     description: 仕訳
   - name: reports
     description: 残高・支出の集計
+  - name: tags
+    description: タグ（明細に付ける目的）
 
 paths:
   /login:
@@ -74,6 +76,14 @@ paths:
     $ref: './paths/reports.yaml#/monthly-expenses'
   /bank-account-ledgers/{id}:
     $ref: './paths/reports.yaml#/bank-account-ledger'
+  /tag-reports/{id}:
+    $ref: './paths/reports.yaml#/tag-report'
+  /tag-reports/{id}/items:
+    $ref: './paths/reports.yaml#/tag-report-items'
+  /tags:
+    $ref: './paths/tags.yaml#/tags'
+  /tags/{id}:
+    $ref: './paths/tags.yaml#/tag'
 
 components:
   securitySchemes:
@@ -138,3 +148,15 @@ components:
       $ref: './schemas/reports.yaml#/LedgerEntry'
     BankAccountLedger:
       $ref: './schemas/reports.yaml#/BankAccountLedger'
+    Tag:
+      $ref: './schemas/tags.yaml#/Tag'
+    TagRef:
+      $ref: './schemas/tags.yaml#/TagRef'
+    TagRequest:
+      $ref: './schemas/tags.yaml#/TagRequest'
+    TagSavedResponse:
+      $ref: './schemas/tags.yaml#/TagSavedResponse'
+    TagReport:
+      $ref: './schemas/tags.yaml#/TagReport'
+    TagReportItems:
+      $ref: './schemas/tags.yaml#/TagReportItems'

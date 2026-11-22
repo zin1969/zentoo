@@ -37,6 +37,9 @@ ErrorResponse:
         - to_account_not_found
         - same_account
         - credit_card_charge_requires_e_money
+        - tag_not_found
+        - duplicate_tag_name
+        - tags_only_for_expense_debits
     errors:
       type: array
       items:

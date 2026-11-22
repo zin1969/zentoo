@@ -209,13 +209,13 @@ journal-entries:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '404':
-        description: 借方・貸方の科目が存在しない、または使えない（error が account_not_found。資産・負債科目は本人のもののみ、費用・資本科目は共通科目か本人の科目のみ使える。存在しない科目と他人の科目は区別しない）
+        description: 借方・貸方の科目が存在しない、または使えない（error が account_not_found。資産・負債科目は本人のもののみ、費用・資本科目は共通科目か本人の科目のみ使える。存在しない科目と他人の科目は区別しない）、または明細のタグが存在しない・他ユーザーのもの（error が tag_not_found）
         content:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
-        description: バリデーションエラー（errors）、貸借不一致（error が unbalanced_journal）、またはカード払いなのに引き落とし設定が無い（error が credit_card_setting_not_found）
+        description: バリデーションエラー（errors）、貸借不一致（error が unbalanced_journal）、カード払いなのに引き落とし設定が無い（error が credit_card_setting_not_found）、または費用以外の明細にタグがある（error が tags_only_for_expense_debits）
         content:
           application/json:
             schema:
@@ -263,7 +263,7 @@ journal-entry:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '404':
-        description: 仕訳が存在しない、または他ユーザーの仕訳（`journal_not_found`）。または科目が使えない（`account_not_found`）
+        description: 仕訳が存在しない、または他ユーザーの仕訳（`journal_not_found`）。または科目が使えない（`account_not_found`）、明細のタグが使えない（`tag_not_found`）
         content:
           application/json:
             schema:
@@ -272,7 +272,7 @@ journal-entry:
         description: |
           バリデーションエラー（`errors`）、引き落とし仕訳（`direct_debit_journal_not_editable`）、
           お買い物の仕訳ではない（`journal_not_editable`）、借方に費用以外がある（`expense_debits_required`）、
-          貸借不一致（`unbalanced_journal`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）
+          貸借不一致（`unbalanced_journal`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）、費用以外の明細にタグがある（`tags_only_for_expense_debits`）
         content:
           application/json:
             schema:

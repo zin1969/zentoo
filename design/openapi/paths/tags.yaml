@@ -1,0 +1,141 @@
+tags:
+  get:
+    tags: [tags]
+    summary: タグの一覧
+    description: |
+      認証済みユーザーのタグを、作った順に返す。各タグが付いている明細の数（`usage_count`）も返す。
+      新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（本文に `next_token` は含めない）。
+    operationId: listTags
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: タグの配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/tags.yaml#/Tag'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  post:
+    tags: [tags]
+    summary: タグの追加
+    description: |
+      タグを作る。お買い物登録の画面から、その場で作るときにも使う。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: createTag
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/tags.yaml#/TagRequest'
+    responses:
+      '201':
+        description: 追加した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/tags.yaml#/TagSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、名前の重複（`duplicate_tag_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+tag:
+  put:
+    tags: [tags]
+    summary: タグの名前の変更
+    description: |
+      タグの名前を変える。付いている明細のタグも、新しい名前で表示される。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: updateTag
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: タグの ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/tags.yaml#/TagRequest'
+    responses:
+      '200':
+        description: 変更した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/tags.yaml#/TagSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: タグが存在しない、または他ユーザーのタグ（`tag_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、名前の重複（`duplicate_tag_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  delete:
+    tags: [tags]
+    summary: タグの削除
+    description: |
+      タグを削除する。使っているタグも削除でき、明細からタグが外れるだけで、明細は消えない。
+      成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
+    operationId: deleteTag
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: タグの ID
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: タグが存在しない、または他ユーザーのタグ（`tag_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

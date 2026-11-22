@@ -136,3 +136,107 @@ bank-account-ledger:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+
+tag-report:
+  get:
+    tags: [reports]
+    summary: タグの集計（年の月ごと）
+    description: |
+      認証済みユーザーのタグについて、そのタグが付いた費用の明細を、年の月ごと（1〜12 月）に合計して返す。日付は仕訳日（買った日）で数える。
+      1 つの明細に複数のタグを付けた場合は、それぞれのタグで数える（タグごとの合計を足しても、支出の合計とは合わない）。
+      内部で PostgreSQL 関数 `get_tag_monthly_totals` を呼び出す。
+      参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: getTagReport
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: タグの ID
+        schema:
+          type: integer
+          minimum: 1
+      - name: year
+        in: query
+        description: 対象の年（`YYYY`、2000〜2100）。省略すると今年（日本時間）
+        schema:
+          type: string
+          pattern: '^\d{4}$'
+    responses:
+      '200':
+        description: 年の合計と、月ごとの合計
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/tags.yaml#/TagReport'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: タグが存在しない、または他ユーザーのタグ（`tag_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 年の指定が不正（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+tag-report-items:
+  get:
+    tags: [reports]
+    summary: タグの集計（月の明細）
+    description: |
+      認証済みユーザーのタグについて、対象月にそのタグが付いた費用の明細を、仕訳日・明細の順に返す。
+      内部で PostgreSQL 関数 `get_tag_items` を呼び出す。
+      参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: getTagReportItems
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: タグの ID
+        schema:
+          type: integer
+          minimum: 1
+      - name: month
+        in: query
+        description: 対象月（`YYYY-MM`）。省略すると今月（日本時間）
+        schema:
+          type: string
+          pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+    responses:
+      '200':
+        description: 月の明細と、その合計
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/tags.yaml#/TagReportItems'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: タグが存在しない、または他ユーザーのタグ（`tag_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 月の指定が不正（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
