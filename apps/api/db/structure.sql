@@ -796,6 +796,36 @@ $$;
 
 
 --
+-- Name: get_monthly_incomes(integer, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_monthly_incomes(user_id integer, target_month date) RETURNS TABLE(account_id bigint, account_name text, amount bigint)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_month_start DATE;
+  ELEMENT_REVENUE CONSTANT INT := 4;
+BEGIN
+  -- target_month は月内のどの日付でもよい
+  v_month_start := DATE_TRUNC('month', target_month)::DATE;
+
+  -- 仕訳日が当月の収益科目の貸方を、科目ごとに合計する（金額の大きい順）
+  RETURN QUERY
+  SELECT ra.id::BIGINT, ra.name, SUM(c.amount)::BIGINT
+    FROM credits c
+    JOIN journals j ON j.id = c.journal_id
+    JOIN revenue_accounts ra ON ra.id = c.account_id
+   WHERE c.element_type = ELEMENT_REVENUE
+     AND j.user_id = get_monthly_incomes.user_id
+     AND j.journal_dt >= v_month_start
+     AND j.journal_dt < (v_month_start + INTERVAL '1 month')::DATE
+   GROUP BY ra.id, ra.name
+   ORDER BY SUM(c.amount) DESC, ra.id;
+END;
+$$;
+
+
+--
 -- Name: get_next_business_day(date); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2493,6 +2523,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261121122000'),
 ('20261121121000'),
 ('20261121120000'),
 ('20261120150000'),
