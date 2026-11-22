@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/apiFetch";
-import { getMonthlyExpenses, type MonthlyExpenses as MonthlyExpensesData } from "@/lib/reports/monthlyExpenses";
+import {
+  getMonthlyExpenses,
+  type MonthlyExpense,
+  type MonthlyExpenses as MonthlyExpensesData
+} from "@/lib/reports/monthlyExpenses";
 
 type Loaded = {
   month: string;
@@ -42,6 +46,40 @@ function errorMessage(error: unknown) {
   }
 
   return "支出の取得に失敗しました。時間をおいて再度お試しください。";
+}
+
+type AmountListProps = {
+  title: string;
+  total: number;
+  items: MonthlyExpense[];
+  emptyText: string;
+};
+
+// 科目ごとの金額の一覧と、その合計（収入・支出で共通）
+function AmountList({ title, total, items, emptyText }: AmountListProps) {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between px-1">
+        <h2 className="text-sm font-medium text-foreground">{title}</h2>
+        <span className="text-base font-semibold tabular-nums">{formatYen(total)}</span>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-black/15 px-4 py-6 text-center text-sm text-black/50 dark:border-white/15 dark:text-white/50">
+          {emptyText}
+        </p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-black/10 rounded-xl border border-black/10 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-black/20">
+          {items.map((item) => (
+            <li key={item.account_id} className="flex items-baseline justify-between gap-2 px-4 py-3">
+              <span className="min-w-0 truncate text-sm">{item.account_name}</span>
+              <span className="tabular-nums">{formatYen(item.amount)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 export default function MonthlyExpenses() {
@@ -102,25 +140,18 @@ export default function MonthlyExpenses() {
 
       {data && (
         <>
+          {/* 収支（収入 − 支出）。マイナスは赤字 */}
           <div className="flex flex-col gap-1 rounded-xl border border-black/10 bg-white px-4 py-4 shadow-sm dark:border-white/10 dark:bg-black/20">
-            <span className="text-xs text-black/50 dark:text-white/50">支出の合計</span>
-            <span className="text-2xl font-semibold tabular-nums">{formatYen(data.total)}</span>
+            <span className="text-xs text-black/50 dark:text-white/50">収支（収入 − 支出）</span>
+            <span
+              className={`text-2xl font-semibold tabular-nums ${data.net < 0 ? "text-red-700 dark:text-red-300" : ""}`}
+            >
+              {formatYen(data.net)}
+            </span>
           </div>
 
-          {data.items.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-black/15 px-4 py-8 text-center text-sm text-black/50 dark:border-white/15 dark:text-white/50">
-              この月の支出はありません。
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-black/10 rounded-xl border border-black/10 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-black/20">
-              {data.items.map((item) => (
-                <li key={item.account_id} className="flex items-baseline justify-between gap-2 px-4 py-3">
-                  <span className="min-w-0 truncate text-sm">{item.account_name}</span>
-                  <span className="tabular-nums">{formatYen(item.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <AmountList title="収入" total={data.income_total} items={data.income_items} emptyText="この月の収入はありません。" />
+          <AmountList title="支出" total={data.total} items={data.items} emptyText="この月の支出はありません。" />
         </>
       )}
     </div>

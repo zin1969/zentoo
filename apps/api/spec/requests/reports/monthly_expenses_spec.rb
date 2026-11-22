@@ -38,14 +38,51 @@ RSpec.describe 'GET /monthly-expenses', type: :request do
       'items' => [
         { 'account_id' => transportation.id, 'account_name' => '交通費', 'amount' => 3_000 },
         { 'account_id' => food.id, 'account_name' => '食費', 'amount' => 1_000 }
-      ]
+      ],
+      'income_total' => 0,
+      'income_items' => [],
+      'net' => -4_000
     )
   end
 
   it 'returns an empty list and a zero total for a month without expenses' do
     get '/monthly-expenses', params: { month: '2026-08' }, headers: headers
 
-    expect(JSON.parse(response.body)).to eq('month' => '2026-08', 'total' => 0, 'items' => [])
+    expect(JSON.parse(response.body)).to eq(
+      'month' => '2026-08', 'total' => 0, 'items' => [], 'income_total' => 0, 'income_items' => [], 'net' => 0
+    )
+  end
+
+  describe 'incomes' do
+    let!(:bank) { create(:asset_account, :mufg_yoga, user: user) }
+    let!(:salary) { create(:revenue_account, :salary, :common) }
+    let!(:bonus) { create(:revenue_account, :bonus, :common) }
+
+    def earn(date:, revenue:, amount:, owner: user, account: bank)
+      Journals::IncomeJournals.new.create!(
+        journal_date: Date.parse(date), asset_account_id: account.id, revenue_account_id: revenue.id,
+        amount: amount, description: nil, user_id: owner.id
+      )
+    end
+
+    it 'returns the income per revenue account, largest first, and the net of income and expenses' do
+      earn(date: '2026-10-25', revenue: salary, amount: 300_000)
+      earn(date: '2026-10-10', revenue: bonus, amount: 500_000)
+      earn(date: '2026-10-31', revenue: salary, amount: 1_000)
+      earn(date: '2026-11-25', revenue: salary, amount: 300_000)
+      other = create(:user)
+      earn(date: '2026-10-25', revenue: salary, amount: 999, owner: other,
+           account: create(:asset_account, :mufg_yoga, user: other))
+
+      get '/monthly-expenses', params: { month: '2026-10' }, headers: headers
+
+      body = JSON.parse(response.body)
+      expect(body['income_items']).to eq([
+        { 'account_id' => bonus.id, 'account_name' => '賞与', 'amount' => 500_000 },
+        { 'account_id' => salary.id, 'account_name' => '給与', 'amount' => 301_000 }
+      ])
+      expect(body.values_at('total', 'income_total', 'net')).to eq([ 4_000, 801_000, 797_000 ])
+    end
   end
 
   it 'defaults to the current month in Japan time' do

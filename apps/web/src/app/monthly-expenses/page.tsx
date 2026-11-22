@@ -9,7 +9,7 @@ export default function Page() {
         <HomeLink />
         <LogoutButton />
       </div>
-      <h1 className="text-xl font-semibold text-foreground">月次の支出</h1>
+      <h1 className="text-xl font-semibold text-foreground">月次の収支</h1>
       <MonthlyExpenses />
     </main>
   );
