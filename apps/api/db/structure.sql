@@ -1574,6 +1574,39 @@ ALTER SEQUENCE public.liability_accounts_id_seq OWNED BY public.liability_accoun
 
 
 --
+-- Name: revenue_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.revenue_accounts (
+    id bigint NOT NULL,
+    parent_id bigint,
+    name text NOT NULL,
+    user_id bigint,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: revenue_accounts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.revenue_accounts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: revenue_accounts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.revenue_accounts_id_seq OWNED BY public.revenue_accounts.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1737,6 +1770,13 @@ ALTER TABLE ONLY public.liability_accounts ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: revenue_accounts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.revenue_accounts ALTER COLUMN id SET DEFAULT nextval('public.revenue_accounts_id_seq'::regclass);
+
+
+--
 -- Name: stores id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1860,6 +1900,14 @@ ALTER TABLE ONLY public.journals
 
 ALTER TABLE ONLY public.liability_accounts
     ADD CONSTRAINT liability_accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: revenue_accounts revenue_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.revenue_accounts
+    ADD CONSTRAINT revenue_accounts_pkey PRIMARY KEY (id);
 
 
 --
@@ -2034,6 +2082,27 @@ CREATE INDEX index_liability_accounts_on_user_id ON public.liability_accounts US
 
 
 --
+-- Name: index_revenue_accounts_on_common_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_revenue_accounts_on_common_name ON public.revenue_accounts USING btree (COALESCE(parent_id, (0)::bigint), name) WHERE (user_id IS NULL);
+
+
+--
+-- Name: index_revenue_accounts_on_parent_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_revenue_accounts_on_parent_id ON public.revenue_accounts USING btree (parent_id);
+
+
+--
+-- Name: index_revenue_accounts_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_revenue_accounts_on_user_id ON public.revenue_accounts USING btree (user_id);
+
+
+--
 -- Name: index_users_on_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2111,6 +2180,13 @@ CREATE TRIGGER trigger_update_updated_at_of_liability_accounts BEFORE UPDATE ON 
 
 
 --
+-- Name: revenue_accounts trigger_update_updated_at_of_revenue_accounts; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_update_updated_at_of_revenue_accounts BEFORE UPDATE ON public.revenue_accounts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_with_current_timestamp();
+
+
+--
 -- Name: stores trigger_update_updated_at_of_stores; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2165,6 +2241,14 @@ ALTER TABLE ONLY public.debits
 
 
 --
+-- Name: revenue_accounts fk_rails_42c8d73a52; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.revenue_accounts
+    ADD CONSTRAINT fk_rails_42c8d73a52 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: journals fk_rails_4cdc69e25e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2186,6 +2270,14 @@ ALTER TABLE ONLY public.credit_cards
 
 ALTER TABLE ONLY public.equity_accounts
     ADD CONSTRAINT fk_rails_7ac996d2ab FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: revenue_accounts fk_rails_8bdcfe7a56; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.revenue_accounts
+    ADD CONSTRAINT fk_rails_8bdcfe7a56 FOREIGN KEY (parent_id) REFERENCES public.revenue_accounts(id);
 
 
 --
@@ -2275,6 +2367,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261121120000'),
 ('20261120150000'),
 ('20261120142000'),
 ('20261120141000'),
