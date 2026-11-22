@@ -3,14 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/apiFetch";
-import {
-  createExpenseAccount,
-  deleteExpenseAccount,
-  getExpenseAccounts,
-  updateExpenseAccount,
-  type ExpenseAccount,
-  type ExpenseAccountInput
-} from "@/lib/masters/expenseAccounts";
+import { expenseAccountsApi } from "@/lib/masters/expenseAccounts";
+import { revenueAccountsApi } from "@/lib/masters/revenueAccounts";
+import type { TwoLevelAccount, TwoLevelAccountInput } from "@/lib/masters/twoLevelAccounts";
 import {
   buttonClass,
   dangerButtonClass,
@@ -23,18 +18,19 @@ import {
 
 const MAX_NAME_LENGTH = 50;
 
-function errorMessage(error: unknown) {
+// errorPrefix はエラーコードの頭（"expense_account" など）
+function errorMessage(error: unknown, errorPrefix: string) {
   if (error instanceof ApiError) {
     switch (error.data?.error) {
       case "duplicate_account_name":
         return "同じ親の中に、同じ名前の科目があります。";
-      case "expense_account_in_use":
+      case `${errorPrefix}_in_use`:
         return "仕訳で使っているため、削除や親の変更はできません。";
-      case "expense_account_has_children":
+      case `${errorPrefix}_has_children`:
         return "子科目があるため、削除や親の設定はできません。";
       case "invalid_parent":
         return "親にできるのは、親の無い科目だけです。";
-      case "expense_account_not_found":
+      case `${errorPrefix}_not_found`:
         return "科目が見つかりません。画面を再読み込みしてください。";
     }
 
@@ -47,7 +43,7 @@ function errorMessage(error: unknown) {
 }
 
 // 親の科目の直後に、その子科目を並べる
-function inTreeOrder(accounts: ExpenseAccount[]) {
+function inTreeOrder(accounts: TwoLevelAccount[]) {
   const ids = new Set(accounts.map((account) => account.id));
   const tops = accounts.filter((account) => account.parent_id === null || !ids.has(account.parent_id));
 
@@ -58,14 +54,14 @@ function inTreeOrder(accounts: ExpenseAccount[]) {
 }
 
 type AccountFormProps = {
-  initial: ExpenseAccountInput;
+  initial: TwoLevelAccountInput;
   // 親にできる科目（親の無い科目。変更のときは自分自身を除く）
-  parents: ExpenseAccount[];
+  parents: TwoLevelAccount[];
   // 使われている科目や子科目のある科目は、親を変えられない
   parentLocked?: boolean;
   submitLabel: string;
   busy: boolean;
-  onSubmit: (input: ExpenseAccountInput) => void;
+  onSubmit: (input: TwoLevelAccountInput) => void;
   onCancel?: () => void;
 };
 
@@ -121,10 +117,17 @@ function AccountForm({ initial, parents, parentLocked = false, submitLabel, busy
   );
 }
 
-// 費用科目（全ユーザー共通、親子の 2 階層）の一覧と、追加・変更・削除
-export default function ExpenseAccountsSection() {
+// サーバーコンポーネントのページから関数は渡せないので、種類の名前で設定を選ぶ
+const KINDS = {
+  expense: { noun: "費用科目", errorPrefix: "expense_account", api: expenseAccountsApi },
+  revenue: { noun: "収益科目", errorPrefix: "revenue_account", api: revenueAccountsApi }
+} as const;
+
+// 親子 2 階層の共通科目（費用科目・収益科目）の一覧と、追加・変更・削除
+export default function TwoLevelAccountsSection({ kind }: { kind: keyof typeof KINDS }) {
+  const { noun, errorPrefix, api } = KINDS[kind];
   const router = useRouter();
-  const [accounts, setAccounts] = useState<ExpenseAccount[] | null>(null);
+  const [accounts, setAccounts] = useState<TwoLevelAccount[] | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -135,7 +138,7 @@ export default function ExpenseAccountsSection() {
   useEffect(() => {
     let cancelled = false;
 
-    getExpenseAccounts()
+    api.list()
       .then((data) => {
         if (!cancelled) setAccounts(data);
       })
@@ -147,13 +150,13 @@ export default function ExpenseAccountsSection() {
           return;
         }
 
-        setError("費用科目の取得に失敗しました。時間をおいて再度お試しください。");
+        setError(`${noun}の取得に失敗しました。時間をおいて再度お試しください。`);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [reloadCount, router]);
+  }, [api, noun, reloadCount, router]);
 
   // 保存・削除をして、成功したら一覧を読み直す
   const run = async (action: () => Promise<unknown>, onSuccess?: () => void) => {
@@ -170,23 +173,23 @@ export default function ExpenseAccountsSection() {
         return;
       }
 
-      setError(errorMessage(e));
+      setError(errorMessage(e, errorPrefix));
     } finally {
       setBusy(false);
     }
   };
 
-  const remove = (account: ExpenseAccount) => {
-    if (!window.confirm(`費用科目「${account.name}」を削除しますか？`)) return;
+  const remove = (account: TwoLevelAccount) => {
+    if (!window.confirm(`${noun}「${account.name}」を削除しますか？`)) return;
 
-    run(() => deleteExpenseAccount(account.id));
+    run(() => api.remove(account.id));
   };
 
   const topLevel = (accounts ?? []).filter((account) => account.parent_id === null);
 
   return (
     <section className={sectionClass}>
-      <h2 className="text-base font-semibold text-foreground">費用科目</h2>
+      <h2 className="text-base font-semibold text-foreground">{noun}</h2>
 
       {error && <p className={errorClass}>{error}</p>}
 
@@ -204,7 +207,7 @@ export default function ExpenseAccountsSection() {
                   submitLabel="保存"
                   busy={busy}
                   onSubmit={(input) =>
-                    run(() => updateExpenseAccount(account.id, input), () => setEditingId(null))
+                    run(() => api.update(account.id, input), () => setEditingId(null))
                   }
                   onCancel={() => setEditingId(null)}
                 />
@@ -245,17 +248,17 @@ export default function ExpenseAccountsSection() {
       )}
 
       <div className="flex flex-col gap-2 border-t border-black/10 pt-3 dark:border-white/10">
-        <span className="text-sm font-medium text-foreground">費用科目を追加</span>
+        <span className="text-sm font-medium text-foreground">{noun}を追加</span>
         <AccountForm
           key={addFormKey}
           initial={{ name: "", parent_id: null }}
           parents={topLevel}
           submitLabel="追加"
           busy={busy}
-          onSubmit={(input) => run(() => createExpenseAccount(input), () => setAddFormKey((n) => n + 1))}
+          onSubmit={(input) => run(() => api.create(input), () => setAddFormKey((n) => n + 1))}
         />
         <p className={noteClass}>
-          費用科目は全員で共通です。使っている科目は名前だけ変えられます。子科目のある科目は削除できません。
+          {noun}は全員で共通です。使っている科目は名前だけ変えられます。子科目のある科目は削除できません。
         </p>
       </div>
     </section>

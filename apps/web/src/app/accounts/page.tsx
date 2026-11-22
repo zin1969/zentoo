@@ -2,7 +2,7 @@ import HomeLink from "../components/HomeLink";
 import LogoutButton from "../components/LogoutButton";
 import AssetAccountsSection from "./components/AssetAccountsSection";
 import CreditCardsSection from "./components/CreditCardsSection";
-import ExpenseAccountsSection from "./components/ExpenseAccountsSection";
+import TwoLevelAccountsSection from "./components/TwoLevelAccountsSection";
 
 export default function Page() {
   return (
@@ -14,7 +14,8 @@ export default function Page() {
       <h1 className="text-xl font-semibold text-foreground">口座・カード・科目の管理</h1>
       <AssetAccountsSection />
       <CreditCardsSection />
-      <ExpenseAccountsSection />
+      <TwoLevelAccountsSection kind="expense" />
+      <TwoLevelAccountsSection kind="revenue" />
     </main>
   );
 }
