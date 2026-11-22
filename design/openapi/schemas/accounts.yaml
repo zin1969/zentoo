@@ -150,6 +150,7 @@ CreditCardRequest:
 
 ExpenseAccountRequest:
   type: object
+  description: 費用科目・収益科目の追加・変更で共通
   required:
     - name
   properties:
@@ -174,3 +175,7 @@ AccountSavedResponse:
     next_token:
       type: string
       description: 次のリクエストに使う JWT
+
+RevenueAccount:
+  $ref: '#/ExpenseAccount'
+  description: 収益科目。形は費用科目と同じ（全ユーザー共通、親子の 2 階層）

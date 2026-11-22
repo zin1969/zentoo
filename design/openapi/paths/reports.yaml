@@ -40,9 +40,10 @@ account-balances:
 monthly-expenses:
   get:
     tags: [reports]
-    summary: 月次の支出
+    summary: 月次の収支
     description: |
-      認証済みユーザーの費用を、対象月の費用科目ごとに集計して、金額の大きい順に返す。
+      認証済みユーザーの費用を、対象月の費用科目ごとに集計して、金額の大きい順に返す（`total`・`items`）。
+      あわせて、収入を収益科目ごとに集計し（`income_total`・`income_items`）、収支（`net` = 収入 − 支出）を返す。
       仕訳日が対象月の仕訳で数える。カード払いは買い物をした日の月に計上する。
       参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
     operationId: getMonthlyExpenses
@@ -59,7 +60,7 @@ monthly-expenses:
             - '2026-10'
     responses:
       '200':
-        description: 科目ごとの支出と合計（該当が無い月は `total` が 0、`items` が空配列）
+        description: 科目ごとの支出・収入と合計、収支（該当が無い月は合計が 0、一覧が空配列）
         content:
           application/json:
             schema:

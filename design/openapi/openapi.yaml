@@ -36,6 +36,10 @@ paths:
     $ref: './paths/accounts.yaml#/expense-accounts'
   /expense-accounts/{id}:
     $ref: './paths/accounts.yaml#/expense-account'
+  /revenue-accounts:
+    $ref: './paths/accounts.yaml#/revenue-accounts'
+  /revenue-accounts/{id}:
+    $ref: './paths/accounts.yaml#/revenue-account'
   /credit-cards:
     $ref: './paths/accounts.yaml#/credit-cards'
   /credit-cards/{id}:
@@ -56,6 +60,10 @@ paths:
     $ref: './paths/journals.yaml#/cash-deposit-journals'
   /direct-debit-journals/{id}:
     $ref: './paths/journals.yaml#/direct-debit-journal'
+  /income-journals:
+    $ref: './paths/journals.yaml#/income-journals'
+  /income-journals/{id}:
+    $ref: './paths/journals.yaml#/income-journal'
   /account-balances:
     $ref: './paths/reports.yaml#/account-balances'
   /monthly-expenses:
@@ -80,6 +88,8 @@ components:
       $ref: './schemas/accounts.yaml#/LiabilityAccount'
     ExpenseAccount:
       $ref: './schemas/accounts.yaml#/ExpenseAccount'
+    RevenueAccount:
+      $ref: './schemas/accounts.yaml#/RevenueAccount'
     AssetAccountRequest:
       $ref: './schemas/accounts.yaml#/AssetAccountRequest'
     CreditCard:
@@ -102,6 +112,8 @@ components:
       $ref: './schemas/journals.yaml#/InsertJournalEntryRequest'
     UpdateDirectDebitDateRequest:
       $ref: './schemas/journals.yaml#/UpdateDirectDebitDateRequest'
+    IncomeJournalRequest:
+      $ref: './schemas/journals.yaml#/IncomeJournalRequest'
     JournalList:
       $ref: './schemas/journals.yaml#/JournalList'
     Journal:

@@ -30,6 +30,9 @@ ErrorResponse:
         - expense_account_in_use
         - expense_account_has_children
         - invalid_parent
+        - revenue_account_not_found
+        - revenue_account_in_use
+        - revenue_account_has_children
     errors:
       type: array
       items:

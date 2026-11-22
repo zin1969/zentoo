@@ -238,3 +238,31 @@ Journal:
     direct_debit_journal_id:
       type: [integer, 'null']
       description: この仕訳がカード払いの場合、引き落とし仕訳の ID
+
+IncomeJournalRequest:
+  type: object
+  required:
+    - journal_date
+    - asset_account_id
+    - revenue_account_id
+    - amount
+  properties:
+    journal_date:
+      type: string
+      format: date
+    asset_account_id:
+      type: integer
+      minimum: 1
+      description: 入金先の口座（本人の口座。預金・現金・電子マネーのどれでもよい）
+    revenue_account_id:
+      type: integer
+      minimum: 1
+      description: 収益科目（共通科目か本人の科目）
+    amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+    description:
+      type: [string, 'null']
+      maxLength: 100
+      description: 摘要（支払元など）。空なら収益科目の名前を入れる

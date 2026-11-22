@@ -470,3 +470,149 @@ credit-card:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+
+revenue-accounts:
+  get:
+    tags: [accounts]
+    summary: 収益勘定科目の一覧
+    description: 全ユーザー共通の収益勘定科目と、認証済みユーザー自身の収益勘定科目を返す。新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（本文に `next_token` は含めない）。
+    operationId: listRevenueAccounts
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: 収益勘定科目の配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/accounts.yaml#/RevenueAccount'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  post:
+    tags: [accounts]
+    summary: 収益科目の追加
+    description: |
+      全ユーザー共通（`user_id` が NULL）の収益科目を追加する。親子の 2 階層で、親にできるのは親の無い科目だけ。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: createRevenueAccount
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/ExpenseAccountRequest'
+    responses:
+      '201':
+        description: 追加した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、親が不正（`invalid_parent`）、同じ親の中で名前の重複（`duplicate_account_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+revenue-account:
+  put:
+    tags: [accounts]
+    summary: 収益科目の変更
+    description: |
+      収益科目の名前と親を変える。仕訳（全ユーザー）で使われている科目は、名前だけ変えられる。子科目のある科目には親を設定できない（3 階層にしないため）。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: updateRevenueAccount
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 収益科目の ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/accounts.yaml#/ExpenseAccountRequest'
+    responses:
+      '200':
+        description: 変更した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/accounts.yaml#/AccountSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 科目が存在しない、または他ユーザーの科目（`revenue_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、使用中の科目の親の付け替え（`revenue_account_in_use`）、子科目のある科目への親の設定（`revenue_account_has_children`）、親が不正（`invalid_parent`）、名前の重複（`duplicate_account_name`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  delete:
+    tags: [accounts]
+    summary: 収益科目の削除
+    description: |
+      使われていない、子科目の無い収益科目を削除する。
+      成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
+    operationId: deleteRevenueAccount
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 収益科目の ID
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 科目が存在しない、または他ユーザーの科目（`revenue_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 使用中の科目（`revenue_account_in_use`）、子科目のある科目（`revenue_account_has_children`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

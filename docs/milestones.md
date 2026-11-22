@@ -199,7 +199,7 @@
 - [x] 収入の修正の DB 関数（`replace_income_journal`）・API・画面と、仕訳一覧の「修正」
 - [x] 仕訳一覧で、収益科目の名前を出す
 - [x] 月次の画面に、収入と収支を出す（`GET /monthly-expenses` に `income_total`・`income_items`・`net` を追加。画面名を「月次の収支」に）
-- [ ] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
+- [x] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
 - [ ] 本番にデプロイし、スマホで確認する（デプロイ前に手動でバックアップ）
 
 **完了条件**: 本番で給料を登録すると、入金先の残高と通帳に反映され、月次の画面に収入と収支が出る。収入を修正・削除できる。

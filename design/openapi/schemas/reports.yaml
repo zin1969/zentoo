@@ -63,6 +63,9 @@ MonthlyExpenses:
     - month
     - total
     - items
+    - income_total
+    - income_items
+    - net
   properties:
     month:
       type: string
@@ -71,11 +74,23 @@ MonthlyExpenses:
         - '2026-10'
     total:
       type: integer
+      description: 支出の合計
     items:
       type: array
-      description: 金額の大きい順
+      description: 費用科目ごとの支出。金額の大きい順
       items:
         $ref: '#/MonthlyExpense'
+    income_total:
+      type: integer
+      description: 収入の合計
+    income_items:
+      type: array
+      description: 収益科目ごとの収入。金額の大きい順。形は支出と同じ
+      items:
+        $ref: '#/MonthlyExpense'
+    net:
+      type: integer
+      description: 収支（収入 − 支出）。マイナスは赤字
 
 LedgerItem:
   type: object

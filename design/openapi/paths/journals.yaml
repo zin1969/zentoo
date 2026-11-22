@@ -428,3 +428,99 @@ direct-debit-journal:
           application/json:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
+
+income-journals:
+  post:
+    tags: [journals]
+    summary: 収入の登録
+    description: |
+      収入の仕訳（借方: 入金先の口座、貸方: 収益科目）を登録する。入金先は本人の口座ならどれでもよい（預金・現金・電子マネー）。
+      摘要（`description`）は仕訳の店舗名に入れ、空なら収益科目の名前を入れる（通帳の摘要に出る）。
+      内部で PostgreSQL 関数 `create_income_journal` を呼び出す。
+      401 以外では新しい `next_token` を返す。
+    operationId: createIncomeJournal
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/IncomeJournalRequest'
+    responses:
+      '201':
+        description: 登録成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 入金先の口座（`asset_account_not_found`）か収益科目（`revenue_account_not_found`）が存在しない、または他ユーザーのもの
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+income-journal:
+  put:
+    tags: [journals]
+    summary: 収入の修正
+    description: |
+      収入の仕訳（貸方がすべて収益）を、新しい内容で作り直す。本文は収入の登録と同じ。
+      内部で PostgreSQL 関数 `replace_income_journal` を呼び出し、元の仕訳を削除して、登録と同じ確認をしながら登録し直す。
+      失敗した場合は、元の仕訳がそのまま残る。**仕訳の ID は変わる**。新しい ID を `journal_id` で返す。
+      401 以外では新しい `next_token` を返す。
+    operationId: replaceIncomeJournal
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 修正する仕訳の ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/IncomeJournalRequest'
+    responses:
+      '200':
+        description: 修正成功（`journal_id` は作り直した仕訳の新しい ID）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 仕訳（`journal_not_found`）・入金先の口座（`asset_account_not_found`）・収益科目（`revenue_account_not_found`）が存在しない、または他ユーザーのもの
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、収入の仕訳ではない（`journal_not_editable`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

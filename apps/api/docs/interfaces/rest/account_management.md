@@ -19,6 +19,10 @@ DELETE /credit-cards/{id}
 POST   /expense-accounts
 PUT    /expense-accounts/{id}
 DELETE /expense-accounts/{id}
+
+POST   /revenue-accounts
+PUT    /revenue-accounts/{id}
+DELETE /revenue-accounts/{id}
 ```
 
 ## Authentication / Authorization
@@ -99,7 +103,9 @@ DELETE /expense-accounts/{id}
 - 変更のとき引き落とし設定が無ければ作る
 - 未払いの残高は [開始負債登録 API](liability_opening_journals.md) で登録する
 
-## 費用科目
+## 費用科目・収益科目
+
+収益科目（`/revenue-accounts`）は、費用科目と同じルール・同じ本文で扱う。エラーコードの頭だけが違う（`expense_account_*` / `revenue_account_*`）。
 
 ### Body（POST / PUT）
 
@@ -116,7 +122,7 @@ DELETE /expense-accounts/{id}
 | parent_id | No       | 親の科目の ID。省略または null でトップレベルの科目になる |
 
 - 親子の 2 階層。親にできるのは、親の無い科目だけ（自分自身は除く）
-- 使われているかは、共通科目なので全ユーザーの仕訳で判定する
+- 使われているかは、共通科目なので全ユーザーの仕訳で判定する（費用科目は借方、収益科目は貸方）
 - 子科目のある科目は、削除できず、親も設定できない（3 階層にしないため）
 
 ## Response
@@ -134,14 +140,14 @@ DELETE /expense-accounts/{id}
 | 404 | `asset_account_not_found` | 口座が存在しない、または他ユーザーの口座 |
 | 404 | `credit_card_not_found` | カードが存在しない、他ユーザーのカード、またはクレジットカードではない負債科目 |
 | 404 | `bank_account_not_found` | 引き落とし口座が、本人の預金口座ではない |
-| 404 | `expense_account_not_found` | 費用科目が存在しない、または他ユーザーの科目 |
+| 404 | `expense_account_not_found` / `revenue_account_not_found` | 費用科目・収益科目が存在しない、または他ユーザーの科目 |
 | 422 | `errors` | 本文のバリデーションエラー |
 | 422 | `duplicate_account_name` | 同じ名前の科目がある |
 | 422 | `cash_account_already_exists` | 現金の口座はすでにある |
 | 422 | `asset_account_in_use` | 使われている口座の削除・種別の変更 |
 | 422 | `credit_card_in_use` | 使われているカードの削除 |
-| 422 | `expense_account_in_use` | 使われている費用科目の削除・親の付け替え |
-| 422 | `expense_account_has_children` | 子科目のある費用科目の削除・親の設定 |
+| 422 | `expense_account_in_use` / `revenue_account_in_use` | 使われている科目の削除・親の付け替え |
+| 422 | `expense_account_has_children` / `revenue_account_has_children` | 子科目のある科目の削除・親の設定 |
 | 422 | `invalid_parent` | 親が存在しない、子科目、または自分自身 |
 
 ```json
