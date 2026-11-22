@@ -1044,6 +1044,8 @@ DECLARE
   v_sum_credit INT := 0;
   v_entry RECORD;
   v_available BOOLEAN;
+  v_debit RECORD;
+  v_debit_id BIGINT;
   ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   ELEMENT_EQUITY CONSTANT INT := 3;
@@ -1104,6 +1106,31 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- 4.6 明細ごとのタグ（tag_ids）を確認する。タグは本人のものだけ、費用の明細にだけ付けられる。
+  -- 他人のタグと存在しないタグは区別しない
+  IF EXISTS (
+    SELECT 1
+      FROM jsonb_array_elements(journal_data->'debits') AS e(value)
+     CROSS JOIN LATERAL jsonb_array_elements_text(
+       CASE WHEN jsonb_typeof(e.value->'tag_ids') = 'array' THEN e.value->'tag_ids' ELSE '[]'::JSONB END
+     ) AS t(tag_id)
+     WHERE NOT EXISTS (
+       SELECT 1 FROM tags tg WHERE tg.id = t.tag_id::BIGINT AND tg.user_id = v_user_id
+     )
+  ) THEN
+    RAISE EXCEPTION 'tag not found';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+      FROM jsonb_array_elements(journal_data->'debits') AS e(value)
+     WHERE jsonb_typeof(e.value->'tag_ids') = 'array'
+       AND jsonb_array_length(e.value->'tag_ids') > 0
+       AND (e.value->>'element_type')::INT IS DISTINCT FROM ELEMENT_EXPENSES
+  ) THEN
+    RAISE EXCEPTION 'tags are only for expense debits';
+  END IF;
+
   -- 5. 親仕訳データを作成
   INSERT INTO journals (
     journal_dt, store_name, user_id
@@ -1114,24 +1141,30 @@ BEGIN
   )
   RETURNING id INTO new_journal_id;
 
-  -- 6. 借方（debits）のインサート
-  INSERT INTO debits (
-    journal_id, element_type, account_id, item_name, amount, user_id
-  )
-  SELECT
-    new_journal_id,
-    element_type,
-    account_id,
-    item_name,
-    amount,
-    v_user_id
-  FROM jsonb_to_recordset(journal_data->'debits')
-    AS debits(
-         element_type INT,
-         account_id INT,
-         item_name TEXT,
-         amount INT
-       );
+  -- 6. 借方（debits）のインサート。明細ごとのタグも入れるので、1 行ずつ送られた順に入れる
+  FOR v_debit IN
+    SELECT e.value
+      FROM jsonb_array_elements(journal_data->'debits') WITH ORDINALITY AS e(value, ord)
+     ORDER BY e.ord
+  LOOP
+    INSERT INTO debits (
+      journal_id, element_type, account_id, item_name, amount, user_id
+    ) VALUES (
+      new_journal_id,
+      (v_debit.value->>'element_type')::INT,
+      (v_debit.value->>'account_id')::INT,
+      v_debit.value->>'item_name',
+      (v_debit.value->>'amount')::INT,
+      v_user_id
+    )
+    RETURNING id INTO v_debit_id;
+
+    INSERT INTO debit_tags (debit_id, tag_id)
+    SELECT DISTINCT v_debit_id, t.tag_id::BIGINT
+      FROM jsonb_array_elements_text(
+        CASE WHEN jsonb_typeof(v_debit.value->'tag_ids') = 'array' THEN v_debit.value->'tag_ids' ELSE '[]'::JSONB END
+      ) AS t(tag_id);
+  END LOOP;
 
   -- 7. 貸方（credits）のインサート
   INSERT INTO credits (
@@ -1621,6 +1654,37 @@ ALTER SEQUENCE public.credits_id_seq OWNED BY public.credits.id;
 
 
 --
+-- Name: debit_tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.debit_tags (
+    id bigint NOT NULL,
+    debit_id bigint NOT NULL,
+    tag_id bigint NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: debit_tags_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.debit_tags_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: debit_tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.debit_tags_id_seq OWNED BY public.debit_tags.id;
+
+
+--
 -- Name: debits; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1991,6 +2055,38 @@ ALTER SEQUENCE public.stores_id_seq OWNED BY public.stores.id;
 
 
 --
+-- Name: tags; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tags (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    name text NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: tags_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tags_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tags_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tags_id_seq OWNED BY public.tags.id;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2048,6 +2144,13 @@ ALTER TABLE ONLY public.credit_cards_updated_at_triggers ALTER COLUMN id SET DEF
 --
 
 ALTER TABLE ONLY public.credits ALTER COLUMN id SET DEFAULT nextval('public.credits_id_seq'::regclass);
+
+
+--
+-- Name: debit_tags id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.debit_tags ALTER COLUMN id SET DEFAULT nextval('public.debit_tags_id_seq'::regclass);
 
 
 --
@@ -2128,6 +2231,13 @@ ALTER TABLE ONLY public.stores ALTER COLUMN id SET DEFAULT nextval('public.store
 
 
 --
+-- Name: tags id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tags ALTER COLUMN id SET DEFAULT nextval('public.tags_id_seq'::regclass);
+
+
+--
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2172,6 +2282,14 @@ ALTER TABLE ONLY public.credit_cards_updated_at_triggers
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT credits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: debit_tags debit_tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.debit_tags
+    ADD CONSTRAINT debit_tags_pkey PRIMARY KEY (id);
 
 
 --
@@ -2271,6 +2389,14 @@ ALTER TABLE ONLY public.stores
 
 
 --
+-- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2318,6 +2444,20 @@ CREATE INDEX index_credits_on_journal_id ON public.credits USING btree (journal_
 --
 
 CREATE INDEX index_credits_on_user_id ON public.credits USING btree (user_id);
+
+
+--
+-- Name: index_debit_tags_on_debit_id_and_tag_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_debit_tags_on_debit_id_and_tag_id ON public.debit_tags USING btree (debit_id, tag_id);
+
+
+--
+-- Name: index_debit_tags_on_tag_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_debit_tags_on_tag_id ON public.debit_tags USING btree (tag_id);
 
 
 --
@@ -2447,6 +2587,20 @@ CREATE INDEX index_revenue_accounts_on_user_id ON public.revenue_accounts USING 
 
 
 --
+-- Name: index_tags_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tags_on_user_id ON public.tags USING btree (user_id);
+
+
+--
+-- Name: index_tags_on_user_id_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_tags_on_user_id_and_name ON public.tags USING btree (user_id, name);
+
+
+--
 -- Name: index_users_on_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2538,6 +2692,13 @@ CREATE TRIGGER trigger_update_updated_at_of_stores BEFORE UPDATE ON public.store
 
 
 --
+-- Name: tags trigger_update_updated_at_of_tags; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_update_updated_at_of_tags BEFORE UPDATE ON public.tags FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_with_current_timestamp();
+
+
+--
 -- Name: users trigger_update_updated_at_of_users; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2558,6 +2719,14 @@ ALTER TABLE ONLY public.credit_cards
 
 ALTER TABLE ONLY public.liability_accounts
     ADD CONSTRAINT fk_rails_0999c965ca FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: debit_tags fk_rails_15532e74e3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.debit_tags
+    ADD CONSTRAINT fk_rails_15532e74e3 FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE;
 
 
 --
@@ -2681,6 +2850,14 @@ ALTER TABLE ONLY public.credit_cards
 
 
 --
+-- Name: debit_tags fk_rails_d32bead28a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.debit_tags
+    ADD CONSTRAINT fk_rails_d32bead28a FOREIGN KEY (debit_id) REFERENCES public.debits(id) ON DELETE CASCADE;
+
+
+--
 -- Name: asset_accounts fk_rails_d5e7f3287d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2694,6 +2871,14 @@ ALTER TABLE ONLY public.asset_accounts
 
 ALTER TABLE ONLY public.debits
     ADD CONSTRAINT fk_rails_e1ba88eebe FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: tags fk_rails_e689f6d0cc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT fk_rails_e689f6d0cc FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -2711,6 +2896,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261121124000'),
 ('20261121123000'),
 ('20261121122000'),
 ('20261121121000'),
