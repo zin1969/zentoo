@@ -7,6 +7,7 @@ module Journals
     class CreditCardSettingNotFound < StandardError; end
     class TagNotFound < StandardError; end
     class TagsOnlyForExpenseDebits < StandardError; end
+    class TaxOnlyForExpenseDebits < StandardError; end
 
     def initialize(base: ActiveRecord::Base)
       @base = base
@@ -41,6 +42,8 @@ module Journals
         TagNotFound.new
       when /tags are only for expense debits/
         TagsOnlyForExpenseDebits.new
+      when /tax is only for expense debits/
+        TaxOnlyForExpenseDebits.new
       else
         error
       end

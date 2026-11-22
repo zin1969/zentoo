@@ -48,6 +48,8 @@ module Journals
         InsertJournalEntry::TagNotFound.new
       when /tags are only for expense debits/
         InsertJournalEntry::TagsOnlyForExpenseDebits.new
+      when /tax is only for expense debits/
+        InsertJournalEntry::TaxOnlyForExpenseDebits.new
       else
         error
       end

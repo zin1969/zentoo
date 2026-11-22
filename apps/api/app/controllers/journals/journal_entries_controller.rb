@@ -63,6 +63,12 @@ module Journals
         error: "tags_only_for_expense_debits",
         next_token: next_token
       }, status: :unprocessable_content
+
+    rescue Journals::InsertJournalEntry::TaxOnlyForExpenseDebits
+      render json: {
+        error: "tax_only_for_expense_debits",
+        next_token: next_token
+      }, status: :unprocessable_content
     end
 
     # お買い物の仕訳を修正する。本文は登録と同じ。仕訳は作り直されるので、新しい journal_id を返す
@@ -114,6 +120,9 @@ module Journals
 
     rescue Journals::InsertJournalEntry::TagsOnlyForExpenseDebits
       render json: { error: "tags_only_for_expense_debits", next_token: next_token }, status: :unprocessable_content
+
+    rescue Journals::InsertJournalEntry::TaxOnlyForExpenseDebits
+      render json: { error: "tax_only_for_expense_debits", next_token: next_token }, status: :unprocessable_content
     end
   end
 end

@@ -99,6 +99,16 @@ BEGIN
     RAISE EXCEPTION 'tags are only for expense debits';
   END IF;
 
+  -- 4.7 外税で登録した明細の税率・税抜の金額は、お買い物の費用の明細にだけ持たせる（表示のため。金額は amount の税込）
+  IF EXISTS (
+    SELECT 1
+      FROM jsonb_array_elements(journal_data->'debits') AS e(value)
+     WHERE e.value->>'tax_rate' IS NOT NULL
+       AND (e.value->>'element_type')::INT IS DISTINCT FROM ELEMENT_EXPENSES
+  ) THEN
+    RAISE EXCEPTION 'tax is only for expense debits';
+  END IF;
+
   -- 5. 親仕訳データを作成
   INSERT INTO journals (
     journal_dt, store_name, user_id
@@ -116,13 +126,15 @@ BEGIN
      ORDER BY e.ord
   LOOP
     INSERT INTO debits (
-      journal_id, element_type, account_id, item_name, amount, user_id
+      journal_id, element_type, account_id, item_name, amount, tax_rate, tax_excluded_amount, user_id
     ) VALUES (
       new_journal_id,
       (v_debit.value->>'element_type')::INT,
       (v_debit.value->>'account_id')::INT,
       v_debit.value->>'item_name',
       (v_debit.value->>'amount')::INT,
+      (v_debit.value->>'tax_rate')::INT,
+      (v_debit.value->>'tax_excluded_amount')::INT,
       v_user_id
     )
     RETURNING id INTO v_debit_id;

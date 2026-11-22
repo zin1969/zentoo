@@ -20,6 +20,9 @@ module Journals
             account_name: account_name(result, debit),
             item_name: debit.item_name,
             amount: debit.amount.to_i,
+            # 外税のレシートで登録した明細の税率（%）と税抜の金額。内税の明細は null。消費税は amount - tax_excluded_amount
+            tax_rate: debit.tax_rate,
+            tax_excluded_amount: debit.tax_excluded_amount,
             # 明細に付いているタグ（お買い物の費用の明細だけ）
             tags: debit.tags.sort_by(&:id).map { |tag| { id: tag.id, name: tag.name } }
           }
