@@ -40,6 +40,7 @@ ErrorResponse:
         - tag_not_found
         - duplicate_tag_name
         - tags_only_for_expense_debits
+        - tax_only_for_expense_debits
     errors:
       type: array
       items:

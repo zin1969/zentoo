@@ -31,10 +31,11 @@ POST /journal-entries
   "date": "2026-07-19",
   "store_name": "ピザーラ",
   "debits": [
-    { "element_type": 5, "account_id": 10051, "amount": 1000, "item_name": "ピザ", "tag_ids": [3] }
+    { "element_type": 5, "account_id": 10051, "amount": 1000, "item_name": "ピザ", "tag_ids": [3] },
+    { "element_type": 5, "account_id": 10052, "amount": 1080, "item_name": "ビール", "tax_rate": 8, "tax_excluded_amount": 1000 }
   ],
   "credits": [
-    { "element_type": 1, "payment_method_type": 1, "account_id": 5, "amount": 1000 }
+    { "element_type": 1, "payment_method_type": 1, "account_id": 5, "amount": 2080 }
   ]
 }
 ```
@@ -43,6 +44,7 @@ POST /journal-entries
 - `payment_method_type`（貸方）: 資産科目は 1 = 現金, 2 = 預貯金, 3 = 電子マネー。負債科目は 1 = 借入金, 2 = キャッシング, 3 = クレジットカード払い
 - 借方の合計と貸方の合計は一致していること
 - `tag_ids`（借方。任意）: 明細に付けるタグの ID（10 個まで）。本人のタグだけ、費用の明細にだけ付けられる。存在しないタグ・他ユーザーのタグは `tag_not_found`（404）、費用以外の明細へのタグは `tags_only_for_expense_debits`（422）。タグは [タグ API](tags.md) で作る
+- `tax_rate` / `tax_excluded_amount`（借方。任意）: 外税のレシートで登録した明細の税率（0〜100 の整数の %）と税抜の金額（0〜`amount`）。2 つは一緒に送る。`amount` は消費税を足した税込の金額で、残高・集計は `amount` で計算する（この 2 つは修正画面の表示のためだけに保存する）。値が範囲外・片方だけは `errors`（422）、費用以外の明細に付けると `tax_only_for_expense_debits`（422）
 
 ## クレジットカード払いの引き落とし仕訳
 

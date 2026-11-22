@@ -43,7 +43,7 @@ GET /journals
       "journal_date": "2026-10-27",
       "store_name": "フェザー・ステップ",
       "debits": [
-        { "element_type": 2, "account_id": 3, "account_name": "tcard", "item_name": "革靴", "amount": 14000, "tags": [] }
+        { "element_type": 2, "account_id": 3, "account_name": "tcard", "item_name": "革靴", "amount": 14000, "tax_rate": null, "tax_excluded_amount": null, "tags": [] }
       ],
       "credits": [
         { "element_type": 1, "payment_method_type": 2, "account_id": 2, "account_name": "三菱UFJ銀行 用賀出張所", "amount": 14000 }

@@ -148,6 +148,15 @@ InsertJournalEntryRequest:
               type: integer
               minimum: 1
             description: 明細に付けるタグ（本人のタグの ID）。費用の明細にだけ付けられる。省略すると付けない
+          tax_rate:
+            type: integer
+            minimum: 0
+            maximum: 100
+            description: 外税のレシートで登録した明細の税率（整数の %）。tax_excluded_amount と一緒に送る。費用の明細にだけ付けられる。表示のためだけに保存し、amount は税込のまま
+          tax_excluded_amount:
+            type: integer
+            minimum: 0
+            description: 外税のレシートで登録した明細の税抜の金額（0 から amount まで）。tax_rate と一緒に送る。消費税は amount - tax_excluded_amount
     credits:
       type: array
       minItems: 1
@@ -208,7 +217,7 @@ Journal:
       type: array
       items:
         type: object
-        required: [element_type, account_id, account_name, amount, tags]
+        required: [element_type, account_id, account_name, amount, tax_rate, tax_excluded_amount, tags]
         properties:
           element_type:
             type: integer
@@ -220,6 +229,13 @@ Journal:
             type: [string, 'null']
           amount:
             type: integer
+            description: 税込の金額
+          tax_rate:
+            type: [integer, 'null']
+            description: 外税のレシートで登録した明細の税率（整数の %）。内税の明細は null
+          tax_excluded_amount:
+            type: [integer, 'null']
+            description: 外税のレシートで登録した明細の税抜の金額。内税の明細は null。消費税は amount - tax_excluded_amount
           tags:
             type: array
             description: 明細に付いているタグ（お買い物の費用の明細だけ）

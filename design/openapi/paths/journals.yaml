@@ -215,7 +215,7 @@ journal-entries:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
-        description: バリデーションエラー（errors）、貸借不一致（error が unbalanced_journal）、カード払いなのに引き落とし設定が無い（error が credit_card_setting_not_found）、または費用以外の明細にタグがある（error が tags_only_for_expense_debits）
+        description: バリデーションエラー（errors）、貸借不一致（error が unbalanced_journal）、カード払いなのに引き落とし設定が無い（error が credit_card_setting_not_found）、費用以外の明細にタグがある（error が tags_only_for_expense_debits）、または費用以外の明細に税率がある（error が tax_only_for_expense_debits）
         content:
           application/json:
             schema:
@@ -272,7 +272,7 @@ journal-entry:
         description: |
           バリデーションエラー（`errors`）、引き落とし仕訳（`direct_debit_journal_not_editable`）、
           お買い物の仕訳ではない（`journal_not_editable`）、借方に費用以外がある（`expense_debits_required`）、
-          貸借不一致（`unbalanced_journal`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）、費用以外の明細にタグがある（`tags_only_for_expense_debits`）
+          貸借不一致（`unbalanced_journal`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）、費用以外の明細にタグがある（`tags_only_for_expense_debits`）、費用以外の明細に税率がある（`tax_only_for_expense_debits`）
         content:
           application/json:
             schema:
