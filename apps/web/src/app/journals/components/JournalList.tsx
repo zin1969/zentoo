@@ -8,6 +8,7 @@ import {
   deleteJournal,
   getJournals,
   isEditableJournal,
+  isIncomeJournal,
   type Journal,
   type JournalPage
 } from "@/lib/journals/journals";
@@ -97,6 +98,14 @@ function DirectDebitBadge({ journal }: { journal: Journal }) {
   return null;
 }
 
+// お買い物と収入は、それぞれの修正画面で直す。それ以外の仕訳は、削除して登録し直す
+function editHref(journal: Journal) {
+  if (isEditableJournal(journal)) return `/journal-entries/${journal.id}/edit`;
+  if (isIncomeJournal(journal)) return `/income-journals/${journal.id}/edit`;
+
+  return null;
+}
+
 type JournalCardProps = {
   journal: Journal;
   deleting: boolean;
@@ -105,6 +114,8 @@ type JournalCardProps = {
 };
 
 function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProps) {
+  const href = editHref(journal);
+
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/20">
       <div className="flex items-baseline justify-between gap-2">
@@ -147,9 +158,9 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
 
       {!journal.original_journal_id && (
         <div className="flex justify-end gap-2">
-          {isEditableJournal(journal) && (
+          {href && (
             <Link
-              href={`/journal-entries/${journal.id}/edit`}
+              href={href}
               className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
             >
               修正

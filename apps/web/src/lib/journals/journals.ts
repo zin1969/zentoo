@@ -70,6 +70,15 @@ export function isEditableJournal(journal: Journal) {
   );
 }
 
+const REVENUE_ELEMENT_TYPE = 4;
+
+// 収入の仕訳（貸方がすべて収益）。収入の修正画面で直す
+export function isIncomeJournal(journal: Journal) {
+  return (
+    journal.credits.length > 0 && journal.credits.every((credit) => credit.element_type === REVENUE_ELEMENT_TYPE)
+  );
+}
+
 // カード払いの仕訳を削除すると、自動で作られた引き落とし仕訳も一緒に削除される
 export async function deleteJournal(id: number) {
   await apiFetch<null>(`/journals/${id}`, { method: "DELETE" });
