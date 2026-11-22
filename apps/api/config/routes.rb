@@ -43,6 +43,9 @@ Rails.application.routes.draw do
   delete "/tags/:id", to: "tags#destroy", constraints: { id: /\d+/ }
 
   get "/recurring-entries", to: "recurring_entries#index"
+  get "/recurring-entries/pending", to: "recurring_occurrences#index"
+  post "/recurring-entries/:id/occurrences", to: "recurring_occurrences#create", constraints: { id: /\d+/ }
+  post "/recurring-entries/:id/skips", to: "recurring_occurrences#skip", constraints: { id: /\d+/ }
   post "/recurring-entries", to: "recurring_entries#create"
   put "/recurring-entries/:id", to: "recurring_entries#update", constraints: { id: /\d+/ }
   delete "/recurring-entries/:id", to: "recurring_entries#destroy", constraints: { id: /\d+/ }

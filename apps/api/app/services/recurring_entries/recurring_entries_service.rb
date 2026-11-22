@@ -21,8 +21,8 @@ module RecurringEntries
       entries.map do |entry|
         Item.new(
           entry: entry,
-          debit_account_name: account_name(debit_element_type(entry), entry.debit_account_id),
-          credit_account_name: account_name(entry.credit_element_type, entry.credit_account_id),
+          debit_account_name: debit_account_name(entry),
+          credit_account_name: credit_account_name(entry),
           next_date: next_date(entry, today)
         )
       end
@@ -40,6 +40,14 @@ module RecurringEntries
         entry.update!(attributes)
         entry
       end
+    end
+
+    def debit_account_name(entry)
+      account_name(debit_element_type(entry), entry.debit_account_id)
+    end
+
+    def credit_account_name(entry)
+      account_name(entry.credit_element_type, entry.credit_account_id)
     end
 
     # 回の記録も消える（DB の ON DELETE CASCADE）。登録した仕訳は残る
