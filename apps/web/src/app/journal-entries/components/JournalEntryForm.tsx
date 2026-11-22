@@ -10,11 +10,18 @@ import { getLiabilityAccounts } from "@/lib/masters/liabilityAccounts";
 import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
 import type { Journal } from "@/lib/journals/journals";
 import { createTag, getTags, type Tag } from "@/lib/masters/tags";
+import { calculateTax, defaultTax } from "@/lib/journals/consumptionTax";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
 const EXPENSE_ELEMENT_TYPE = 5;
 const MAX_TAG_NAME_LENGTH = 30;
+const MAX_TAX_RATE = 100;
+// 外税のときに選べる税率。一時的な税率などは「その他」で数値を入れる
+const TAX_RATE_CHOICES = ["10", "8"];
+
+// 税込: 明細の金額は税込（今まで通り）。税抜: 外税のレシートで、明細の金額は税抜
+type TaxMode = "included" | "excluded";
 
 type DebitLine = {
   key: string;
@@ -25,7 +32,11 @@ type DebitLine = {
   parentId: string;
   // 登録する科目。子科目か、親の科目そのもの（「〇〇のまま」）
   expenseAccountId: string;
+  // 税込のときは税込の金額、税抜（外税）のときは税抜の金額
   amount: string;
+  // 税抜（外税）のときの税率。「10」「8」か「other」（customRate に数値を入れる）
+  rateChoice: string;
+  customRate: string;
 };
 
 type CreditLine = {
@@ -57,23 +68,73 @@ function nextKey() {
 }
 
 function emptyDebitLine(): DebitLine {
-  return { key: nextKey(), itemName: "", tagName: "", parentId: "", expenseAccountId: "", amount: "" };
+  return {
+    key: nextKey(),
+    itemName: "",
+    tagName: "",
+    parentId: "",
+    expenseAccountId: "",
+    amount: "",
+    rateChoice: TAX_RATE_CHOICES[0],
+    customRate: ""
+  };
 }
 
 function emptyCreditLine(): CreditLine {
   return { key: nextKey(), paymentKey: "", amount: "" };
 }
 
-// 修正のときは、元の仕訳の内容をフォームの初期値にする
+// 修正のときは、元の仕訳の内容をフォームの初期値にする。外税で登録した明細は、税抜の金額と税率で開く
 function debitLinesFrom(journal: Journal): DebitLine[] {
-  return journal.debits.map((debit) => ({
-    key: nextKey(),
-    itemName: debit.item_name ?? "",
-    tagName: debit.tags[0]?.name ?? "",
-    parentId: "",
-    expenseAccountId: String(debit.account_id),
-    amount: String(debit.amount)
-  }));
+  return journal.debits.map((debit) => {
+    const rate = debit.tax_rate === null ? null : String(debit.tax_rate);
+    const isChoice = rate !== null && TAX_RATE_CHOICES.includes(rate);
+
+    return {
+      key: nextKey(),
+      itemName: debit.item_name ?? "",
+      tagName: debit.tags[0]?.name ?? "",
+      parentId: "",
+      expenseAccountId: String(debit.account_id),
+      amount: String(debit.tax_excluded_amount ?? debit.amount),
+      rateChoice: rate === null ? TAX_RATE_CHOICES[0] : isChoice ? rate : "other",
+      customRate: rate !== null && !isChoice ? rate : ""
+    };
+  });
+}
+
+function isExcludedJournal(journal?: Journal) {
+  return journal?.debits.some((debit) => debit.tax_rate !== null) ?? false;
+}
+
+// 修正のときに、登録したときの税率ごとの消費税を再現する（自動の計算と違えば、手で直した値として開く）
+function taxOverridesFrom(journal?: Journal): Record<string, string> {
+  if (!isExcludedJournal(journal)) return {};
+
+  const groups = new Map<number, { subtotal: number; tax: number }>();
+  for (const debit of journal?.debits ?? []) {
+    if (debit.tax_rate === null || debit.tax_excluded_amount === null) continue;
+
+    const group = groups.get(debit.tax_rate) ?? { subtotal: 0, tax: 0 };
+    group.subtotal += debit.tax_excluded_amount;
+    group.tax += debit.amount - debit.tax_excluded_amount;
+    groups.set(debit.tax_rate, group);
+  }
+
+  return Object.fromEntries(
+    [...groups].flatMap(([rate, group]) =>
+      group.tax === defaultTax(group.subtotal, rate) ? [] : [[String(rate), String(group.tax)]]
+    )
+  );
+}
+
+// 明細の税率。数値になっていなければ null
+function lineTaxRate(line: DebitLine): number | null {
+  const raw = line.rateChoice === "other" ? line.customRate.trim() : line.rateChoice;
+  if (!/^\d+$/.test(raw)) return null;
+
+  const rate = Number(raw);
+  return rate <= MAX_TAX_RATE ? rate : null;
 }
 
 function creditLinesFrom(journal: Journal): CreditLine[] {
@@ -120,6 +181,10 @@ function extractErrorMessage(error: unknown, isEdit: boolean): string {
       return "タグが見つかりません。画面を再読み込みしてください。";
     }
 
+    if (data?.error === "tax_only_for_expense_debits") {
+      return "税率は費用の明細にだけ付けられます。";
+    }
+
     if (data?.error === "credit_card_setting_not_found") {
       return "クレジットカードの引き落とし設定が見つかりません。";
     }
@@ -152,6 +217,9 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
   const router = useRouter();
   const [date, setDate] = useState(journal?.journal_date ?? "");
   const [storeName, setStoreName] = useState(journal?.store_name ?? "");
+  const [taxMode, setTaxMode] = useState<TaxMode>(isExcludedJournal(journal) ? "excluded" : "included");
+  // 税率ごとに手で直した消費税（キーは税率）。空の税率は自動の計算を使う
+  const [taxOverrides, setTaxOverrides] = useState<Record<string, string>>(() => taxOverridesFrom(journal));
   const [debitLines, setDebitLines] = useState<DebitLine[]>(() =>
     journal ? debitLinesFrom(journal) : [emptyDebitLine()]
   );
@@ -197,9 +265,35 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
       .catch(handleMasterError("支払い方法の取得に失敗しました。時間をおいて再度お試しください。"));
   }, [router]);
 
-  const debitTotal = sumAmounts(debitLines.map((l) => l.amount));
-  const creditTotal = sumAmounts(creditLines.map((l) => l.amount));
-  const isBalanced = debitTotal > 0 && debitTotal === creditTotal;
+  const isExcluded = taxMode === "excluded";
+
+  // 税抜（外税）のとき: 税率ごとに消費税を計算して、明細を税込の金額にする
+  const taxResult = calculateTax(
+    debitLines.flatMap((line) => {
+      const rate = lineTaxRate(line);
+      return rate === null ? [] : [{ key: line.key, taxExcludedAmount: Number(line.amount) || 0, taxRate: rate }];
+    }),
+    new Map(
+      Object.entries(taxOverrides).flatMap(([rate, value]) =>
+        /^\d+$/.test(value.trim()) ? [[Number(rate), Number(value)] as [number, number]] : []
+      )
+    )
+  );
+  // 税率がすべて数値で、手で直した消費税も数値になっていること（空のままでは登録しない）
+  const ratesValid =
+    !isExcluded ||
+    (debitLines.every((line) => lineTaxRate(line) !== null) &&
+      taxResult.groups.every((group) => {
+        const value = taxOverrides[String(group.rate)];
+        return value === undefined || /^\d+$/.test(value.trim());
+      }));
+
+  const debitTotal = isExcluded ? taxResult.total : sumAmounts(debitLines.map((l) => l.amount));
+  // 外税で支払い方法が 1 つなら、その金額は税込の合計で埋める（自分で計算しなくて済むように）
+  const autoCreditAmount = isExcluded && creditLines.length === 1;
+  const creditAmountOf = (line: CreditLine) => (autoCreditAmount ? debitTotal : Number(line.amount) || 0);
+  const creditTotal = creditLines.reduce((total, line) => total + creditAmountOf(line), 0);
+  const isBalanced = debitTotal > 0 && debitTotal === creditTotal && ratesValid;
 
   // 親の科目を選んでから、その子科目を選ぶ。親に子科目が無ければ、親の科目で登録する
   const hasAccount = (id: number | null) => id !== null && expenseAccounts.some((a) => a.id === id);
@@ -218,6 +312,24 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
   const selectParent = (key: string, parentId: string) => {
     // 子科目があれば、子科目か「〇〇のまま」を選び直してもらう
     updateDebitLine(key, { parentId, expenseAccountId: childrenOf(parentId).length > 0 ? "" : parentId });
+  };
+
+  // 税率ごとの消費税を手で直す。自動の計算と同じ値なら、自動の計算に戻す
+  const setTaxOverride = (rate: number, value: string, calculated: number) => {
+    setTaxOverrides((current) => {
+      const next = { ...current };
+      if (value === String(calculated)) {
+        delete next[String(rate)];
+      } else {
+        next[String(rate)] = value;
+      }
+      return next;
+    });
+  };
+
+  const changeTaxMode = (mode: TaxMode) => {
+    setTaxMode(mode);
+    setTaxOverrides({});
   };
 
   const updateDebitLine = (key: string, patch: Partial<DebitLine>) => {
@@ -276,9 +388,11 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
         debits: debitLines.map((line) => ({
           element_type: EXPENSE_ELEMENT_TYPE,
           account_id: Number(line.expenseAccountId),
-          amount: Number(line.amount),
+          // 金額はいつも税込。外税のときは、税率と税抜の金額も一緒に送る（修正のときの表示に使う）
+          amount: isExcluded ? taxResult.amounts.get(line.key) : Number(line.amount),
           item_name: line.itemName,
-          tag_ids: line.tagName.trim() ? [tagIds.get(line.tagName.trim())] : []
+          tag_ids: line.tagName.trim() ? [tagIds.get(line.tagName.trim())] : [],
+          ...(isExcluded ? { tax_rate: lineTaxRate(line), tax_excluded_amount: Number(line.amount) } : {})
         })),
         credits: creditLines.map((line) => {
           const account = paymentAccounts.find((a) => paymentKey(a) === line.paymentKey);
@@ -287,7 +401,7 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
             element_type: account?.element_type,
             payment_method_type: account?.payment_method_type,
             account_id: account?.id,
-            amount: Number(line.amount)
+            amount: creditAmountOf(line)
           };
         })
       };
@@ -305,6 +419,7 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
       setStoreName("");
       setDebitLines([emptyDebitLine()]);
       setCreditLines([emptyCreditLine()]);
+      setTaxOverrides({});
     } catch (error) {
       if (isUnauthorized(error)) {
         router.replace("/login");
@@ -367,6 +482,34 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
           required
           className={inputClass}
         />
+      </div>
+
+      {/* 外税のレシートは、税抜の金額と税率を入れれば、消費税を計算して税込で登録する */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-foreground">レシートの金額</span>
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/10" role="radiogroup">
+          {(
+            [
+              ["included", "税込（内税）"],
+              ["excluded", "税抜（外税）"]
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={taxMode === mode}
+              onClick={() => changeTaxMode(mode)}
+              className={
+                taxMode === mode
+                  ? "rounded-md bg-white px-3 py-1.5 text-sm font-medium text-foreground shadow-sm dark:bg-black/40"
+                  : "rounded-md px-3 py-1.5 text-sm text-black/60 dark:text-white/60"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-col gap-2.5">
@@ -436,6 +579,8 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
                   <input
                     type="number"
                     min="1"
+                    aria-label={isExcluded ? "税抜の金額" : "金額"}
+                    placeholder={isExcluded ? "税抜" : ""}
                     value={line.amount}
                     onChange={(e) => updateDebitLine(line.key, { amount: e.target.value })}
                     required
@@ -463,6 +608,43 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
                   ))}
                 </select>
               )}
+              {isExcluded && (
+                <div className="flex items-center gap-2">
+                  <select
+                    aria-label="税率"
+                    value={line.rateChoice}
+                    onChange={(e) => updateDebitLine(line.key, { rateChoice: e.target.value })}
+                    className={`${lineInputClass} w-24 shrink-0`}
+                  >
+                    {TAX_RATE_CHOICES.map((rate) => (
+                      <option key={rate} value={rate}>
+                        {rate}%
+                      </option>
+                    ))}
+                    <option value="other">その他</option>
+                  </select>
+                  {line.rateChoice === "other" && (
+                    <div className="relative w-20 shrink-0">
+                      <input
+                        type="number"
+                        min="0"
+                        max={MAX_TAX_RATE}
+                        aria-label="税率（%）"
+                        value={line.customRate}
+                        onChange={(e) => updateDebitLine(line.key, { customRate: e.target.value })}
+                        required
+                        className={`${lineInputClass} w-full pr-6 text-right`}
+                      />
+                      <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-sm text-black/40 dark:text-white/40">
+                        %
+                      </span>
+                    </div>
+                  )}
+                  <span className="ml-auto text-xs tabular-nums text-black/55 dark:text-white/55">
+                    税込 ¥{(taxResult.amounts.get(line.key) ?? 0).toLocaleString()}
+                  </span>
+                </div>
+              )}
               {/* 何のために使ったか。候補に無い名前は、登録のときに新しいタグとして作る */}
               <input
                 type="text"
@@ -483,8 +665,39 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
           </datalist>
         </div>
 
+        {isExcluded && taxResult.groups.length > 0 && (
+          <div className="flex flex-col gap-1.5 rounded-lg bg-black/5 p-3 text-sm dark:bg-white/5">
+            {taxResult.groups.map((group) => (
+              <div key={group.rate} className="flex items-center justify-between gap-2">
+                <span className="text-black/60 dark:text-white/60">
+                  {group.rate}% 対象 ¥{group.subtotal.toLocaleString()}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-black/55 dark:text-white/55">消費税</span>
+                  <div className="relative w-24">
+                    <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-black/40 dark:text-white/40">
+                      ¥
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      aria-label={`${group.rate}% の消費税`}
+                      value={taxOverrides[String(group.rate)] ?? String(group.defaultTax)}
+                      onChange={(e) => setTaxOverride(group.rate, e.target.value, group.defaultTax)}
+                      className={`${lineInputClass} w-full pl-6 text-right`}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <p className="text-xs text-black/50 dark:text-white/50">
+              消費税は税率ごとの合計から計算しています（端数は切り捨て）。レシートと違うときは直してください。
+            </p>
+          </div>
+        )}
+
         <div className="flex items-baseline justify-between pt-0.5">
-          <span className="text-sm text-black/55 dark:text-white/55">借方合計</span>
+          <span className="text-sm text-black/55 dark:text-white/55">{isExcluded ? "税込合計" : "借方合計"}</span>
           <span className="text-base font-semibold tabular-nums text-foreground">
             ¥{debitTotal.toLocaleString()}
           </span>
@@ -544,10 +757,11 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
                 <input
                   type="number"
                   min="1"
-                  value={line.amount}
+                  value={autoCreditAmount ? String(debitTotal) : line.amount}
                   onChange={(e) => updateCreditLine(line.key, { amount: e.target.value })}
+                  readOnly={autoCreditAmount}
                   required
-                  className={`${lineInputClass} w-full pl-6 text-right`}
+                  className={`${lineInputClass} w-full pl-6 text-right ${autoCreditAmount ? "bg-black/5 dark:bg-white/5" : ""}`}
                 />
               </div>
               <button

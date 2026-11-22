@@ -6,6 +6,9 @@ export type JournalDebit = {
   account_name: string | null;
   item_name: string | null;
   amount: number;
+  // 外税のレシートで登録した明細の税率（%）と税抜の金額。内税の明細は null。消費税は amount - tax_excluded_amount
+  tax_rate: number | null;
+  tax_excluded_amount: number | null;
   // 明細に付いているタグ（お買い物の費用の明細だけ）
   tags: { id: number; name: string }[];
 };
