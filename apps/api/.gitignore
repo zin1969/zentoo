@@ -80,8 +80,8 @@ Sessionx.vim
 # Temporary
 .netrwhist
 *~
-# Auto-generated tag files
-tags
+# Auto-generated tag files（ctags のファイル。apps/api 直下だけ。app/services/tags などのフォルダは無視しない）
+/tags
 # Persistent undo
 [._]*.un~
 
