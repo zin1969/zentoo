@@ -1029,6 +1029,86 @@ $$;
 
 
 --
+-- Name: get_tag_items(integer, integer, date, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_tag_items(user_id integer, tag_id integer, from_date date, to_date date) RETURNS TABLE(journal_id bigint, journal_date date, store_name text, item_name text, account_id bigint, account_name text, amount bigint)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  ELEMENT_EXPENSES CONSTANT INT := 5;
+BEGIN
+  -- タグは本人のものだけ。他ユーザーのタグと存在しないタグは区別しない
+  IF NOT EXISTS (
+    SELECT 1
+      FROM tags tg
+     WHERE tg.id = get_tag_items.tag_id
+       AND tg.user_id = get_tag_items.user_id
+  ) THEN
+    RAISE EXCEPTION 'tag not found: %', tag_id;
+  END IF;
+
+  -- 期間内に、タグが付いた費用の明細を、仕訳日・明細の順に返す
+  RETURN QUERY
+  SELECT j.id::BIGINT, j.journal_dt, j.store_name, d.item_name, d.account_id::BIGINT, ea.name, d.amount::BIGINT
+    FROM debit_tags dt
+    JOIN debits d ON d.id = dt.debit_id
+    JOIN journals j ON j.id = d.journal_id
+    LEFT JOIN expense_accounts ea ON ea.id = d.account_id
+   WHERE dt.tag_id = get_tag_items.tag_id
+     AND d.element_type = ELEMENT_EXPENSES
+     AND j.user_id = get_tag_items.user_id
+     AND j.journal_dt BETWEEN from_date AND to_date
+   ORDER BY j.journal_dt, d.id;
+END;
+$$;
+
+
+--
+-- Name: get_tag_monthly_totals(integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_tag_monthly_totals(user_id integer, tag_id integer, target_year integer) RETURNS TABLE(month integer, amount bigint)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_year_start DATE;
+  ELEMENT_EXPENSES CONSTANT INT := 5;
+BEGIN
+  -- タグは本人のものだけ。他ユーザーのタグと存在しないタグは区別しない
+  IF NOT EXISTS (
+    SELECT 1
+      FROM tags tg
+     WHERE tg.id = get_tag_monthly_totals.tag_id
+       AND tg.user_id = get_tag_monthly_totals.user_id
+  ) THEN
+    RAISE EXCEPTION 'tag not found: %', tag_id;
+  END IF;
+
+  v_year_start := MAKE_DATE(target_year, 1, 1);
+
+  -- タグが付いた費用の明細を、仕訳日（買った日）の月ごとに合計する。明細の無い月も 0 で返す
+  RETURN QUERY
+  SELECT m.m_month::INT, COALESCE(SUM(t.t_amount), 0)::BIGINT
+    FROM GENERATE_SERIES(1, 12) AS m(m_month)
+    LEFT JOIN (
+      SELECT EXTRACT(MONTH FROM j.journal_dt)::INT AS t_month, d.amount::BIGINT AS t_amount
+        FROM debit_tags dt
+        JOIN debits d ON d.id = dt.debit_id
+        JOIN journals j ON j.id = d.journal_id
+       WHERE dt.tag_id = get_tag_monthly_totals.tag_id
+         AND d.element_type = ELEMENT_EXPENSES
+         AND j.user_id = get_tag_monthly_totals.user_id
+         AND j.journal_dt >= v_year_start
+         AND j.journal_dt < (v_year_start + INTERVAL '1 year')::DATE
+    ) t ON t.t_month = m.m_month
+   GROUP BY m.m_month
+   ORDER BY m.m_month;
+END;
+$$;
+
+
+--
 -- Name: insert_journal_entry(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2896,6 +2976,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261121125000'),
 ('20261121124000'),
 ('20261121123000'),
 ('20261121122000'),
