@@ -1,0 +1,184 @@
+RecurringEntryRequest:
+  type: object
+  description: |
+    決まった支払い（家賃・サブスク・給料など）。自動では登録せず、回ごとに確かめてから仕訳にする。
+    支出（kind = 1）は、借方が費用科目、貸方が支払い方法（本人の口座 = 1 か、本人のカード・借入 = 2）。
+    収入（kind = 2）は、借方が入金先（本人の口座）、貸方が収益科目（credit_element_type = 4）。
+    費用・収益科目は共通科目か本人の科目。
+  required:
+    - name
+    - kind
+    - amount
+    - debit_account_id
+    - credit_element_type
+    - credit_account_id
+    - interval_unit
+    - interval_count
+    - start_date
+  properties:
+    name:
+      type: string
+      maxLength: 30
+      description: 前後の空白は取り除く
+      examples:
+        - 家賃
+    kind:
+      type: integer
+      enum: [1, 2]
+      description: 1 = 支出, 2 = 収入
+    store_name:
+      type: [string, 'null']
+      maxLength: 100
+      description: 仕訳の店舗名（収入では摘要）。空なら、収入の摘要は名前になる
+    item_name:
+      type: [string, 'null']
+      maxLength: 100
+      description: 支出の明細の品目。空なら名前になる
+    amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 目安の金額。登録のときに直せる
+    debit_account_id:
+      type: integer
+      minimum: 1
+      description: 支出は費用科目、収入は入金先の口座
+    credit_element_type:
+      type: integer
+      enum: [1, 2, 4]
+      description: 支出は 1（資産）か 2（負債）、収入は 4（収益）
+    credit_account_id:
+      type: integer
+      minimum: 1
+      description: 支出は支払い方法の口座・カード、収入は収益科目
+    interval_unit:
+      type: integer
+      enum: [1, 2]
+      description: |
+        1 = 月単位（開始日の月から interval_count ヶ月ごとの day_of_month 日。毎年は 12 ヶ月ごと）、
+        2 = 週単位（開始日から最初の weekday 曜日から、interval_count 週ごと）
+    interval_count:
+      type: integer
+      minimum: 1
+      maximum: 12
+    day_of_month:
+      type: [integer, 'null']
+      minimum: 1
+      maximum: 31
+      description: 月単位のときに必須。月に無い日は月末にするので、31 は月末。週単位では無視する
+    weekday:
+      type: [integer, 'null']
+      minimum: 0
+      maximum: 6
+      description: 週単位のときに必須（0 = 日曜 … 6 = 土曜）。月単位では無視する
+    start_date:
+      type: string
+      format: date
+      description: この日より前の回は出さない。土日・祝日でも日をずらさない
+    end_date:
+      type: [string, 'null']
+      format: date
+      description: 任意。開始日以降。この日より後の回は出さない
+
+RecurringEntry:
+  allOf:
+    - $ref: '#/RecurringEntryRequest'
+    - type: object
+      required: [id, debit_account_name, credit_account_name, next_date]
+      properties:
+        id:
+          type: integer
+        debit_account_name:
+          type: [string, 'null']
+        credit_account_name:
+          type: [string, 'null']
+        next_date:
+          type: [string, 'null']
+          format: date
+          description: 今日以降の次の予定日。終了していれば null
+
+RecurringEntrySavedResponse:
+  type: object
+  required: [id, next_token]
+  properties:
+    id:
+      type: integer
+    next_token:
+      type: string
+      description: 次のリクエストに使う JWT
+
+PendingOccurrence:
+  type: object
+  description: まだ登録も飛ばしもしていない回
+  required:
+    - recurring_entry_id
+    - scheduled_date
+    - name
+    - kind
+    - amount
+    - interval_unit
+    - interval_count
+  properties:
+    recurring_entry_id:
+      type: integer
+    scheduled_date:
+      type: string
+      format: date
+    name:
+      type: string
+    kind:
+      type: integer
+      enum: [1, 2]
+    amount:
+      type: integer
+      description: 目安の金額
+    store_name:
+      type: [string, 'null']
+    item_name:
+      type: [string, 'null']
+    debit_account_name:
+      type: [string, 'null']
+    credit_account_name:
+      type: [string, 'null']
+    interval_unit:
+      type: integer
+    interval_count:
+      type: integer
+
+RegisterOccurrenceRequest:
+  type: object
+  required: [scheduled_date, amount]
+  properties:
+    scheduled_date:
+      type: string
+      format: date
+      description: 登録する回の予定日
+    date:
+      type: string
+      format: date
+      description: 仕訳の日付。省略すると予定日（遅れて払ったときなどに変える）
+    amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 確かめた（直した）金額
+
+SkipOccurrenceRequest:
+  type: object
+  required: [scheduled_date]
+  properties:
+    scheduled_date:
+      type: string
+      format: date
+      description: 飛ばす回の予定日
+
+OccurrenceRegisteredResponse:
+  type: object
+  required: [journal_id, next_token]
+  properties:
+    journal_id:
+      type: integer
+      description: 登録した仕訳の ID
+    next_token:
+      type: string
+      description: 次のリクエストに使う JWT

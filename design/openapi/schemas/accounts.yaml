@@ -23,7 +23,7 @@ AssetAccount:
       description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
     in_use:
       type: boolean
-      description: 仕訳で使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる（削除と種別の変更ができない）
+      description: 仕訳か決まった支払いで使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる（削除と種別の変更ができない）
 
 LiabilityAccount:
   type: object
@@ -68,7 +68,7 @@ ExpenseAccount:
       description: 親の科目の ID（トップレベルの科目は null）
     in_use:
       type: boolean
-      description: 仕訳（全ユーザー）で使われている。true の科目は名前だけ変えられる（削除と親の付け替えができない）
+      description: 仕訳（全ユーザー）か決まった支払いで使われている。true の科目は名前だけ変えられる（削除と親の付け替えができない）
     has_children:
       type: boolean
       description: 子科目がある。true の科目は削除できず、親も設定できない
@@ -119,7 +119,7 @@ CreditCard:
       type: [string, 'null']
     in_use:
       type: boolean
-      description: 仕訳で使われている。true のカードは削除できない（名前と設定は変えられる）
+      description: 仕訳か決まった支払いで使われている。true のカードは削除できない（名前と設定は変えられる）
 
 CreditCardRequest:
   type: object

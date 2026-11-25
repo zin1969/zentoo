@@ -62,7 +62,7 @@ asset-account:
     tags: [accounts]
     summary: 口座の変更
     description: |
-      口座の名前と種別を変える。仕訳で使われている口座と、カードの引き落とし口座になっている口座は、名前だけ変えられる。
+      口座の名前と種別を変える。仕訳か決まった支払いで使われている口座と、カードの引き落とし口座になっている口座は、名前だけ変えられる。
       401 以外では、本文に新しい `next_token` を返す。
     operationId: updateAssetAccount
     security:
@@ -110,7 +110,7 @@ asset-account:
     tags: [accounts]
     summary: 口座の削除
     description: |
-      使われていない口座を削除する。仕訳で使われている口座と、カードの引き落とし口座になっている口座は削除できない。
+      使われていない口座を削除する。仕訳か決まった支払いで使われている口座と、カードの引き落とし口座になっている口座は削除できない。
       成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
     operationId: deleteAssetAccount
     security:
@@ -232,7 +232,7 @@ expense-account:
     tags: [accounts]
     summary: 費用科目の変更
     description: |
-      費用科目の名前と親を変える。仕訳（全ユーザー）で使われている科目は、名前だけ変えられる。子科目のある科目には親を設定できない（3 階層にしないため）。
+      費用科目の名前と親を変える。仕訳（全ユーザー）か決まった支払いで使われている科目は、名前だけ変えられる。子科目のある科目には親を設定できない（3 階層にしないため）。
       401 以外では、本文に新しい `next_token` を返す。
     operationId: updateExpenseAccount
     security:
@@ -387,7 +387,7 @@ credit-card:
     tags: [accounts]
     summary: クレジットカードの変更
     description: |
-      カードの名前と引き落とし設定を変える。仕訳で使われているカードも変えられる。引き落とし設定が無ければ作る。
+      カードの名前と引き落とし設定を変える。仕訳か決まった支払いで使われているカードも変えられる。引き落とし設定が無ければ作る。
       登録済みの引き落とし仕訳は変えない（新しい設定は、これから登録するカード払いから使う）。
       401 以外では、本文に新しい `next_token` を返す。
     operationId: updateCreditCard
@@ -465,7 +465,7 @@ credit-card:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
-        description: 仕訳で使われているカード（`credit_card_in_use`）
+        description: 仕訳か決まった支払いで使われているカード（`credit_card_in_use`）
         content:
           application/json:
             schema:
@@ -534,7 +534,7 @@ revenue-account:
     tags: [accounts]
     summary: 収益科目の変更
     description: |
-      収益科目の名前と親を変える。仕訳（全ユーザー）で使われている科目は、名前だけ変えられる。子科目のある科目には親を設定できない（3 階層にしないため）。
+      収益科目の名前と親を変える。仕訳（全ユーザー）か決まった支払いで使われている科目は、名前だけ変えられる。子科目のある科目には親を設定できない（3 階層にしないため）。
       401 以外では、本文に新しい `next_token` を返す。
     operationId: updateRevenueAccount
     security:

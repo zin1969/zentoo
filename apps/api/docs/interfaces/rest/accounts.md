@@ -39,7 +39,7 @@ GET /revenue-accounts
 ```
 
 - `payment_method_type`: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
-- `in_use`: 仕訳で使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる
+- `in_use`: 仕訳か決まった支払いで使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる
 
 `GET /liability-accounts`
 
@@ -61,7 +61,7 @@ GET /revenue-accounts
 ```
 
 - `parent_id`: 親の科目の ID（トップレベルの科目は null）
-- `in_use`: 仕訳（全ユーザー）で使われている。true の科目は名前だけ変えられる
+- `in_use`: 仕訳（全ユーザー）か決まった支払いで使われている。true の科目は名前だけ変えられる
 - `has_children`: 子科目がある。true の科目は削除できない
 
 `GET /revenue-accounts`（収益科目）も、同じ形で返す

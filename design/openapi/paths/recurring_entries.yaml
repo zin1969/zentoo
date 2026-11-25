@@ -1,0 +1,278 @@
+recurring-entries:
+  get:
+    tags: [recurring_entries]
+    summary: 決まった支払いの一覧
+    description: |
+      認証済みユーザーの決まった支払いを、作った順に返す。科目の名前と、今日以降の次の予定日も返す。
+      新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（本文に `next_token` は含めない）。
+    operationId: listRecurringEntries
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: 決まった支払いの配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/recurring_entries.yaml#/RecurringEntry'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  post:
+    tags: [recurring_entries]
+    summary: 決まった支払いの追加
+    description: |
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: createRecurringEntry
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/recurring_entries.yaml#/RecurringEntryRequest'
+    responses:
+      '201':
+        description: 追加した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/recurring_entries.yaml#/RecurringEntrySavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 科目・口座・カードが存在しない、使えない、または種類に合わない（`account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+recurring-entry:
+  put:
+    tags: [recurring_entries]
+    summary: 決まった支払いの変更
+    description: |
+      すべての項目を送り直す。すでに登録・飛ばした回の記録はそのまま残る。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: updateRecurringEntry
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 決まった支払いの ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/recurring_entries.yaml#/RecurringEntryRequest'
+    responses:
+      '200':
+        description: 変更した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/recurring_entries.yaml#/RecurringEntrySavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 決まった支払いが存在しない・他ユーザーのもの（`recurring_entry_not_found`）、または科目が使えない（`account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  delete:
+    tags: [recurring_entries]
+    summary: 決まった支払いの削除
+    description: |
+      回の記録も一緒に消える。登録した仕訳は残る。
+      成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
+    operationId: deleteRecurringEntry
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 決まった支払いの ID
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 決まった支払いが存在しない、または他ユーザーのもの（`recurring_entry_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+pending-occurrences:
+  get:
+    tags: [recurring_entries]
+    summary: 未登録の回の一覧
+    description: |
+      今月の末日までの、まだ登録も飛ばしもしていない回を、予定日の順に返す。
+      開始日から数えるので、先月以前の取り残しも含む。登録した仕訳を削除すると、その回はまた未登録に戻る。
+      新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: listPendingOccurrences
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: 未登録の回の配列
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/recurring_entries.yaml#/PendingOccurrence'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+occurrences:
+  post:
+    tags: [recurring_entries]
+    summary: 回の登録
+    description: |
+      回を、確かめた金額で仕訳にする。支出はお買い物、収入は収入登録と同じ処理で登録するので、
+      カード払いなら引き落とし仕訳も作られる。仕訳を修正（作り直し）しても、回の記録は新しい仕訳に付いたまま。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: registerOccurrence
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 決まった支払いの ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/recurring_entries.yaml#/RegisterOccurrenceRequest'
+    responses:
+      '201':
+        description: 登録した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/recurring_entries.yaml#/OccurrenceRegisteredResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 決まった支払いが存在しない・他ユーザーのもの（`recurring_entry_not_found`）、または科目が使えなくなった（`account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、予定日ではない（`not_scheduled_date`）、すでに登録・飛ばした回（`occurrence_already_recorded`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+skips:
+  post:
+    tags: [recurring_entries]
+    summary: 回を飛ばす
+    description: |
+      回を「今回はなし」にする。仕訳は作らない。
+      401 以外では、本文に新しい `next_token` を返す。
+    operationId: skipOccurrence
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 決まった支払いの ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/recurring_entries.yaml#/SkipOccurrenceRequest'
+    responses:
+      '201':
+        description: 飛ばした
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [next_token]
+              properties:
+                next_token:
+                  type: string
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 決まった支払いが存在しない、または他ユーザーのもの（`recurring_entry_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、予定日ではない（`not_scheduled_date`）、すでに登録・飛ばした回（`occurrence_already_recorded`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

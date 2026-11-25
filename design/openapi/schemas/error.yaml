@@ -41,6 +41,9 @@ ErrorResponse:
         - duplicate_tag_name
         - tags_only_for_expense_debits
         - tax_only_for_expense_debits
+        - recurring_entry_not_found
+        - not_scheduled_date
+        - occurrence_already_recorded
     errors:
       type: array
       items:

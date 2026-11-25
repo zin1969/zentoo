@@ -24,6 +24,8 @@ tags:
     description: 残高・支出の集計
   - name: tags
     description: タグ（明細に付ける目的）
+  - name: recurring_entries
+    description: 決まった支払い（回ごとに確かめてから登録する）
 
 paths:
   /login:
@@ -84,6 +86,16 @@ paths:
     $ref: './paths/tags.yaml#/tags'
   /tags/{id}:
     $ref: './paths/tags.yaml#/tag'
+  /recurring-entries:
+    $ref: './paths/recurring_entries.yaml#/recurring-entries'
+  /recurring-entries/{id}:
+    $ref: './paths/recurring_entries.yaml#/recurring-entry'
+  /recurring-entries/pending:
+    $ref: './paths/recurring_entries.yaml#/pending-occurrences'
+  /recurring-entries/{id}/occurrences:
+    $ref: './paths/recurring_entries.yaml#/occurrences'
+  /recurring-entries/{id}/skips:
+    $ref: './paths/recurring_entries.yaml#/skips'
 
 components:
   securitySchemes:
@@ -160,3 +172,17 @@ components:
       $ref: './schemas/tags.yaml#/TagReport'
     TagReportItems:
       $ref: './schemas/tags.yaml#/TagReportItems'
+    RecurringEntryRequest:
+      $ref: './schemas/recurring_entries.yaml#/RecurringEntryRequest'
+    RecurringEntry:
+      $ref: './schemas/recurring_entries.yaml#/RecurringEntry'
+    RecurringEntrySavedResponse:
+      $ref: './schemas/recurring_entries.yaml#/RecurringEntrySavedResponse'
+    PendingOccurrence:
+      $ref: './schemas/recurring_entries.yaml#/PendingOccurrence'
+    RegisterOccurrenceRequest:
+      $ref: './schemas/recurring_entries.yaml#/RegisterOccurrenceRequest'
+    SkipOccurrenceRequest:
+      $ref: './schemas/recurring_entries.yaml#/SkipOccurrenceRequest'
+    OccurrenceRegisteredResponse:
+      $ref: './schemas/recurring_entries.yaml#/OccurrenceRegisteredResponse'
