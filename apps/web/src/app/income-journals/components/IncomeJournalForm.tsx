@@ -7,6 +7,7 @@ import { ASSET_TYPES, getAssetAccounts, type AssetAccount } from "@/lib/masters/
 import { getRevenueAccounts, type RevenueAccount } from "@/lib/masters/revenueAccounts";
 import { createIncomeJournal, updateIncomeJournal } from "@/lib/journals/incomeJournals";
 import type { Journal } from "@/lib/journals/journals";
+import { localToday } from "@/lib/dates/localToday";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -38,14 +39,16 @@ function errorMessage(error: unknown, isEdit: boolean) {
 type Props = {
   // 渡されたときは修正。元の仕訳の内容で開き、送信すると作り直して仕訳一覧に戻る
   journal?: Journal;
+  // true のときは、journal の内容をコピーした新しい登録（日付は今日。元の仕訳は変えない）
+  copy?: boolean;
 };
 
 // 収入（借方: 入金先の口座、貸方: 収益科目）の登録・修正
-export default function IncomeJournalForm({ journal }: Props = {}) {
-  const isEdit = journal !== undefined;
+export default function IncomeJournalForm({ journal, copy = false }: Props = {}) {
+  const isEdit = journal !== undefined && !copy;
   const router = useRouter();
 
-  const [date, setDate] = useState(journal?.journal_date ?? "");
+  const [date, setDate] = useState(copy ? localToday() : (journal?.journal_date ?? ""));
   const [assetAccountId, setAssetAccountId] = useState(String(journal?.debits[0]?.account_id ?? ""));
   // 選んだ親の科目。空なら、選んだ科目（revenueAccountId）からたどる（修正で開いたとき）
   const [parentId, setParentId] = useState("");
@@ -120,7 +123,7 @@ export default function IncomeJournalForm({ journal }: Props = {}) {
     };
 
     try {
-      if (journal) {
+      if (isEdit && journal) {
         await updateIncomeJournal(journal.id, input);
         router.push("/journals");
         return;

@@ -12,8 +12,9 @@ type Loaded = {
   error?: string;
 };
 
-// 修正する振替の仕訳を取得してから、登録と同じフォームを、その内容で開く
-export default function EditTransferJournal({ journalId }: { journalId: string }) {
+// 修正する振替の仕訳を取得してから、登録と同じフォームを、その内容で開く。
+// copy のときは、その内容をコピーした新しい登録として開く（日付は今日。元の仕訳は変えない）
+export default function EditTransferJournal({ journalId, copy = false }: { journalId: string; copy?: boolean }) {
   const router = useRouter();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const isValidId = /^\d+$/.test(journalId);
@@ -30,7 +31,7 @@ export default function EditTransferJournal({ journalId }: { journalId: string }
         setLoaded(
           isTransferJournal(journal)
             ? { journal }
-            : { error: "この仕訳は振替の仕訳ではないため、ここでは修正できません。" }
+            : { error: copy ? "この仕訳は振替の仕訳ではないため、ここではコピーできません。" : "この仕訳は振替の仕訳ではないため、ここでは修正できません。" }
         );
       })
       .catch((error) => {
@@ -45,7 +46,7 @@ export default function EditTransferJournal({ journalId }: { journalId: string }
         setLoaded({
           error:
             error instanceof ApiError && error.status === 404
-              ? "修正する仕訳が見つかりません。すでに削除されている可能性があります。"
+              ? `${copy ? "コピー" : "修正"}する仕訳が見つかりません。すでに削除されている可能性があります。`
               : "仕訳の取得に失敗しました。時間をおいて再度お試しください。"
         });
       });
@@ -53,9 +54,11 @@ export default function EditTransferJournal({ journalId }: { journalId: string }
     return () => {
       cancelled = true;
     };
-  }, [isValidId, journalId, router]);
+  }, [copy, isValidId, journalId, router]);
 
-  const shown: Loaded | null = isValidId ? loaded : { error: "修正する仕訳が見つかりません。" };
+  const shown: Loaded | null = isValidId
+    ? loaded
+    : { error: `${copy ? "コピー" : "修正"}する仕訳が見つかりません。` };
 
   if (!shown) {
     return <p className="text-sm text-black/50 dark:text-white/50">読み込み中...</p>;
@@ -77,9 +80,11 @@ export default function EditTransferJournal({ journalId }: { journalId: string }
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-black/60 dark:text-white/60">
-        修正すると、仕訳は新しい内容で作り直されます。カードからのチャージは、引き落とし仕訳も作り直します。
+        {copy
+          ? "コピーした内容で、新しく登録します（日付は今日）。違うところを直してから登録してください。"
+          : "修正すると、仕訳は新しい内容で作り直されます。カードからのチャージは、引き落とし仕訳も作り直します。"}
       </p>
-      <TransferJournalForm journal={shown.journal} />
+      <TransferJournalForm journal={shown.journal} copy={copy} />
     </div>
   );
 }

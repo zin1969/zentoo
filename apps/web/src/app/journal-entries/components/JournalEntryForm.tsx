@@ -11,6 +11,7 @@ import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
 import type { Journal } from "@/lib/journals/journals";
 import { createTag, getTags, type Tag } from "@/lib/masters/tags";
 import { calculateTax, defaultTax } from "@/lib/journals/consumptionTax";
+import { localToday } from "@/lib/dates/localToday";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -210,16 +211,21 @@ function extractErrorMessage(error: unknown, isEdit: boolean): string {
 type JournalEntryFormProps = {
   // 渡されたときは修正。元の仕訳の内容で開き、送信すると作り直して仕訳一覧に戻る
   journal?: Journal;
+  // true のときは、journal の内容をコピーした新しい登録（日付は今日。元の仕訳は変えない）
+  copy?: boolean;
 };
 
-export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}) {
-  const isEdit = journal !== undefined;
+export default function JournalEntryForm({ journal, copy = false }: JournalEntryFormProps = {}) {
+  const isEdit = journal !== undefined && !copy;
   const router = useRouter();
-  const [date, setDate] = useState(journal?.journal_date ?? "");
+  const [date, setDate] = useState(copy ? localToday() : (journal?.journal_date ?? ""));
   const [storeName, setStoreName] = useState(journal?.store_name ?? "");
   const [taxMode, setTaxMode] = useState<TaxMode>(isExcludedJournal(journal) ? "excluded" : "included");
   // 税率ごとに手で直した消費税（キーは税率）。空の税率は自動の計算を使う
-  const [taxOverrides, setTaxOverrides] = useState<Record<string, string>>(() => taxOverridesFrom(journal));
+  // コピーのときは、手で直した消費税は引き継がない（今の金額で計算し直す）
+  const [taxOverrides, setTaxOverrides] = useState<Record<string, string>>(() =>
+    copy ? {} : taxOverridesFrom(journal)
+  );
   const [debitLines, setDebitLines] = useState<DebitLine[]>(() =>
     journal ? debitLinesFrom(journal) : [emptyDebitLine()]
   );
@@ -406,7 +412,7 @@ export default function JournalEntryForm({ journal }: JournalEntryFormProps = {}
         })
       };
 
-      if (journal) {
+      if (isEdit && journal) {
         await updateJournalEntry(journal.id, body);
         router.push("/journals");
         return;

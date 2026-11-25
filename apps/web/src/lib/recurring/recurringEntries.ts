@@ -1,4 +1,7 @@
 import { apiFetch } from "@/lib/api/apiFetch";
+import { localToday } from "@/lib/dates/localToday";
+
+export { localToday };
 
 // 決まった収支（家賃・サブスク・給料など）。回ごとに確かめてから仕訳にする
 
@@ -173,11 +176,4 @@ function upcomingMonthlyDates({ intervalCount, dayOfMonth, startDate, endDate }:
   }
 
   return dates;
-}
-
-// 端末のローカル日付（YYYY-MM-DD）
-export function localToday() {
-  const now = new Date();
-
-  return formatDate(now.getFullYear(), now.getMonth(), now.getDate());
 }

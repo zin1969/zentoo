@@ -7,6 +7,7 @@ import { ASSET_TYPES, getAssetAccounts, type AssetAccount } from "@/lib/masters/
 import { getCreditCards, type CreditCard } from "@/lib/masters/creditCards";
 import { createTransferJournal, updateTransferJournal } from "@/lib/journals/transferJournals";
 import type { Journal } from "@/lib/journals/journals";
+import { localToday } from "@/lib/dates/localToday";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -82,14 +83,16 @@ function initialFrom(journal?: Journal): FromKey {
 type Props = {
   // 渡されたときは修正。元の仕訳の内容で開き、送信すると作り直して仕訳一覧に戻る
   journal?: Journal;
+  // true のときは、journal の内容をコピーした新しい登録（日付は今日。元の仕訳は変えない）
+  copy?: boolean;
 };
 
 // 振替（引き出し・口座間の振替・電子マネーへのチャージ）の登録・修正
-export default function TransferJournalForm({ journal }: Props = {}) {
-  const isEdit = journal !== undefined;
+export default function TransferJournalForm({ journal, copy = false }: Props = {}) {
+  const isEdit = journal !== undefined && !copy;
   const router = useRouter();
 
-  const [date, setDate] = useState(journal?.journal_date ?? "");
+  const [date, setDate] = useState(copy ? localToday() : (journal?.journal_date ?? ""));
   const [from, setFrom] = useState<FromKey>(initialFrom(journal));
   const [toAccountId, setToAccountId] = useState(String(journal?.debits[0]?.account_id ?? ""));
   const [amount, setAmount] = useState(String(journal?.debits[0]?.amount ?? ""));
@@ -151,7 +154,7 @@ export default function TransferJournalForm({ journal }: Props = {}) {
     };
 
     try {
-      if (journal) {
+      if (isEdit && journal) {
         await updateTransferJournal(journal.id, input);
         router.push("/journals");
         return;

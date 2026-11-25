@@ -99,11 +99,12 @@ function DirectDebitBadge({ journal }: { journal: Journal }) {
   return null;
 }
 
-// お買い物・収入・振替は、それぞれの修正画面で直す。それ以外の仕訳は、削除して登録し直す
-function editHref(journal: Journal) {
-  if (isEditableJournal(journal)) return `/journal-entries/${journal.id}/edit`;
-  if (isIncomeJournal(journal)) return `/income-journals/${journal.id}/edit`;
-  if (isTransferJournal(journal)) return `/transfer-journals/${journal.id}/edit`;
+// お買い物・収入・振替は、それぞれの画面で直したり、コピーして新しく登録したりできる。
+// それ以外の仕訳（開始残高など）は、削除して登録し直す
+function journalPath(journal: Journal) {
+  if (isEditableJournal(journal)) return `/journal-entries/${journal.id}`;
+  if (isIncomeJournal(journal)) return `/income-journals/${journal.id}`;
+  if (isTransferJournal(journal)) return `/transfer-journals/${journal.id}`;
 
   return null;
 }
@@ -116,7 +117,7 @@ type JournalCardProps = {
 };
 
 function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProps) {
-  const href = editHref(journal);
+  const path = journalPath(journal);
 
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/20">
@@ -172,13 +173,22 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
 
       {!journal.original_journal_id && (
         <div className="flex justify-end gap-2">
-          {href && (
-            <Link
-              href={href}
-              className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
-            >
-              修正
-            </Link>
+          {path && (
+            <>
+              {/* 同じ内容で、日付を今日にして新しく登録する（元の仕訳は変えない） */}
+              <Link
+                href={`${path}/copy`}
+                className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
+              >
+                コピー
+              </Link>
+              <Link
+                href={`${path}/edit`}
+                className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
+              >
+                修正
+              </Link>
+            </>
           )}
           <button
             type="button"
