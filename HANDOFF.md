@@ -30,7 +30,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 
 ## 現在の状態
 
-- **M0〜M12 は完了**（M5・M6 は 2026-11-20、M7〜M9 は 2026-11-21、M10〜M12 は 2026-11-22 に完了。M12 は「お買い物の明細にタグを付けて、目的ごとに集計できる」）。
+- **M0〜M13 は完了**（M5・M6 は 2026-11-20、M7〜M9 は 2026-11-21、M10〜M12 は 2026-11-22 に完了。M12 は「お買い物の明細にタグを付けて、目的ごとに集計できる」）。
 - 追加で完了したもの: 開始負債の登録、ダミー費用科目 `root` の廃止（親なし = トップレベル）。
 - 本番: Kamal でデプロイ（手順は `docs/deployment.md` の「さくらの VPS + Kamal」）。日次バックアップは VPS の cron で日本時間 4 時に `ops/backup_postgres.sh`、Google Drive に rclone の crypt で暗号化して保管。crypt のパスワード 2 つと masa のパスワードは、ユーザーがパスワード管理ツールに保管。`rclone.conf` は保管も表示もしない。
 - 仕訳は全種類で削除でき（DB から完全に消す。カード払いは引き落とし仕訳も一緒に消える）、お買い物の仕訳は修正できる（作り直すので ID が変わる）。それ以外の仕訳は、削除して登録し直す。
@@ -41,11 +41,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - 引き出し・預け入れ・口座間の振替・電子マネーへのチャージは「振替」（`/transfer-journals`）で登録・修正できる。カードからのチャージは引き落とし仕訳を自動で作る。Web の「現金の預け入れ」画面は振替にまとめた（Rails の `POST /cash-deposit-journals` は残している）。
 - お買い物の明細にタグ（目的）を付けられる（`tags` はユーザーごと、明細とは多対多の `debit_tags`）。画面は明細ごとに 1 つで、お買い物登録でその場で作る。「タグの集計」（`/tag-reports`）で 1 年分を月ごとに見られる（DB 関数 `get_tag_monthly_totals`・`get_tag_items`）。
 - お買い物登録で、外税のレシートを「税抜（外税）」に切り替えて、明細ごとの税抜の金額と税率（10% / 8% / その他の数値）で登録できる（2026-11-22 完了）。消費税は税率ごとの合計から切り捨てで計算し、手で直せる。明細の `amount` は税込のままで、表示のために `tax_rate`・`tax_excluded_amount` を保存する（計算は `apps/web/src/lib/journals/consumptionTax.ts`）。修正では税抜の状態で開く。
-- **M13「毎月の決まった支払いを、確かめてから登録できる」を進行中**（2026-11-22 着手）。方針とタスクは `docs/milestones.md`。
-  - 済み: テーブル（`recurring_entries`、`recurring_entry_occurrences`）と予定日の DB 関数（月単位・週単位）、設定の API（`/recurring-entries`）、今月の分の API（`/recurring-entries/pending`、`/:id/occurrences`、`/:id/skips`）、画面（`/recurring-entries`、`/recurring-entries/settings`）。
-  - 画面の名前は「決まった収支」（収入も同じ画面で登録するため。2026-11-25 にユーザーの判断で「決まった支払い」から変更）。コードと仕様書の名前は `recurring_entries` のまま。
-  - 仕様書: `design/openapi/paths/recurring_entries.yaml`、`apps/api/docs/interfaces/rest/recurring_entries.md`。
-  - 残り: 本番へのデプロイ（DB を変えるので、先に手動でバックアップ）とスマホでの確認。
+- 決まった収支（家賃・サブスク・給料など）を設定し、回ごとに確かめてから登録できる（M13、2026-11-25 完了）。画面は「決まった収支」（`/recurring-entries`、設定は `/recurring-entries/settings`）。コードと仕様書の名前は `recurring_entries`（`recurring_entries` と回の記録 `recurring_entry_occurrences`）。周期は月単位（N ヶ月ごとの D 日、31 は月末）と週単位（N 週ごとの何曜日）で、予定日は DB 関数 `get_recurring_dates`。自動では登録しない。仕訳を修正（作り直し）しても回の記録は付いたまま。決まった振替は「後回し」。次のマイルストーンはまだ決めていない。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
 - push 済みかどうかは `git status` で確認する。
 
