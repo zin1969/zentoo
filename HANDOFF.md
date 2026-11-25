@@ -42,7 +42,8 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - お買い物の明細にタグ（目的）を付けられる（`tags` はユーザーごと、明細とは多対多の `debit_tags`）。画面は明細ごとに 1 つで、お買い物登録でその場で作る。「タグの集計」（`/tag-reports`）で 1 年分を月ごとに見られる（DB 関数 `get_tag_monthly_totals`・`get_tag_items`）。
 - お買い物登録で、外税のレシートを「税抜（外税）」に切り替えて、明細ごとの税抜の金額と税率（10% / 8% / その他の数値）で登録できる（2026-11-22 完了）。消費税は税率ごとの合計から切り捨てで計算し、手で直せる。明細の `amount` は税込のままで、表示のために `tax_rate`・`tax_excluded_amount` を保存する（計算は `apps/web/src/lib/journals/consumptionTax.ts`）。修正では税抜の状態で開く。
 - 決まった収支（家賃・サブスク・給料など）を設定し、回ごとに確かめてから登録できる（M13、2026-11-25 完了）。画面は「決まった収支」（`/recurring-entries`、設定は `/recurring-entries/settings`）。コードと仕様書の名前は `recurring_entries`（`recurring_entries` と回の記録 `recurring_entry_occurrences`）。周期は月単位（N ヶ月ごとの D 日、31 は月末）と週単位（N 週ごとの何曜日）で、予定日は DB 関数 `get_recurring_dates`。自動では登録しない。仕訳を修正（作り直し）しても回の記録は付いたまま。決まった振替は「後回し」。
-- 仕訳一覧の「コピー」で、お買い物・収入・振替を同じ内容（日付は今日）で新しく登録できる（M14、2026-11-26 完了）。画面は `/journal-entries/{id}/copy` など。修正画面の読み込みとフォームを `copy` で使い回している（Next.js だけ。API・DB は変えていない）。次のマイルストーンはまだ決めていない。方針とタスクは `docs/milestones.md`。
+- 仕訳一覧の「コピー」で、お買い物・収入・振替を同じ内容（日付は今日）で新しく登録できる（M14、2026-11-26 完了）。画面は `/journal-entries/{id}/copy` など。修正画面の読み込みとフォームを `copy` で使い回している（Next.js だけ。API・DB は変えていない）。方針とタスクは `docs/milestones.md`。
+- **次は M15「仕訳一覧で、キーワード・科目・タグから仕訳を探せる」**（2026-11-26 に決定、未着手）。方針とタスクは `docs/milestones.md`。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
 - push 済みかどうかは `git status` で確認する。
 
