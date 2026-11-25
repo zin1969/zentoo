@@ -9,7 +9,7 @@ module RecurringEntries
     Item = Struct.new(:entry, :debit_account_name, :credit_account_name, :next_date, keyword_init: true)
 
     KIND_EXPENSE = 1
-    # 次の予定日を探す期間。月単位は 12 ヶ月ごとまでなので、1 年と少し先まで見れば必ず見つかる
+    # 次の予定日を探す期間。月単位は 12 ヶ月ごと、週単位は 12 週ごとまでなので、1 年と少し先まで見れば必ず見つかる
     NEXT_DATE_SEARCH_DAYS = 400
 
     # 作った順に返す

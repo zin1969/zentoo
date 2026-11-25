@@ -41,7 +41,9 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - 引き出し・預け入れ・口座間の振替・電子マネーへのチャージは「振替」（`/transfer-journals`）で登録・修正できる。カードからのチャージは引き落とし仕訳を自動で作る。Web の「現金の預け入れ」画面は振替にまとめた（Rails の `POST /cash-deposit-journals` は残している）。
 - お買い物の明細にタグ（目的）を付けられる（`tags` はユーザーごと、明細とは多対多の `debit_tags`）。画面は明細ごとに 1 つで、お買い物登録でその場で作る。「タグの集計」（`/tag-reports`）で 1 年分を月ごとに見られる（DB 関数 `get_tag_monthly_totals`・`get_tag_items`）。
 - お買い物登録で、外税のレシートを「税抜（外税）」に切り替えて、明細ごとの税抜の金額と税率（10% / 8% / その他の数値）で登録できる（2026-11-22 完了）。消費税は税率ごとの合計から切り捨てで計算し、手で直せる。明細の `amount` は税込のままで、表示のために `tax_rate`・`tax_excluded_amount` を保存する（計算は `apps/web/src/lib/journals/consumptionTax.ts`）。修正では税抜の状態で開く。
-- **次は M13「毎月の決まった支払いを、確かめてから登録できる」**（2026-11-22 に決定、未着手）。方針とタスクは `docs/milestones.md`。
+- **M13「毎月の決まった支払いを、確かめてから登録できる」を進行中**（2026-11-22 着手）。方針とタスクは `docs/milestones.md`。
+  - 済み: テーブル（`recurring_entries`、`recurring_entry_occurrences`）と予定日の DB 関数（月単位・週単位）、設定の API（`/recurring-entries`）、今月の分の API（`/recurring-entries/pending`、`/:id/occurrences`、`/:id/skips`）、画面（`/recurring-entries`、`/recurring-entries/settings`）。
+  - 残り: 仕様書（OpenAPI / REST）の更新、本番へのデプロイ（DB を変えるので、先に手動でバックアップ）。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
 - push 済みかどうかは `git status` で確認する。
 

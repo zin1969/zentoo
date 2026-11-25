@@ -6,7 +6,7 @@ class RecurringEntriesController < ApplicationController
 
   PERMITTED = %i[
     name kind store_name item_name amount debit_account_id credit_element_type credit_account_id
-    interval_unit interval_count day_of_month start_date end_date
+    interval_unit interval_count day_of_month weekday start_date end_date
   ].freeze
 
   # 追加・変更・削除のエラーも、本文に新しいトークンを載せる（BFF が Cookie を更新する）

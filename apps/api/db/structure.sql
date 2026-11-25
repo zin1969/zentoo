@@ -1071,11 +1071,14 @@ DECLARE
   v_start_month INT;
   v_first_step INT;
   v_last_step INT;
+  v_first_date DATE;
+  v_step_days INT;
   INTERVAL_UNIT_MONTH CONSTANT INT := 1;
+  INTERVAL_UNIT_WEEK CONSTANT INT := 2;
+  DAYS_PER_WEEK CONSTANT INT := 7;
 BEGIN
-  -- 週単位（interval_unit = 2）は、このあとのタスクで足す
-  IF interval_unit <> INTERVAL_UNIT_MONTH THEN
-    RAISE EXCEPTION 'interval_unit not supported yet: %', interval_unit;
+  IF interval_unit NOT IN (INTERVAL_UNIT_MONTH, INTERVAL_UNIT_WEEK) THEN
+    RAISE EXCEPTION 'interval_unit not supported: %', interval_unit;
   END IF;
 
   -- 開始日より前・終了日より後の回は出さない
@@ -1083,6 +1086,21 @@ BEGIN
   v_to := LEAST(to_date, COALESCE(end_date, to_date));
 
   IF v_from > v_to THEN
+    RETURN;
+  END IF;
+
+  -- 週単位は、開始日から最初の weekday 曜日（0 = 日曜。開始日がその曜日なら開始日）から、interval_count 週ごと
+  IF interval_unit = INTERVAL_UNIT_WEEK THEN
+    v_first_date := start_date + ((weekday - EXTRACT(DOW FROM start_date)::INT + DAYS_PER_WEEK) % DAYS_PER_WEEK);
+    v_step_days := interval_count * DAYS_PER_WEEK;
+
+    RETURN QUERY
+    SELECT v_first_date + s.step * v_step_days
+      FROM GENERATE_SERIES(
+             GREATEST(0, CEIL((v_from - v_first_date)::NUMERIC / v_step_days)::INT),
+             FLOOR((v_to - v_first_date)::NUMERIC / v_step_days)::INT
+           ) AS s(step)
+     ORDER BY 1;
     RETURN;
   END IF;
 
@@ -3286,6 +3304,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261122124000'),
 ('20261122123000'),
 ('20261122122000'),
 ('20261122121000'),

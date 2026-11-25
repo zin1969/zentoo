@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-# 決まった支払いの予定日（月単位: 開始日の月から N ヶ月ごとの D 日。31 日は月末）
+# 決まった支払いの予定日（月単位: 開始日の月から N ヶ月ごとの D 日。31 日は月末。週単位: N 週ごとの何曜日）
 RSpec.describe "get_recurring_dates" do
   # interval_unit: 1 = 月単位、2 = 週単位
   def dates(count:, day:, start:, from:, to:, end_date: nil, unit: 1, weekday: nil)
@@ -60,11 +60,31 @@ RSpec.describe "get_recurring_dates" do
       .to eq([])
   end
 
-  it "does not support weeks yet" do
-    expect {
-      ActiveRecord::Base.transaction(requires_new: true) do
-        dates(unit: 2, count: 1, day: nil, weekday: 5, start: "2026-11-01", from: "2026-11-01", to: "2026-11-30")
-      end
-    }.to raise_error(ActiveRecord::StatementInvalid, /interval_unit not supported yet/)
+  describe "weeks" do
+    def weekly(count:, weekday:, start:, from:, to:, end_date: nil)
+      dates(unit: 2, count: count, day: nil, weekday: weekday, start: start, end_date: end_date, from: from, to: to)
+    end
+
+    # 2026-11-01 は日曜日
+    it "starts from the first given weekday on or after the start date" do
+      expect(weekly(count: 1, weekday: 5, start: "2026-11-01", from: "2026-11-01", to: "2026-11-30")).to eq(
+        [ Date.new(2026, 11, 6), Date.new(2026, 11, 13), Date.new(2026, 11, 20), Date.new(2026, 11, 27) ]
+      )
+      expect(weekly(count: 1, weekday: 0, start: "2026-11-01", from: "2026-11-01", to: "2026-11-08")).to eq(
+        [ Date.new(2026, 11, 1), Date.new(2026, 11, 8) ]
+      )
+    end
+
+    it "counts every N weeks from the first date, also when the period begins later" do
+      expect(weekly(count: 2, weekday: 5, start: "2026-11-01", from: "2026-11-14", to: "2026-12-31")).to eq(
+        [ Date.new(2026, 11, 20), Date.new(2026, 12, 4), Date.new(2026, 12, 18) ]
+      )
+    end
+
+    it "leaves out the dates after the end date" do
+      expect(weekly(count: 1, weekday: 5, start: "2026-11-01", end_date: "2026-11-12", from: "2026-11-01", to: "2026-11-30"))
+        .to eq([ Date.new(2026, 11, 6) ])
+      expect(weekly(count: 1, weekday: 5, start: "2026-11-01", from: "2026-11-01", to: "2026-11-05")).to eq([])
+    end
   end
 end

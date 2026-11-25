@@ -9,9 +9,11 @@ import {
   ELEMENT_LIABILITIES,
   ELEMENT_REVENUE,
   INTERVAL_UNIT_MONTH,
+  INTERVAL_UNIT_WEEK,
   KIND_EXPENSE,
   KIND_INCOME,
   MONTH_END_DAY,
+  WEEKDAY_NAMES,
   localToday,
   upcomingDates,
   type RecurringEntry,
@@ -24,13 +26,14 @@ const MAX_TEXT_LENGTH = 100;
 const MAX_INTERVAL_COUNT = 12;
 const YEARLY_INTERVAL_COUNT = 12;
 
-// くり返し。毎年は「開始日の月から 12 ヶ月ごと」
-type Repeat = "monthly" | "every_n_months" | "yearly";
+// くり返し。毎年は「開始日の月から 12 ヶ月ごと」、毎週は「N 週ごとの何曜日」（毎週は 1 週ごと）
+type Repeat = "monthly" | "every_n_months" | "yearly" | "weekly";
 
 const REPEATS: { value: Repeat; label: string }[] = [
   { value: "monthly", label: "毎月" },
   { value: "every_n_months", label: "N ヶ月ごと" },
-  { value: "yearly", label: "毎年" }
+  { value: "yearly", label: "毎年" },
+  { value: "weekly", label: "毎週" }
 ];
 
 const DAYS = Array.from({ length: MONTH_END_DAY - 1 }, (_, i) => i + 1);
@@ -42,7 +45,8 @@ export type Accounts = {
   liability: LiabilityAccount[];
 };
 
-function repeatOf(intervalCount: number): Repeat {
+function repeatOf(intervalUnit: number, intervalCount: number): Repeat {
+  if (intervalUnit === INTERVAL_UNIT_WEEK) return "weekly";
   if (intervalCount === 1) return "monthly";
   if (intervalCount === YEARLY_INTERVAL_COUNT) return "yearly";
 
@@ -110,21 +114,40 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
   const [amount, setAmount] = useState(entry ? String(entry.amount) : "");
   const [storeName, setStoreName] = useState(entry?.store_name ?? "");
   const [itemName, setItemName] = useState(entry?.item_name ?? "");
-  const [repeat, setRepeat] = useState<Repeat>(repeatOf(entry?.interval_count ?? 1));
+  const initialRepeat = repeatOf(entry?.interval_unit ?? INTERVAL_UNIT_MONTH, entry?.interval_count ?? 1);
+  const [repeat, setRepeat] = useState<Repeat>(initialRepeat);
   const [intervalCount, setIntervalCount] = useState(
-    entry && repeatOf(entry.interval_count) === "every_n_months" ? String(entry.interval_count) : "3"
+    entry && initialRepeat === "every_n_months" ? String(entry.interval_count) : "3"
   );
+  const [weekInterval, setWeekInterval] = useState(entry && initialRepeat === "weekly" ? String(entry.interval_count) : "1");
   const [dayOfMonth, setDayOfMonth] = useState(String(entry?.day_of_month ?? 27));
+  const [weekday, setWeekday] = useState(String(entry?.weekday ?? 5));
   const [startDate, setStartDate] = useState(entry?.start_date ?? localToday());
   const [endDate, setEndDate] = useState(entry?.end_date ?? "");
 
   const isExpense = kind === KIND_EXPENSE;
-  const count =
-    repeat === "monthly" ? 1 : repeat === "yearly" ? YEARLY_INTERVAL_COUNT : Number(intervalCount) || 0;
+  const isWeekly = repeat === "weekly";
+  const intervalUnit = isWeekly ? INTERVAL_UNIT_WEEK : INTERVAL_UNIT_MONTH;
+  const count = {
+    monthly: 1,
+    yearly: YEARLY_INTERVAL_COUNT,
+    every_n_months: Number(intervalCount) || 0,
+    weekly: Number(weekInterval) || 0
+  }[repeat];
   const countValid = Number.isInteger(count) && count >= 1 && count <= MAX_INTERVAL_COUNT;
   const preview =
     countValid && startDate
-      ? upcomingDates({ intervalCount: count, dayOfMonth: Number(dayOfMonth), startDate, endDate }, localToday())
+      ? upcomingDates(
+          {
+            intervalUnit,
+            intervalCount: count,
+            dayOfMonth: Number(dayOfMonth),
+            weekday: Number(weekday),
+            startDate,
+            endDate
+          },
+          localToday()
+        )
       : [];
 
   const changeKind = (next: number) => {
@@ -150,9 +173,10 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
       debit_account_id: Number(debitAccountId),
       credit_element_type: creditElementType,
       credit_account_id: creditAccountId,
-      interval_unit: INTERVAL_UNIT_MONTH,
+      interval_unit: intervalUnit,
       interval_count: count,
-      day_of_month: Number(dayOfMonth),
+      day_of_month: isWeekly ? null : Number(dayOfMonth),
+      weekday: isWeekly ? Number(weekday) : null,
       start_date: startDate,
       end_date: endDate || null
     });
@@ -325,7 +349,7 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
 
       <div className="flex flex-col gap-1.5">
         <span className={labelClass}>くり返し</span>
-        <div className="grid grid-cols-3 gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/10" role="radiogroup" aria-label="くり返し">
+        <div className="grid grid-cols-4 gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/10" role="radiogroup" aria-label="くり返し">
           {REPEATS.map((item) => (
             <button
               key={item.value}
@@ -358,21 +382,53 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
           )}
           {repeat === "monthly" && <span>毎月</span>}
           {repeat === "yearly" && <span>毎年、開始日の月の</span>}
-          <select
-            aria-label="日"
-            value={dayOfMonth}
-            onChange={(e) => setDayOfMonth(e.target.value)}
-            className={`${inputClass} w-24`}
-          >
-            {DAYS.map((day) => (
-              <option key={day} value={day}>
-                {day} 日
-              </option>
-            ))}
-            <option value={MONTH_END_DAY}>月末</option>
-          </select>
+          {isWeekly ? (
+            <>
+              <input
+                type="number"
+                aria-label="何週ごと"
+                min="1"
+                max={MAX_INTERVAL_COUNT}
+                value={weekInterval}
+                onChange={(e) => setWeekInterval(e.target.value)}
+                required
+                className={`${inputClass} w-16 text-right`}
+              />
+              <span>週ごとの</span>
+              <select
+                aria-label="曜日"
+                value={weekday}
+                onChange={(e) => setWeekday(e.target.value)}
+                className={`${inputClass} w-24`}
+              >
+                {WEEKDAY_NAMES.map((name, index) => (
+                  <option key={name} value={index}>
+                    {name}曜日
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <select
+              aria-label="日"
+              value={dayOfMonth}
+              onChange={(e) => setDayOfMonth(e.target.value)}
+              className={`${inputClass} w-24`}
+            >
+              {DAYS.map((day) => (
+                <option key={day} value={day}>
+                  {day} 日
+                </option>
+              ))}
+              <option value={MONTH_END_DAY}>月末</option>
+            </select>
+          )}
         </div>
-        <p className={noteClass}>月に無い日（2 月 30 日など）は月末になります。土日・祝日でもずらしません。</p>
+        <p className={noteClass}>
+          {isWeekly
+            ? "開始日から最初のその曜日が 1 回目です（隔週は 2 週ごと）。"
+            : "月に無い日（2 月 30 日など）は月末になります。土日・祝日でもずらしません。"}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">

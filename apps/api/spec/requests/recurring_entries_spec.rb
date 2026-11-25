@@ -97,10 +97,25 @@ RSpec.describe 'Recurring entries', type: :request do
       expect(body['next_token']).to be_present
     end
 
-    it 'does not accept weekly entries yet, or an end before the start' do
-      create_entry(rent_params.merge(interval_unit: 2, end_date: '2026-10-31'))
+    it 'accepts a weekly entry with a weekday, and ignores the day of the month' do
+      travel_to(Time.zone.local(2026, 11, 26, 9, 0)) do
+        create_entry(rent_params.merge(interval_unit: 2, interval_count: 2, weekday: 5))
+        expect(response).to have_http_status(:created)
 
-      expect(body['errors']).to include('Interval unit must be 1 (month)', 'End date must be on or after the start date')
+        get '/recurring-entries', headers: headers
+      end
+
+      expect(body.sole).to include('interval_unit' => 2, 'interval_count' => 2, 'weekday' => 5, 'day_of_month' => nil,
+                                   'next_date' => '2026-12-04')
+    end
+
+    it 'returns 422 for a weekly entry without a weekday, an unknown unit, or an end before the start' do
+      create_entry(rent_params.merge(interval_unit: 2, weekday: 7))
+      expect(body['errors']).to include('Weekday must be an integer between 0 (Sunday) and 6 (Saturday)')
+
+      create_entry(rent_params.merge(interval_unit: 3, end_date: '2026-10-31'))
+      expect(body['errors']).to include('Interval unit must be 1 (month) or 2 (week)',
+                                        'End date must be on or after the start date')
     end
 
     it "returns 404 for an account that is not the user's or does not match the kind" do
