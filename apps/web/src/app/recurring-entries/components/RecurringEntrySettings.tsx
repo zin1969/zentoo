@@ -26,7 +26,7 @@ function errorMessage(error: unknown) {
       case "account_not_found":
         return "選んだ科目・口座が見つかりません。画面を再読み込みしてください。";
       case "recurring_entry_not_found":
-        return "決まった支払いが見つかりません。画面を再読み込みしてください。";
+        return "決まった収支が見つかりません。画面を再読み込みしてください。";
     }
 
     if (error.data?.errors?.length) {
@@ -53,13 +53,13 @@ function formatYen(amount: number) {
   return `¥${amount.toLocaleString("ja-JP")}`;
 }
 
-// 決まった支払いの一覧と、追加・変更・削除
+// 決まった収支の一覧と、追加・変更・削除
 export default function RecurringEntrySettings() {
   const router = useRouter();
   const [entries, setEntries] = useState<RecurringEntry[] | null>(null);
   const [accounts, setAccounts] = useState<Accounts | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
-  // 開いているフォーム。"new" は追加、数値は変更する決まった支払いの ID
+  // 開いているフォーム。"new" は追加、数値は変更する決まった収支の ID
   const [editing, setEditing] = useState<"new" | number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +73,7 @@ export default function RecurringEntrySettings() {
       })
       .catch((e) => {
         if (!cancelled) {
-          handleLoadError(e, router, setError, "決まった支払いの取得に失敗しました。時間をおいて再度お試しください。");
+          handleLoadError(e, router, setError, "決まった収支の取得に失敗しました。時間をおいて再度お試しください。");
         }
       });
 
@@ -154,7 +154,7 @@ export default function RecurringEntrySettings() {
         {entries === null ? (
           !error && <p className="text-sm text-black/50 dark:text-white/50">読み込み中...</p>
         ) : entries.length === 0 ? (
-          <p className={noteClass}>決まった支払いはまだありません。</p>
+          <p className={noteClass}>決まった収支はまだありません。</p>
         ) : (
           <ul className="flex flex-col divide-y divide-black/10 dark:divide-white/10">
             {entries.map((entry) => (
@@ -198,12 +198,12 @@ export default function RecurringEntrySettings() {
 
       {editing === "new" ? (
         <section className={sectionClass}>
-          <h2 className="text-base font-semibold text-foreground">決まった支払いを追加</h2>
+          <h2 className="text-base font-semibold text-foreground">決まった収支を追加</h2>
           {form()}
         </section>
       ) : (
         <button type="button" onClick={() => open("new")} disabled={!accounts} className={primaryButtonClass}>
-          決まった支払いを追加
+          決まった収支を追加
         </button>
       )}
     </div>

@@ -9,7 +9,7 @@ export default function Page() {
         <HomeLink />
         <LogoutButton />
       </div>
-      <h1 className="text-xl font-semibold text-foreground">今月の決まった支払い</h1>
+      <h1 className="text-xl font-semibold text-foreground">今月の決まった収支</h1>
       <PendingOccurrences />
     </main>
   );

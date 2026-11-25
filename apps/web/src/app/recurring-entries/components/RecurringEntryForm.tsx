@@ -97,7 +97,7 @@ type Props = {
   onCancel: () => void;
 };
 
-// 決まった支払いの追加・変更。くり返しを切り替えると入力欄が変わり、次の予定日で確かめられる
+// 決まった収支の追加・変更。くり返しを切り替えると入力欄が変わり、次の予定日で確かめられる
 export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, onCancel }: Props) {
   const [name, setName] = useState(entry?.name ?? "");
   const [kind, setKind] = useState(entry?.kind ?? KIND_EXPENSE);
@@ -460,7 +460,7 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
         </div>
       </div>
       <p className={noteClass}>
-        開始日から後の回が「今月の決まった支払い」に並びます。登録済みの月より前を開始日にすると、その月も未登録として出ます。
+        開始日から後の回が「今月の決まった収支」に並びます。登録済みの月より前を開始日にすると、その月も未登録として出ます。
       </p>
 
       <div className="flex flex-col gap-1.5 rounded-lg bg-black/5 p-3 dark:bg-white/5">

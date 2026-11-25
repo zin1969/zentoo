@@ -4,7 +4,7 @@ import LogoutButton from "./components/LogoutButton";
 const MENU = [
   { href: "/journal-entries", title: "お買い物登録", description: "日々の支出を登録する" },
   { href: "/income-journals", title: "収入登録", description: "給料などの収入を、入金先の口座に登録する" },
-  { href: "/recurring-entries", title: "決まった支払い", description: "家賃・サブスク・給料など、今月の分を確かめて登録する" },
+  { href: "/recurring-entries", title: "決まった収支", description: "家賃・サブスク・給料など、決まった支払いと収入の今月の分を確かめて登録する" },
   { href: "/transfer-journals", title: "振替", description: "ATM での引き出し・預け入れ、口座間の振替、電子マネーへのチャージを登録する" },
   { href: "/journals", title: "仕訳一覧", description: "登録した仕訳を期間で確認する" },
   { href: "/account-balances", title: "残高", description: "口座・現金・カードの残高を確認する" },

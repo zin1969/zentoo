@@ -21,9 +21,9 @@ function errorMessage(error: unknown) {
         return "この回はすでに登録されているか、飛ばしてあります。画面を再読み込みしてください。";
       case "not_scheduled_date":
       case "recurring_entry_not_found":
-        return "決まった支払いの設定が変わっています。画面を再読み込みしてください。";
+        return "決まった収支の設定が変わっています。画面を再読み込みしてください。";
       case "account_not_found":
-        return "科目・口座が見つかりません。決まった支払いの設定を確かめてください。";
+        return "科目・口座が見つかりません。決まった収支の設定を確かめてください。";
       case "credit_card_setting_not_found":
         return "クレジットカードの引き落とし設定が見つかりません。";
     }
@@ -119,7 +119,7 @@ function OccurrenceRow({ occurrence, overdue, busy, onRegister, onSkip }: RowPro
   );
 }
 
-// 今月の末日までの、まだ登録していない決まった支払い（先月以前の取り残しも含む）
+// 今月の末日までの、まだ登録していない決まった収支（先月以前の取り残しも含む）
 export default function PendingOccurrences() {
   const router = useRouter();
   const [occurrences, setOccurrences] = useState<PendingOccurrence[] | null>(null);
@@ -144,7 +144,7 @@ export default function PendingOccurrences() {
           return;
         }
 
-        setError("決まった支払いの取得に失敗しました。時間をおいて再度お試しください。");
+        setError("決まった収支の取得に失敗しました。時間をおいて再度お試しください。");
       });
 
     return () => {
@@ -187,7 +187,7 @@ export default function PendingOccurrences() {
         {occurrences === null ? (
           !error && <p className="text-sm text-black/50 dark:text-white/50">読み込み中...</p>
         ) : occurrences.length === 0 ? (
-          <p className={noteClass}>今月の決まった支払いは、すべて登録済みです。</p>
+          <p className={noteClass}>今月の決まった収支は、すべて登録済みです。</p>
         ) : (
           <ul className="flex flex-col divide-y divide-black/10 dark:divide-white/10">
             {occurrences.map((occurrence) => (
@@ -225,7 +225,7 @@ export default function PendingOccurrences() {
       </section>
 
       <Link href="/recurring-entries/settings" className={`${buttonClass} text-center`}>
-        決まった支払いの設定
+        決まった収支の設定
       </Link>
     </div>
   );

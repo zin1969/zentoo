@@ -10,11 +10,11 @@ export default function Page() {
           href="/recurring-entries"
           className="text-sm text-black/60 underline hover:text-black dark:text-white/60 dark:hover:text-white"
         >
-          ← 今月の決まった支払い
+          ← 今月の決まった収支
         </Link>
         <LogoutButton />
       </div>
-      <h1 className="text-xl font-semibold text-foreground">決まった支払いの設定</h1>
+      <h1 className="text-xl font-semibold text-foreground">決まった収支の設定</h1>
       <RecurringEntrySettings />
     </main>
   );

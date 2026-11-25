@@ -43,6 +43,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30。詳しい手順や仕様�
 - お買い物登録で、外税のレシートを「税抜（外税）」に切り替えて、明細ごとの税抜の金額と税率（10% / 8% / その他の数値）で登録できる（2026-11-22 完了）。消費税は税率ごとの合計から切り捨てで計算し、手で直せる。明細の `amount` は税込のままで、表示のために `tax_rate`・`tax_excluded_amount` を保存する（計算は `apps/web/src/lib/journals/consumptionTax.ts`）。修正では税抜の状態で開く。
 - **M13「毎月の決まった支払いを、確かめてから登録できる」を進行中**（2026-11-22 着手）。方針とタスクは `docs/milestones.md`。
   - 済み: テーブル（`recurring_entries`、`recurring_entry_occurrences`）と予定日の DB 関数（月単位・週単位）、設定の API（`/recurring-entries`）、今月の分の API（`/recurring-entries/pending`、`/:id/occurrences`、`/:id/skips`）、画面（`/recurring-entries`、`/recurring-entries/settings`）。
+  - 画面の名前は「決まった収支」（収入も同じ画面で登録するため。2026-11-25 にユーザーの判断で「決まった支払い」から変更）。コードと仕様書の名前は `recurring_entries` のまま。
   - 仕様書: `design/openapi/paths/recurring_entries.yaml`、`apps/api/docs/interfaces/rest/recurring_entries.md`。
   - 残り: 本番へのデプロイ（DB を変えるので、先に手動でバックアップ）とスマホでの確認。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
