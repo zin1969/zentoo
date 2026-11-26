@@ -69,8 +69,9 @@ module Journals
       element_type = account[:element_type]
       account_ids = account_ids_with_children(user_id, element_type, account[:account_id])
 
-      debits = Debit.where(element_type: element_type, account_id: account_ids).select(:journal_id)
-      credits = Credit.where(element_type: element_type, account_id: account_ids).select(:journal_id)
+      # element_type の属性は ElementTypeType（値オブジェクトに変換する）なので、ハッシュの条件では整数と比べられない。SQL で比べる
+      debits = Debit.where("debits.element_type = ?", element_type).where(account_id: account_ids).select(:journal_id)
+      credits = Credit.where("credits.element_type = ?", element_type).where(account_id: account_ids).select(:journal_id)
 
       scope.where(id: debits).or(scope.where(id: credits))
     end
