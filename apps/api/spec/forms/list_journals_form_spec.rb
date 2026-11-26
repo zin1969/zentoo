@@ -41,4 +41,35 @@ RSpec.describe ListJournalsForm do
       expect(form(page: page)).not_to be_valid
     end
   end
+
+  it "has no search condition by default" do
+    f = form
+
+    expect([ f.keyword, f.account, f.tag ]).to eq([ nil, nil, nil ])
+  end
+
+  it "strips the keyword and ignores a blank one" do
+    expect(form(q: "  本屋 ").keyword).to eq("本屋")
+    expect(form(q: "   ").keyword).to be_nil
+  end
+
+  it "parses the account and the tag" do
+    f = form(element_type: "5", account_id: "12", tag_id: "3")
+
+    expect(f).to be_valid
+    expect(f.account).to eq({ element_type: 5, account_id: 12 })
+    expect(f.tag).to eq(3)
+  end
+
+  it "requires element_type and account_id together" do
+    expect(form(account_id: "12")).not_to be_valid
+    expect(form(element_type: "5")).not_to be_valid
+  end
+
+  it "rejects an unknown element_type or a malformed id" do
+    expect(form(element_type: "0", account_id: "1")).not_to be_valid
+    expect(form(element_type: "6", account_id: "1")).not_to be_valid
+    expect(form(element_type: "5", account_id: "0")).not_to be_valid
+    expect(form(tag_id: "abc")).not_to be_valid
+  end
 end

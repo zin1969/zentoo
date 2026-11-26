@@ -3,7 +3,7 @@
 import { proxyAuthedGet } from "@/lib/rails/proxyAuthedGet";
 
 // Rails に中継するクエリパラメータ（これ以外は捨てる）
-const ALLOWED_PARAMS = ["from", "to", "page"] as const;
+const ALLOWED_PARAMS = ["from", "to", "page", "q", "element_type", "account_id", "tag_id"] as const;
 
 export async function GET(req: Request) {
   const incoming = new URL(req.url).searchParams;

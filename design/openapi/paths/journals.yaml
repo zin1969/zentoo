@@ -29,9 +29,40 @@ journals:
           type: integer
           minimum: 1
           default: 1
+      - name: q
+        in: query
+        description: |
+          キーワード。店舗名（収入・振替では摘要）か、明細の品目に含まれる仕訳を返す（部分一致、大文字小文字を区別しない）。
+          前後の空白は除く。`%` と `_` は文字として扱う。省略または空白だけなら絞らない。
+        schema:
+          type: string
+      - name: element_type
+        in: query
+        description: |
+          科目の要素（1: 資産、2: 負債、3: 元入金、4: 収益、5: 費用）。`account_id` と組で指定する。
+        schema:
+          type: integer
+          enum: [1, 2, 3, 4, 5]
+      - name: account_id
+        in: query
+        description: |
+          科目・口座・カードの ID。借方・貸方のどちらかでこの科目を使っている仕訳を返す。`element_type` と組で指定する。
+          費用科目・収益科目は、親の科目を指定すると子科目の仕訳も含める（共通科目か本人の科目だけが対象）。
+          他人の科目を指定しても、何も返さないだけ（存在しない科目と区別しない）。
+        schema:
+          type: integer
+          minimum: 1
+      - name: tag_id
+        in: query
+        description: タグの ID。このタグが付いた明細のある仕訳を返す。他人のタグを指定しても、何も返さないだけ。
+        schema:
+          type: integer
+          minimum: 1
     responses:
       '200':
-        description: 仕訳の一覧（該当が無い、またはページが範囲外なら `journals` は空配列）
+        description: |
+          仕訳の一覧（該当が無い、またはページが範囲外なら `journals` は空配列）。
+          条件はすべて AND で絞り込む。`total_count` は条件に合う仕訳の数。明細は、条件に合わないものも含めて仕訳ごと返す。
         content:
           application/json:
             schema:
@@ -43,7 +74,7 @@ journals:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
-        description: 期間・ページの指定が不正（`errors`）
+        description: 期間・ページ・検索の条件の指定が不正（`errors`）
         content:
           application/json:
             schema:

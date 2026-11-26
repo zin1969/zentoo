@@ -10,9 +10,10 @@ module Journals
       render json: { error: "journal_not_found" }, status: :not_found
     end
 
+    # 期間・キーワード・科目・タグで絞り込める（すべて AND）。
     # 参照 API なので本文に next_token は載せない（新しいトークンは X-Next-Token ヘッダで返る）
     def index
-      form = ListJournalsForm.new(params.permit(:from, :to, :page).to_h)
+      form = ListJournalsForm.new(params.permit(:from, :to, :page, :q, :element_type, :account_id, :tag_id).to_h)
 
       unless form.valid?
         return render json: { errors: form.errors.full_messages }, status: :unprocessable_content
@@ -22,7 +23,10 @@ module Journals
         user_id: current_user.id,
         from: form.from_date,
         to: form.to_date,
-        page: form.page_number
+        page: form.page_number,
+        keyword: form.keyword,
+        account: form.account,
+        tag_id: form.tag
       )
     end
 

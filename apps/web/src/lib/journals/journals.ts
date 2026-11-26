@@ -42,18 +42,31 @@ export type JournalPage = {
   total_count: number;
 };
 
+// 条件はすべて AND。期間を省略すると全期間から探す
 export type JournalQuery = {
   from?: string;
   to?: string;
   page?: number;
+  // 店舗名（摘要）か明細の品目に含まれる文字列
+  q?: string;
+  // 借方・貸方のどちらかでこの科目を使っている仕訳（費用・収益科目は子科目も含む）
+  account?: { element_type: number; account_id: number };
+  // このタグが付いた明細のある仕訳
+  tagId?: number;
 };
 
-export async function getJournals({ from, to, page }: JournalQuery = {}) {
+export async function getJournals({ from, to, page, q, account, tagId }: JournalQuery = {}) {
   const params = new URLSearchParams();
 
   if (from) params.set("from", from);
   if (to) params.set("to", to);
   if (page && page > 1) params.set("page", String(page));
+  if (q?.trim()) params.set("q", q.trim());
+  if (account) {
+    params.set("element_type", String(account.element_type));
+    params.set("account_id", String(account.account_id));
+  }
+  if (tagId) params.set("tag_id", String(tagId));
 
   const query = params.toString();
 

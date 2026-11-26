@@ -14,6 +14,12 @@ import {
   type JournalPage
 } from "@/lib/journals/journals";
 import DirectDebitDateEditor from "./DirectDebitDateEditor";
+import JournalSearch, {
+  EMPTY_CONDITIONS,
+  hasConditions,
+  parseAccountKey,
+  type JournalSearchConditions
+} from "./JournalSearch";
 
 type Loaded = {
   key: string;
@@ -44,7 +50,7 @@ function formatYen(amount: number) {
 
 function errorMessage(error: unknown) {
   if (error instanceof ApiError && error.status === 422) {
-    return error.data?.errors?.join(" / ") ?? "期間の指定が正しくありません。";
+    return error.data?.errors?.join(" / ") ?? "期間か検索の条件の指定が正しくありません。";
   }
 
   return "仕訳の取得に失敗しました。時間をおいて再度お試しください。";
@@ -207,6 +213,9 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
 export default function JournalList() {
   const router = useRouter();
   const [range, setRange] = useState(currentMonthRange);
+  // 期間を外して、全期間から探す
+  const [allPeriods, setAllPeriods] = useState(false);
+  const [conditions, setConditions] = useState<JournalSearchConditions>(EMPTY_CONDITIONS);
   const [page, setPage] = useState(1);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   // 削除や引き落とし日の変更のあとに、同じ期間・ページを読み直すための番号
@@ -214,13 +223,24 @@ export default function JournalList() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const key = `${range.from}|${range.to}|${page}|${reloadCount}`;
+  const from = allPeriods ? undefined : range.from;
+  const to = allPeriods ? undefined : range.to;
+  const q = conditions.q.trim();
+  const { accountKey, tagId } = conditions;
+  const key = JSON.stringify([from, to, q, accountKey, tagId, page, reloadCount]);
   const loading = loaded?.key !== key;
 
   useEffect(() => {
     let cancelled = false;
 
-    getJournals({ from: range.from, to: range.to, page })
+    getJournals({
+      from,
+      to,
+      page,
+      q,
+      account: parseAccountKey(accountKey),
+      tagId: tagId ? Number(tagId) : undefined
+    })
       .then((data) => {
         if (!cancelled) setLoaded({ key, data });
       })
@@ -239,7 +259,7 @@ export default function JournalList() {
     return () => {
       cancelled = true;
     };
-  }, [key, range.from, range.to, page, router]);
+  }, [key, from, to, q, accountKey, tagId, page, router]);
 
   const data = loaded?.key === key ? loaded.data : undefined;
   const totalPages = data ? Math.max(1, Math.ceil(data.total_count / data.per_page)) : 1;
@@ -273,6 +293,18 @@ export default function JournalList() {
     setDeleteError(null);
   };
 
+  const changeAllPeriods = (checked: boolean) => {
+    setAllPeriods(checked);
+    setPage(1);
+    setDeleteError(null);
+  };
+
+  const changeConditions = (next: JournalSearchConditions) => {
+    setConditions(next);
+    setPage(1);
+    setDeleteError(null);
+  };
+
   const inputClass =
     "min-w-0 flex-1 rounded-md border border-black/15 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-white/15 dark:bg-black/20";
   const pagerClass =
@@ -285,18 +317,26 @@ export default function JournalList() {
           type="date"
           aria-label="開始日"
           value={range.from}
+          disabled={allPeriods}
           onChange={(e) => changeRange({ from: e.target.value })}
-          className={inputClass}
+          className={`${inputClass} disabled:opacity-40`}
         />
         <span className="text-sm text-black/50 dark:text-white/50">〜</span>
         <input
           type="date"
           aria-label="終了日"
           value={range.to}
+          disabled={allPeriods}
           onChange={(e) => changeRange({ to: e.target.value })}
-          className={inputClass}
+          className={`${inputClass} disabled:opacity-40`}
         />
       </div>
+      <label className="flex items-center gap-2 text-sm text-foreground">
+        <input type="checkbox" checked={allPeriods} onChange={(e) => changeAllPeriods(e.target.checked)} />
+        すべての期間
+      </label>
+
+      <JournalSearch conditions={conditions} onChange={changeConditions} />
 
       {loaded?.key === key && loaded.error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
@@ -318,7 +358,7 @@ export default function JournalList() {
 
           {data.journals.length === 0 ? (
             <p className="rounded-xl border border-dashed border-black/15 px-4 py-8 text-center text-sm text-black/50 dark:border-white/15 dark:text-white/50">
-              この期間の仕訳はありません。
+              {hasConditions(conditions) ? "条件に合う仕訳はありません。" : "この期間の仕訳はありません。"}
             </p>
           ) : (
             <ul className="flex flex-col gap-3">
