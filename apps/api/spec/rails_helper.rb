@@ -74,5 +74,7 @@ RSpec.configure do |config|
   # config.filter_gems_from_backtrace("gem name")
 
   # For FactoryBot can be written in abbreviation
-  include FactoryBot::Syntax::Methods
+  # config.include にする。素の include だと Object に入り、create がコントローラーの「内部のメソッド」と
+  # みなされて、モジュールから来る create アクション（TwoLevelAccountsActions）が 404 になる
+  config.include FactoryBot::Syntax::Methods
 end
