@@ -61,6 +61,24 @@ RSpec.describe 'Transfer journals', type: :request do
       expect(balances.values_at(suica.id, tcard.id, bank.id)).to eq([ 3_000, 0, -3_000 ])
     end
 
+    it 'moves money into a securities account and on to investments, outside the monthly totals' do
+      securities = create(:asset_account, :securities, user: user)
+      nisa = create(:asset_account, :nisa, user: user)
+      ideco = create(:asset_account, :ideco, user: user)
+
+      post_transfer(from_account_id: bank.id, to_account_id: securities.id, amount: 50_000)
+      post_transfer(from_account_id: securities.id, to_account_id: nisa.id, amount: 30_000, description: '積立 NISA')
+      expect(response).to have_http_status(:created)
+      # 証券口座から出すと、貸方の支払い方法は証券口座の種別（4）になる
+      expect(Journal.find(body['journal_id']).credits.sole.payment_method_type).to eq(4)
+      post_transfer(from_account_id: bank.id, to_account_id: ideco.id, amount: 23_000, description: 'iDeCo')
+
+      expect(balances.values_at(bank.id, securities.id, nisa.id, ideco.id)).to eq([ -73_000, 20_000, 30_000, 23_000 ])
+
+      get '/monthly-expenses', params: { month: '2026-11' }, headers: headers
+      expect(JSON.parse(response.body)['total']).to eq(0)
+    end
+
     it 'returns 404 for an account or card of another user' do
       other = create(:user)
 

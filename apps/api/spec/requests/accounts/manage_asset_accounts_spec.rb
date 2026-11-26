@@ -74,6 +74,18 @@ RSpec.describe 'Managing asset accounts', type: :request do
       expect(response).to have_http_status(:created)
     end
 
+    it 'creates a securities account and an investment account' do
+      post_account(name: '証券口座', asset_type: 4)
+      securities_id = body['id']
+      post_account(name: '積立 NISA', asset_type: 5)
+      nisa_id = body['id']
+
+      expect(AssetAccount.find(securities_id).asset_type).to eq('securities')
+      expect(AssetAccount.find(nisa_id).asset_type).to eq('investment')
+      expect(listed[securities_id]).to include('payment_method_type' => 4)
+      expect(listed[nisa_id]).to include('payment_method_type' => 5)
+    end
+
     it 'returns 422 for a second cash account' do
       post_account(name: 'へそくり', asset_type: 1)
 
@@ -82,10 +94,10 @@ RSpec.describe 'Managing asset accounts', type: :request do
     end
 
     it 'returns 422 with errors for a blank name or an unknown type' do
-      post_account(name: ' ', asset_type: 4)
+      post_account(name: ' ', asset_type: 6)
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(body['errors']).to contain_exactly("Name can't be blank", 'Asset type must be 1 (cash), 2 (deposit) or 3 (e_money)')
+      expect(body['errors']).to contain_exactly("Name can't be blank", 'Asset type must be 1 (cash), 2 (deposit), 3 (e_money), 4 (securities) or 5 (investment)')
     end
   end
 

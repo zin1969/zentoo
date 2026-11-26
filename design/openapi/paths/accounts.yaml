@@ -25,7 +25,7 @@ asset-accounts:
     tags: [accounts]
     summary: 口座の追加
     description: |
-      認証済みユーザーの口座（現金・預金・電子マネー）を追加する。
+      認証済みユーザーの口座（現金・預金・電子マネー・証券口座・投資）を追加する。
       現金の口座は 1 つだけ（現金の預け入れが、現金の口座が 1 つに決まることを前提にしているため）。
       401 以外では、本文に新しい `next_token` を返す。
     operationId: createAssetAccount

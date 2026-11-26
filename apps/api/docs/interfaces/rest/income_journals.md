@@ -45,7 +45,7 @@ PUT  /income-journals/{id}
 | Name               | Required | Description |
 | ------------------ | -------- | ----------- |
 | journal_date       | Yes      | 日付（`YYYY-MM-DD`） |
-| asset_account_id   | Yes      | 入金先の口座。預金・現金・電子マネーのどれでもよい |
+| asset_account_id   | Yes      | 入金先の口座。種別は問わない（配当なら証券口座） |
 | revenue_account_id | Yes      | 収益科目。親の科目も選べる |
 | amount             | Yes      | 金額（1 〜 2147483647） |
 | description        | No       | 摘要（支払元など。100 文字まで）。仕訳の店舗名に入れ、空なら収益科目の名前を入れる（通帳の摘要に出る） |

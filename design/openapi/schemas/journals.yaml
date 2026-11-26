@@ -281,7 +281,7 @@ IncomeJournalRequest:
     asset_account_id:
       type: integer
       minimum: 1
-      description: 入金先の口座（本人の口座。預金・現金・電子マネーのどれでもよい）
+      description: 入金先の口座（本人の口座。種別は問わない）
     revenue_account_id:
       type: integer
       minimum: 1

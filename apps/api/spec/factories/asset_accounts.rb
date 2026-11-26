@@ -23,5 +23,20 @@ FactoryBot.define do
       asset_type { :e_money }
       name { "Suica" }
     end
+
+    trait :securities do
+      asset_type { :securities }
+      name { "証券口座" }
+    end
+
+    trait :nisa do
+      asset_type { :investment }
+      name { "積立 NISA" }
+    end
+
+    trait :ideco do
+      asset_type { :investment }
+      name { "iDeCo" }
+    end
   end
 end

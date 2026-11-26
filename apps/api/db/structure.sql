@@ -1761,7 +1761,7 @@ CREATE TABLE public.asset_accounts (
     user_id bigint,
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT asset_account_asset_type CHECK ((asset_type = ANY (ARRAY[1, 2, 3])))
+    CONSTRAINT asset_account_asset_type CHECK ((asset_type = ANY (ARRAY[1, 2, 3, 4, 5])))
 );
 
 
@@ -1866,7 +1866,7 @@ CREATE TABLE public.credits (
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT credit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5]))),
-    CONSTRAINT credit_payment_method_type CHECK ((((element_type = 1) AND (payment_method_type = ANY (ARRAY[1, 2, 3]))) OR ((element_type = 2) AND (payment_method_type = ANY (ARRAY[1, 2, 3]))) OR ((element_type = ANY (ARRAY[3, 4, 5])) AND (payment_method_type = 0))))
+    CONSTRAINT credit_payment_method_type CHECK ((((element_type = 1) AND (payment_method_type = ANY (ARRAY[1, 2, 3, 4, 5]))) OR ((element_type = 2) AND (payment_method_type = ANY (ARRAY[1, 2, 3]))) OR ((element_type = ANY (ARRAY[3, 4, 5])) AND (payment_method_type = 0))))
 );
 
 
@@ -3304,6 +3304,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261127120000'),
 ('20261122124000'),
 ('20261122123000'),
 ('20261122122000'),

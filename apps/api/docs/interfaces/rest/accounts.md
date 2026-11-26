@@ -38,7 +38,7 @@ GET /revenue-accounts
 ]
 ```
 
-- `payment_method_type`: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
+- `payment_method_type`: 1 = 現金, 2 = 預貯金, 3 = 電子マネー, 4 = 証券口座（預り金）, 5 = 投資（iDeCo・積立 NISA・株式など）
 - `in_use`: 仕訳か決まった支払いで使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる
 
 `GET /liability-accounts`

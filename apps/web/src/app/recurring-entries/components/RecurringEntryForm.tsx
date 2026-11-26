@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ASSET_TYPES, type AssetAccount } from "@/lib/masters/assetAccounts";
+import { ASSET_TYPES, PAYMENT_ASSET_TYPES, type AssetAccount } from "@/lib/masters/assetAccounts";
 import type { LiabilityAccount } from "@/lib/masters/liabilityAccounts";
 import type { TwoLevelAccount } from "@/lib/masters/twoLevelAccounts";
 import {
@@ -270,7 +270,7 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
           <option value="">{isExpense ? "支払い方法を選択" : "収益科目を選択"}</option>
           {isExpense ? (
             <>
-              {ASSET_TYPES.map((type) => (
+              {PAYMENT_ASSET_TYPES.map((type) => (
                 <optgroup key={type.value} label={type.label}>
                   {accounts.asset
                     .filter((a) => a.payment_method_type === type.value)

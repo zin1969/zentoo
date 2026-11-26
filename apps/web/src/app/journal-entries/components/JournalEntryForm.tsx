@@ -55,7 +55,8 @@ type PaymentAccount = {
   category: "asset" | "liability";
 };
 
-const DEPOSIT_PAYMENT_METHOD_TYPE = 2;
+const CASH_PAYMENT_METHOD_TYPE = 1;
+const E_MONEY_PAYMENT_METHOD_TYPE = 3;
 const ASSET_ELEMENT_TYPE = 1;
 
 function paymentKey(account: Pick<PaymentAccount, "category" | "id">) {
@@ -261,9 +262,13 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
     Promise.all([getAssetAccounts(), getLiabilityAccounts()])
       .then(([assetAccounts, liabilityAccounts]) => {
         setPaymentAccounts([
-          // 預貯金（銀行口座）は支払い方法として選ばせない。カード払いの引き落としは自動仕訳で作る
+          // 支払い方法は現金と電子マネーだけ。預貯金（銀行口座）は選ばせない（カード払いの引き落としは自動仕訳で作る）。
+          // 証券口座・投資の口座も、お買い物には使わない
           ...assetAccounts
-            .filter((a) => a.payment_method_type !== DEPOSIT_PAYMENT_METHOD_TYPE)
+            .filter(
+              (a) =>
+                a.payment_method_type === CASH_PAYMENT_METHOD_TYPE || a.payment_method_type === E_MONEY_PAYMENT_METHOD_TYPE
+            )
             .map((a) => ({ ...a, category: "asset" as const })),
           ...liabilityAccounts.map((a) => ({ ...a, category: "liability" as const }))
         ]);

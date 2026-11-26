@@ -19,8 +19,8 @@ AssetAccount:
       description: 要素種別（1 = 資産）
     payment_method_type:
       type: integer
-      enum: [1, 2, 3]
-      description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー
+      enum: [1, 2, 3, 4, 5]
+      description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー, 4 = 証券口座（預り金）, 5 = 投資（iDeCo・積立 NISA・株式など）
     in_use:
       type: boolean
       description: 仕訳か決まった支払いで使われているか、カードの引き落とし口座になっている。true の口座は名前だけ変えられる（削除と種別の変更ができない）
@@ -85,8 +85,8 @@ AssetAccountRequest:
       description: 前後の空白は取り除く。本人の口座の中で重ならないこと
     asset_type:
       type: integer
-      enum: [1, 2, 3]
-      description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー（一覧の `payment_method_type` と同じ値）。現金の口座は 1 つだけ
+      enum: [1, 2, 3, 4, 5]
+      description: 1 = 現金, 2 = 預貯金, 3 = 電子マネー, 4 = 証券口座（預り金）, 5 = 投資（iDeCo・積立 NISA・株式など）（一覧の `payment_method_type` と同じ値）。現金の口座は 1 つだけ
 
 CreditCard:
   type: object
