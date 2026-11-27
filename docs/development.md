@@ -1,7 +1,7 @@
 # 開発手順
 
 Docker は Vagrant 上の Debian で動かす。以下のコマンドはリポジトリのルートで、Vagrant 内から実行する。
-Compose は Docker のプラグイン（`docker compose`、v2）を使う。ハイフン付きの `docker-compose` は使わない（2026-11-28 に切り替え）。入っているかは `docker compose version` で確かめる。
+Compose は Docker のプラグイン（`docker compose`。2026-11-28 時点の Vagrant では v5.7.1）を使う。ハイフン付きの `docker-compose` は使わない（2026-11-28 に切り替え）。入っているかは `docker compose version` で確かめる。
 
 ```
 docker compose -f docker-compose/docker-compose.yaml ...
