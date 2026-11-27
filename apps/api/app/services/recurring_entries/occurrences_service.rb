@@ -11,13 +11,17 @@ module RecurringEntries
     Item = Struct.new(:entry, :scheduled_date, :debit_account_name, :credit_account_name, keyword_init: true)
 
     KIND_EXPENSE = 1
+    KIND_INCOME = 2
+    KIND_TRANSFER = 3
 
     def initialize(
       journal_entries: Journals::InsertJournalEntry.new,
-      income_journals: Journals::IncomeJournals.new
+      income_journals: Journals::IncomeJournals.new,
+      transfer_journals: Journals::TransferJournals.new
     )
       @journal_entries = journal_entries
       @income_journals = income_journals
+      @transfer_journals = transfer_journals
     end
 
     # 今月の末日までの、まだ登録も飛ばしもしていない回（先月以前の取り残しも含む）。予定日の順
@@ -84,14 +88,23 @@ module RecurringEntries
       ActiveModel::Type::Boolean.new.cast(value)
     end
 
-    # 支出はお買い物、収入は収入登録と同じ処理で登録する（科目の確認やカードの引き落とし仕訳もそちらで行う）
+    # 支出はお買い物、収入は収入登録、振替は振替と同じ処理で登録する
+    # （科目の確認やカードの引き落とし仕訳もそちらで行う）
     def create_journal!(user, entry, date, amount)
-      if entry.kind == KIND_EXPENSE
+      description = entry.store_name.presence || entry.name
+
+      case entry.kind
+      when KIND_EXPENSE
         @journal_entries.insert_journal_entry!(journal_data: expense_journal(user, entry, date, amount))
-      else
+      when KIND_INCOME
         @income_journals.create!(
           journal_date: date, asset_account_id: entry.debit_account_id, revenue_account_id: entry.credit_account_id,
-          amount: amount, description: entry.store_name.presence || entry.name, user_id: user.id
+          amount: amount, description: description, user_id: user.id
+        )
+      when KIND_TRANSFER
+        @transfer_journals.create!(
+          journal_date: date, from_element_type: entry.credit_element_type, from_account_id: entry.credit_account_id,
+          to_account_id: entry.debit_account_id, amount: amount, description: description, user_id: user.id
         )
       end
     end

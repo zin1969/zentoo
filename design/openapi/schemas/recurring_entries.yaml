@@ -4,6 +4,7 @@ RecurringEntryRequest:
     決まった支払い（家賃・サブスク・給料など）。自動では登録せず、回ごとに確かめてから仕訳にする。
     支出（kind = 1）は、借方が費用科目、貸方が支払い方法（本人の口座 = 1 か、本人のカード・借入 = 2）。
     収入（kind = 2）は、借方が入金先（本人の口座）、貸方が収益科目（credit_element_type = 4）。
+    振替（kind = 3）は、借方が入金先（本人の口座）、貸方が出金元（本人の口座 = 1 か、本人のクレジットカード = 2）。
     費用・収益科目は共通科目か本人の科目。
   required:
     - name
@@ -24,16 +25,16 @@ RecurringEntryRequest:
         - 家賃
     kind:
       type: integer
-      enum: [1, 2]
-      description: 1 = 支出, 2 = 収入
+      enum: [1, 2, 3]
+      description: 1 = 支出, 2 = 収入, 3 = 振替
     store_name:
       type: [string, 'null']
       maxLength: 100
-      description: 仕訳の店舗名（収入では摘要）。空なら、収入の摘要は名前になる
+      description: 仕訳の店舗名（収入・振替では摘要）。空なら、収入・振替の摘要は名前になる
     item_name:
       type: [string, 'null']
       maxLength: 100
-      description: 支出の明細の品目。空なら名前になる
+      description: 支出の明細の品目。空なら名前になる。振替では保存しない
     amount:
       type: integer
       minimum: 1
@@ -42,15 +43,15 @@ RecurringEntryRequest:
     debit_account_id:
       type: integer
       minimum: 1
-      description: 支出は費用科目、収入は入金先の口座
+      description: 支出は費用科目、収入・振替は入金先の口座
     credit_element_type:
       type: integer
       enum: [1, 2, 4]
-      description: 支出は 1（資産）か 2（負債）、収入は 4（収益）
+      description: 支出・振替は 1（資産）か 2（負債）、収入は 4（収益）
     credit_account_id:
       type: integer
       minimum: 1
-      description: 支出は支払い方法の口座・カード、収入は収益科目
+      description: 支出は支払い方法の口座・カード、収入は収益科目、振替は出金元の口座・カード（入金先と同じ口座は不可）
     interval_unit:
       type: integer
       enum: [1, 2]
@@ -128,7 +129,7 @@ PendingOccurrence:
       type: string
     kind:
       type: integer
-      enum: [1, 2]
+      enum: [1, 2, 3]
     amount:
       type: integer
       description: 目安の金額

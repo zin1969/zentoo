@@ -177,8 +177,8 @@ occurrences:
     tags: [recurring_entries]
     summary: 回の登録
     description: |
-      回を、確かめた金額で仕訳にする。支出はお買い物、収入は収入登録と同じ処理で登録するので、
-      カード払いなら引き落とし仕訳も作られる。仕訳を修正（作り直し）しても、回の記録は新しい仕訳に付いたまま。
+      回を、確かめた金額で仕訳にする。支出はお買い物、収入は収入登録、振替は振替と同じ処理で登録するので、
+      カード払い（カードからのチャージ）なら引き落とし仕訳も作られる。仕訳を修正（作り直し）しても、回の記録は新しい仕訳に付いたまま。
       401 以外では、本文に新しい `next_token` を返す。
     operationId: registerOccurrence
     security:
@@ -217,7 +217,7 @@ occurrences:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
-        description: バリデーションエラー（`errors`）、予定日ではない（`not_scheduled_date`）、すでに登録・飛ばした回（`occurrence_already_recorded`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）
+        description: バリデーションエラー（`errors`）、予定日ではない（`not_scheduled_date`）、すでに登録・飛ばした回（`occurrence_already_recorded`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）、振替で出金元と入金先が同じ口座（`same_account`）、カードからの入金先が電子マネーではない（`credit_card_charge_requires_e_money`）
         content:
           application/json:
             schema:

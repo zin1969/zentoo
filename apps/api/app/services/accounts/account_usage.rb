@@ -3,8 +3,8 @@
 module Accounts
   # 科目が仕訳か決まった支払いで使われているか。どちらも科目を ID で参照していて外部キーが無いため、ここで確かめる
   module AccountUsage
-    # 決まった支払いの借方の科目の種別（支出は費用、収入は入金先の資産）
-    RECURRING_DEBIT_KINDS = { ElementType::EXPENSES => 1, ElementType::ASSETS => 2 }.freeze
+    # 決まった支払いの借方の科目の種別（支出は費用、収入と振替は入金先の資産）
+    RECURRING_DEBIT_KINDS = { ElementType::EXPENSES => [ 1 ], ElementType::ASSETS => [ 2, 3 ] }.freeze
 
     module_function
 
@@ -34,8 +34,8 @@ module Accounts
       return Set.new if ids.empty?
 
       entries = user_id ? RecurringEntry.where(user_id: user_id) : RecurringEntry.all
-      debit_kind = RECURRING_DEBIT_KINDS[element_type]
-      debit_ids = debit_kind ? entries.where(kind: debit_kind, debit_account_id: ids).distinct.pluck(:debit_account_id) : []
+      debit_kinds = RECURRING_DEBIT_KINDS[element_type]
+      debit_ids = debit_kinds ? entries.where(kind: debit_kinds, debit_account_id: ids).distinct.pluck(:debit_account_id) : []
       credit_ids = entries.where(credit_element_type: element_type, credit_account_id: ids).distinct.pluck(:credit_account_id)
 
       (debit_ids + credit_ids).to_set

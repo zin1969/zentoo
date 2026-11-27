@@ -34,6 +34,16 @@ RSpec.describe 'Recurring entries', type: :request do
     }
   end
 
+  # 毎月 27 日に銀行から証券口座へ入金する
+  let!(:securities) { create(:asset_account, :securities, user: user) }
+  let(:transfer_params) do
+    {
+      name: '証券口座へ入金', kind: 3, item_name: '無視される', amount: 33_333,
+      debit_account_id: securities.id, credit_element_type: 1, credit_account_id: bank.id,
+      interval_unit: 1, interval_count: 1, day_of_month: 27, start_date: '2026-11-01'
+    }
+  end
+
   def body
     JSON.parse(response.body)
   end
@@ -81,6 +91,42 @@ RSpec.describe 'Recurring entries', type: :request do
       create_entry(rent_params.merge(credit_element_type: 2, credit_account_id: tcard.id))
 
       expect(response).to have_http_status(:created)
+    end
+
+    it 'adds a transfer from a bank account or a credit card, without an item name' do
+      suica = create(:asset_account, :suica, user: user)
+
+      # トークンは 15 分で切れるので、リクエストはすべてこの中で送る
+      travel_to(Time.zone.local(2026, 11, 26, 9, 0)) do
+        create_entry(transfer_params)
+        expect(response).to have_http_status(:created)
+
+        create_entry(transfer_params.merge(name: 'オートチャージ', debit_account_id: suica.id, credit_element_type: 2,
+                                           credit_account_id: tcard.id))
+        expect(response).to have_http_status(:created)
+
+        get '/recurring-entries', headers: headers
+      end
+
+      expect(body.first).to include(
+        'kind' => 3, 'item_name' => nil, 'debit_account_name' => securities.name, 'credit_account_name' => bank.name,
+        'next_date' => '2026-11-27'
+      )
+      expect(body.second).to include('debit_account_name' => suica.name, 'credit_account_name' => tcard.name)
+    end
+
+    it 'returns 422 for a transfer between the same account or from revenue, and 404 for a destination that is not an asset' do
+      create_entry(transfer_params.merge(credit_account_id: securities.id))
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(body['errors']).to include('Credit account must differ from the debit account')
+
+      create_entry(transfer_params.merge(credit_element_type: 4, credit_account_id: salary.id))
+      expect(body['errors']).to include('Credit element type must be one of 1, 2 for this kind')
+
+      create_entry(transfer_params.merge(debit_account_id: rent.id))
+      expect(response).to have_http_status(:not_found)
+      expect(body['error']).to eq('account_not_found')
+      expect(RecurringEntry.count).to eq(0)
     end
 
     it 'returns 422 for values that do not fit' do
@@ -183,6 +229,14 @@ RSpec.describe 'Recurring entries', type: :request do
 
       delete "/expense-accounts/#{rent.id}", headers: headers
       expect(body['error']).to eq('expense_account_in_use')
+    end
+
+    it 'includes the destination account of a transfer' do
+      create_entry(transfer_params)
+
+      delete "/asset-accounts/#{securities.id}", headers: headers
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(body['error']).to eq('asset_account_in_use')
     end
   end
 end

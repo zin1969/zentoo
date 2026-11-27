@@ -8,7 +8,7 @@ import { getExpenseAccounts } from "@/lib/masters/expenseAccounts";
 import { getLiabilityAccounts } from "@/lib/masters/liabilityAccounts";
 import { getRevenueAccounts } from "@/lib/masters/revenueAccounts";
 import {
-  KIND_EXPENSE,
+  KIND_LABELS,
   createRecurringEntry,
   deleteRecurringEntry,
   getRecurringEntries,
@@ -169,10 +169,10 @@ export default function RecurringEntrySettings() {
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className={noteClass}>
-                        {entry.kind === KIND_EXPENSE ? "支出" : "収入"} · {scheduleLabel(entry)}
+                        {KIND_LABELS[entry.kind]} · {scheduleLabel(entry)}
                         {entry.end_date ? ` · ${entry.end_date} まで` : ""}
                       </span>
-                      {/* 支出は「費用科目 ← 支払い方法」、収入は「入金先 ← 収益科目」 */}
+                      {/* 支出は「費用科目 ← 支払い方法」、収入は「入金先 ← 収益科目」、振替は「入金先 ← 出金元」 */}
                       <span className={noteClass}>
                         {entry.debit_account_name ?? "?"} ← {entry.credit_account_name ?? "?"}
                       </span>

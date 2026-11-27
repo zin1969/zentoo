@@ -12,6 +12,8 @@ import {
   INTERVAL_UNIT_WEEK,
   KIND_EXPENSE,
   KIND_INCOME,
+  KIND_LABELS,
+  KIND_TRANSFER,
   MONTH_END_DAY,
   WEEKDAY_NAMES,
   localToday,
@@ -25,6 +27,9 @@ const MAX_NAME_LENGTH = 30;
 const MAX_TEXT_LENGTH = 100;
 const MAX_INTERVAL_COUNT = 12;
 const YEARLY_INTERVAL_COUNT = 12;
+// 口座の種別とカードの種別（支払い方法の種別と同じ値）
+const E_MONEY = 3;
+const CREDIT_CARD = 3;
 
 // くり返し。毎年は「開始日の月から 12 ヶ月ごと」、毎週は「N 週ごとの何曜日」（毎週は 1 週ごと）
 type Repeat = "monthly" | "every_n_months" | "yearly" | "weekly";
@@ -101,14 +106,14 @@ type Props = {
 export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, onCancel }: Props) {
   const [name, setName] = useState(entry?.name ?? "");
   const [kind, setKind] = useState(entry?.kind ?? KIND_EXPENSE);
-  // 支出: 費用科目、収入: 入金先の口座
+  // 支出: 費用科目、収入・振替: 入金先の口座
   const [debitAccountId, setDebitAccountId] = useState(entry ? String(entry.debit_account_id) : "");
-  // 支出: 「1-口座の ID」か「2-カードの ID」、収入: 収益科目の ID
+  // 支出・振替: 「1-口座の ID」か「2-カードの ID」、収入: 収益科目の ID
   const [creditKey, setCreditKey] = useState(
     entry
-      ? entry.kind === KIND_EXPENSE
-        ? `${entry.credit_element_type}-${entry.credit_account_id}`
-        : String(entry.credit_account_id)
+      ? entry.kind === KIND_INCOME
+        ? String(entry.credit_account_id)
+        : `${entry.credit_element_type}-${entry.credit_account_id}`
       : ""
   );
   const [amount, setAmount] = useState(entry ? String(entry.amount) : "");
@@ -126,6 +131,15 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
   const [endDate, setEndDate] = useState(entry?.end_date ?? "");
 
   const isExpense = kind === KIND_EXPENSE;
+  const isTransfer = kind === KIND_TRANSFER;
+  // 振替の入金先: 出金元と同じ口座は除き、カードからは電子マネーだけ（振替の画面と同じ）
+  const [creditType, creditId] = creditKey.split("-").map(Number);
+  const isAllowedTransferTo = (account: AssetAccount) => {
+    if (!isTransfer || creditKey === "") return true;
+    if (creditType === ELEMENT_LIABILITIES) return account.payment_method_type === E_MONEY;
+
+    return account.id !== creditId;
+  };
   const isWeekly = repeat === "weekly";
   const intervalUnit = isWeekly ? INTERVAL_UNIT_WEEK : INTERVAL_UNIT_MONTH;
   const count = {
@@ -152,23 +166,34 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
 
   const changeKind = (next: number) => {
     setKind(next);
-    // 支出と収入では、選べる科目が違う
+    // 支出・収入・振替では、選べる科目が違う
     setDebitAccountId("");
     setCreditKey("");
+  };
+
+  const changeCredit = (next: string) => {
+    setCreditKey(next);
+
+    // 振替で、選んでいた入金先が選べなくなったら外す
+    if (!isTransfer || next === "") return;
+    const [type, id] = next.split("-").map(Number);
+    const to = accounts.asset.find((a) => String(a.id) === debitAccountId);
+    if (to && (type === ELEMENT_LIABILITIES ? to.payment_method_type !== E_MONEY : to.id === id)) {
+      setDebitAccountId("");
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const [creditElementType, creditAccountId] = isExpense
-      ? creditKey.split("-").map(Number)
-      : [ELEMENT_REVENUE, Number(creditKey)];
+    const [creditElementType, creditAccountId] =
+      kind === KIND_INCOME ? [ELEMENT_REVENUE, Number(creditKey)] : creditKey.split("-").map(Number);
 
     onSubmit({
       name: name.trim(),
       kind,
       store_name: storeName.trim(),
-      item_name: itemName.trim(),
+      item_name: isExpense ? itemName.trim() : "",
       amount: Number(amount),
       debit_account_id: Number(debitAccountId),
       credit_element_type: creditElementType,
@@ -206,13 +231,8 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/10" role="radiogroup" aria-label="種類">
-        {(
-          [
-            [KIND_EXPENSE, "支出"],
-            [KIND_INCOME, "収入"]
-          ] as const
-        ).map(([value, label]) => (
+      <div className="grid grid-cols-3 gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/10" role="radiogroup" aria-label="種類">
+        {[KIND_EXPENSE, KIND_INCOME, KIND_TRANSFER].map((value) => (
           <button
             key={value}
             type="button"
@@ -221,7 +241,7 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
             onClick={() => changeKind(value)}
             className={chipClass(kind === value)}
           >
-            {label}
+            {KIND_LABELS[value]}
           </button>
         ))}
       </div>
@@ -244,7 +264,7 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
             ASSET_TYPES.map((type) => (
               <optgroup key={type.value} label={type.label}>
                 {accounts.asset
-                  .filter((a) => a.payment_method_type === type.value)
+                  .filter((a) => a.payment_method_type === type.value && isAllowedTransferTo(a))
                   .map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -258,17 +278,41 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="recurring-credit" className={labelClass}>
-          {isExpense ? "支払い方法" : "収益科目"}
+          {isExpense ? "支払い方法" : isTransfer ? "出金元" : "収益科目"}
         </label>
         <select
           id="recurring-credit"
           value={creditKey}
-          onChange={(e) => setCreditKey(e.target.value)}
+          onChange={(e) => changeCredit(e.target.value)}
           required
           className={inputClass}
         >
-          <option value="">{isExpense ? "支払い方法を選択" : "収益科目を選択"}</option>
-          {isExpense ? (
+          <option value="">{isExpense ? "支払い方法を選択" : isTransfer ? "出金元を選択" : "収益科目を選択"}</option>
+          {isTransfer ? (
+            <>
+              {ASSET_TYPES.map((type) => (
+                <optgroup key={type.value} label={type.label}>
+                  {accounts.asset
+                    .filter((a) => a.payment_method_type === type.value)
+                    .map((a) => (
+                      <option key={a.id} value={`${ELEMENT_ASSETS}-${a.id}`}>
+                        {a.name}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+              {/* カードからは電子マネーへのチャージ（オートチャージなど）だけ */}
+              <optgroup label="クレジットカード（電子マネーへのチャージ）">
+                {accounts.liability
+                  .filter((a) => a.payment_method_type === CREDIT_CARD)
+                  .map((a) => (
+                    <option key={a.id} value={`${ELEMENT_LIABILITIES}-${a.id}`}>
+                      {a.name}
+                    </option>
+                  ))}
+              </optgroup>
+            </>
+          ) : isExpense ? (
             <>
               {PAYMENT_ASSET_TYPES.map((type) => (
                 <optgroup key={type.value} label={type.label}>
@@ -318,11 +362,12 @@ export default function RecurringEntryForm({ entry, accounts, busy, onSubmit, on
       <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="recurring-store" className={labelClass}>
-            {isExpense ? "店舗名（任意）" : "支払元（任意）"}
+            {isExpense ? "店舗名（任意）" : isTransfer ? "摘要（任意）" : "支払元（任意）"}
           </label>
           <input
             id="recurring-store"
             type="text"
+            placeholder={isTransfer ? name || "空なら名前" : undefined}
             value={storeName}
             maxLength={MAX_TEXT_LENGTH}
             onChange={(e) => setStoreName(e.target.value)}

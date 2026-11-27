@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/apiFetch";
 import {
   KIND_EXPENSE,
+  KIND_LABELS,
+  KIND_TRANSFER,
   getPendingOccurrences,
   localToday,
   registerOccurrence,
@@ -26,6 +28,10 @@ function errorMessage(error: unknown) {
         return "科目・口座が見つかりません。決まった収支の設定を確かめてください。";
       case "credit_card_setting_not_found":
         return "クレジットカードの引き落とし設定が見つかりません。";
+      case "same_account":
+        return "出金元と入金先が同じ口座です。決まった収支の設定を確かめてください。";
+      case "credit_card_charge_requires_e_money":
+        return "クレジットカードから入れられるのは、電子マネーだけです。決まった収支の設定を確かめてください。";
     }
 
     if (error.data?.errors?.length) {
@@ -60,6 +66,7 @@ function OccurrenceRow({ occurrence, overdue, busy, onRegister, onSkip }: RowPro
   const [amount, setAmount] = useState(String(occurrence.amount));
   const [date, setDate] = useState(occurrence.scheduled_date);
   const isExpense = occurrence.kind === KIND_EXPENSE;
+  const dateLabel = isExpense ? "支払った日" : occurrence.kind === KIND_TRANSFER ? "振り替えた日" : "入金された日";
   const amountValid = /^\d+$/.test(amount) && Number(amount) > 0;
 
   return (
@@ -67,7 +74,7 @@ function OccurrenceRow({ occurrence, overdue, busy, onRegister, onSkip }: RowPro
       <div className="flex items-baseline justify-between gap-2">
         <span className="truncate text-sm font-medium text-foreground">
           {occurrence.name}
-          <span className="ml-1.5 text-xs font-normal text-black/50 dark:text-white/50">{isExpense ? "支出" : "収入"}</span>
+          <span className="ml-1.5 text-xs font-normal text-black/50 dark:text-white/50">{KIND_LABELS[occurrence.kind]}</span>
         </span>
         <span
           className={`shrink-0 text-xs tabular-nums ${overdue ? "text-red-600 dark:text-red-400" : "text-black/55 dark:text-white/55"}`}
@@ -96,7 +103,7 @@ function OccurrenceRow({ occurrence, overdue, busy, onRegister, onSkip }: RowPro
         </div>
         <input
           type="date"
-          aria-label={`${occurrence.name}の${isExpense ? "支払った日" : "入金された日"}`}
+          aria-label={`${occurrence.name}の${dateLabel}`}
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className={`${inputClass} w-36`}

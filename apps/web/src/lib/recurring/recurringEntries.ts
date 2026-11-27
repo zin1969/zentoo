@@ -5,9 +5,17 @@ export { localToday };
 
 // 決まった収支（家賃・サブスク・給料など）。回ごとに確かめてから仕訳にする
 
-// 1: 支出（借方が費用、貸方が支払い方法の口座かカード）、2: 収入（借方が入金先の口座、貸方が収益科目）
+// 1: 支出（借方が費用、貸方が支払い方法の口座かカード）、2: 収入（借方が入金先の口座、貸方が収益科目）、
+// 3: 振替（借方が入金先の口座、貸方が出金元の口座かカード）
 export const KIND_EXPENSE = 1;
 export const KIND_INCOME = 2;
+export const KIND_TRANSFER = 3;
+
+export const KIND_LABELS: Record<number, string> = {
+  [KIND_EXPENSE]: "支出",
+  [KIND_INCOME]: "収入",
+  [KIND_TRANSFER]: "振替"
+};
 
 // 貸方の科目の種別（1: 資産、2: 負債、4: 収益）
 export const ELEMENT_ASSETS = 1;

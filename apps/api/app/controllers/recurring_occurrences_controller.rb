@@ -22,12 +22,24 @@ class RecurringOccurrencesController < ApplicationController
   rescue_from RecurringEntries::OccurrencesService::AccountNotFound,
               Journals::InsertJournalEntry::AccountNotFound,
               Journals::IncomeJournals::AssetAccountNotFound,
-              Journals::IncomeJournals::RevenueAccountNotFound do
+              Journals::IncomeJournals::RevenueAccountNotFound,
+              Journals::TransferJournals::FromAccountNotFound,
+              Journals::TransferJournals::ToAccountNotFound do
     render_error("account_not_found", :not_found)
   end
 
-  rescue_from Journals::InsertJournalEntry::CreditCardSettingNotFound do
+  rescue_from Journals::InsertJournalEntry::CreditCardSettingNotFound,
+              Journals::TransferJournals::CreditCardSettingNotFound do
     render_error("credit_card_setting_not_found", :unprocessable_content)
+  end
+
+  # 振替: 同じ口座の間、カードから電子マネー以外への振替（設定のあとで口座の種別を変えた場合など）
+  rescue_from Journals::TransferJournals::SameAccount do
+    render_error("same_account", :unprocessable_content)
+  end
+
+  rescue_from Journals::TransferJournals::CreditCardChargeRequiresEMoney do
+    render_error("credit_card_charge_requires_e_money", :unprocessable_content)
   end
 
   def index

@@ -7,10 +7,12 @@ class RecurringEntryForm
 
   KIND_EXPENSE = 1
   KIND_INCOME = 2
-  # 支出の支払い方法は資産か負債、収入の相手は収益
+  KIND_TRANSFER = 3
+  # 支出の支払い方法は資産か負債、収入の相手は収益、振替の出金元は口座（資産）かカード（負債）
   CREDIT_ELEMENT_TYPES = {
     KIND_EXPENSE => [ ElementType::ASSETS, ElementType::LIABILITIES ],
-    KIND_INCOME => [ ElementType::REVENUE ]
+    KIND_INCOME => [ ElementType::REVENUE ],
+    KIND_TRANSFER => [ ElementType::ASSETS, ElementType::LIABILITIES ]
   }.freeze
   INTERVAL_UNIT_MONTH = 1
   INTERVAL_UNIT_WEEK = 2
@@ -45,6 +47,7 @@ class RecurringEntryForm
   validate :validate_kind
   validate :validate_amount
   validate :validate_account_ids
+  validate :validate_transfer_accounts
   validate :validate_schedule
   validate :validate_period
 
@@ -54,7 +57,8 @@ class RecurringEntryForm
 
   def to_attributes
     {
-      name: name, kind: kind, store_name: store_name.presence, item_name: item_name.presence, amount: amount,
+      name: name, kind: kind, store_name: store_name.presence, item_name: transfer? ? nil : item_name.presence,
+      amount: amount,
       debit_account_id: debit_account_id, credit_element_type: credit_element_type, credit_account_id: credit_account_id,
       interval_unit: interval_unit, interval_count: interval_count,
       day_of_month: monthly? ? day_of_month : nil, weekday: monthly? ? nil : weekday,
@@ -64,13 +68,18 @@ class RecurringEntryForm
 
   private
 
+  # 振替の仕訳に品目は無いので、送られても保存しない
+  def transfer?
+    kind == KIND_TRANSFER
+  end
+
   def monthly?
     interval_unit == INTERVAL_UNIT_MONTH
   end
 
   def validate_kind
     allowed = CREDIT_ELEMENT_TYPES[kind]
-    return errors.add(:kind, "must be 1 (expense) or 2 (income)") if allowed.nil?
+    return errors.add(:kind, "must be 1 (expense), 2 (income) or 3 (transfer)") if allowed.nil?
     return if allowed.include?(credit_element_type)
 
     errors.add(:credit_element_type, "must be one of #{allowed.join(', ')} for this kind")
@@ -88,6 +97,14 @@ class RecurringEntryForm
 
       errors.add(attribute, "must be a positive integer")
     end
+  end
+
+  # 同じ口座の間では振替できない
+  def validate_transfer_accounts
+    return unless transfer? && credit_element_type == ElementType::ASSETS
+    return unless debit_account_id.is_a?(Integer) && debit_account_id == credit_account_id
+
+    errors.add(:credit_account_id, "must differ from the debit account")
   end
 
   # 月単位は日（day_of_month）、週単位は曜日（weekday）を使う。使わない方は送られても無視する

@@ -12,6 +12,9 @@ RETURNS INT
 LANGUAGE plpgsql
 AS $$
 DECLARE
+  v_new_journal_id INT;
+  v_occurrence_entry_ids BIGINT[];
+  v_occurrence_dates DATE[];
   ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
@@ -59,12 +62,28 @@ BEGIN
     RAISE EXCEPTION 'journal is not a transfer journal: %', journal_id;
   END IF;
 
+  -- 決まった振替の回の記録は、仕訳を消すと一緒に消える（ON DELETE CASCADE）ので、先に控えて新しい仕訳に付け直す
+  SELECT ARRAY_AGG(o.recurring_entry_id), ARRAY_AGG(o.scheduled_date)
+    INTO v_occurrence_entry_ids, v_occurrence_dates
+    FROM recurring_entry_occurrences o
+   WHERE o.journal_id = replace_transfer_journal.journal_id
+  ;
+
   -- 元の仕訳（とカードからのチャージの引き落とし仕訳）を消して、登録と同じ確認をしながら作り直す。
   -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
   PERFORM delete_journal(replace_transfer_journal.journal_id, replace_transfer_journal.user_id);
 
-  RETURN create_transfer_journal(
+  v_new_journal_id := create_transfer_journal(
     journal_date, from_element_type, from_account_id, to_account_id, amount, description, user_id
   );
+
+  IF v_occurrence_entry_ids IS NOT NULL THEN
+    INSERT INTO recurring_entry_occurrences (recurring_entry_id, scheduled_date, journal_id)
+    SELECT x.entry_id, x.scheduled_date, v_new_journal_id
+      FROM UNNEST(v_occurrence_entry_ids, v_occurrence_dates) AS x(entry_id, scheduled_date)
+    ;
+  END IF;
+
+  RETURN v_new_journal_id;
 END;
 $$;

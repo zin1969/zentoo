@@ -136,6 +136,68 @@ RSpec.describe 'Recurring occurrences', type: :request do
     end
   end
 
+  describe 'POST /recurring-entries/:id/occurrences for a transfer' do
+    let!(:securities) { create(:asset_account, :securities, user: user) }
+    let!(:suica) { create(:asset_account, :suica, user: user) }
+
+    # 11 月から毎月 27 日に、銀行から証券口座へ入金する
+    def transfer_entry(**attributes)
+      create(:recurring_entry, user: user, name: '証券口座へ入金', kind: 3, amount: 33_333, day_of_month: 27,
+                               debit_account_id: securities.id, credit_element_type: 1, credit_account_id: bank.id,
+                               start_date: Date.new(2026, 11, 1), **attributes)
+    end
+
+    it 'registers a transfer with the name as its description, and keeps the occurrence when the journal is replaced' do
+      entry = transfer_entry
+
+      on_today do
+        register(entry, scheduled_date: '2026-11-27', amount: 30_000)
+
+        expect(response).to have_http_status(:created)
+        journal = Journal.find(body['journal_id'])
+        expect(journal).to have_attributes(journal_dt: Date.new(2026, 11, 27), store_name: '証券口座へ入金')
+        expect(line(journal.debits.sole)).to eq([ securities.id, 30_000 ])
+        expect(journal.credits.sole.element_type).to eq(ElementType::ASSETS)
+        expect(journal.credits.sole.payment_method_type).to eq(2)
+        expect(line(journal.credits.sole)).to eq([ bank.id, 30_000 ])
+
+        put "/transfer-journals/#{journal.id}", headers: headers, params: {
+          journal_date: '2026-11-28', from_type: 'asset', from_account_id: bank.id, to_account_id: securities.id,
+          amount: 33_333, description: '証券口座へ入金'
+        }.to_json
+
+        expect(response).to have_http_status(:ok)
+        expect(RecurringEntryOccurrence.sole).to have_attributes(scheduled_date: Date.new(2026, 11, 27),
+                                                                 journal_id: body['journal_id'])
+        expect(pending).not_to include([ '証券口座へ入金', '2026-11-27' ])
+      end
+    end
+
+    it 'makes the direct debit journal for a charge from a credit card' do
+      create(:credit_card, :tcard, user: user, liability_account: tcard, bank_account: bank)
+      entry = transfer_entry(name: 'オートチャージ', store_name: 'Suica チャージ', debit_account_id: suica.id,
+                             credit_element_type: 2, credit_account_id: tcard.id)
+
+      on_today { register(entry, scheduled_date: '2026-11-27', amount: 3_000) }
+
+      expect(response).to have_http_status(:created)
+      expect(Journal.find(body['journal_id']).store_name).to eq('Suica チャージ')
+      expect(DirectDebitJournal.where(original_id: body['journal_id'])).to exist
+    end
+
+    it 'returns 422 for a charge from a card into an account that is not e-money' do
+      create(:credit_card, :tcard, user: user, liability_account: tcard, bank_account: bank)
+      entry = transfer_entry(credit_element_type: 2, credit_account_id: tcard.id)
+
+      on_today { register(entry, scheduled_date: '2026-11-27', amount: 3_000) }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(body['error']).to eq('credit_card_charge_requires_e_money')
+      expect(Journal.count).to eq(0)
+      expect(RecurringEntryOccurrence.count).to eq(0)
+    end
+  end
+
   describe 'POST /recurring-entries/:id/skips' do
     it 'skips a date, brings back a date whose journal was deleted, and refuses to record a date twice' do
       on_today do

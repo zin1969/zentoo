@@ -34,6 +34,11 @@ RSpec.describe "recurring_entries" do
       expect { create_entry(interval_unit: 2, day_of_month: nil, weekday: 5) }.not_to raise_error
     end
 
+    it "accepts a transfer from an asset or a liability" do
+      expect { create_entry(kind: 3, debit_account_id: cash.id, credit_element_type: 1) }.not_to raise_error
+      expect { create_entry(kind: 3, debit_account_id: cash.id, credit_element_type: 2) }.not_to raise_error
+    end
+
     it "rejects a schedule that does not match its unit" do
       expect { create_entry(day_of_month: 32) }.to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_schedule/)
       expect { create_entry(weekday: 1) }.to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_schedule/)
@@ -48,6 +53,11 @@ RSpec.describe "recurring_entries" do
         .to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_credit_element_type/)
       expect { create_entry(kind: 2, credit_element_type: 1) }
         .to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_credit_element_type/)
+      expect { create_entry(kind: 3, credit_element_type: 4) }
+        .to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_credit_element_type/)
+      # 種類が 1〜3 でなければ、種類と貸方の種別のどちらかの制約で落ちる（どちらが先に報告されるかは決まっていない）
+      expect { create_entry(kind: 4) }
+        .to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_(kind|credit_element_type)/)
       expect { create_entry(amount: 0) }.to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_amount/)
       expect { create_entry(end_date: Date.new(2026, 10, 31)) }
         .to raise_error(ActiveRecord::StatementInvalid, /recurring_entry_period/)
