@@ -105,12 +105,12 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30、最終更新: 2026-11-28�
 - DB 関数の `CREATE OR REPLACE` を使うマイグレーションは不可逆（`down` で `IrreversibleMigration`）。規約は `docs/rules/rails_db_logic_coding_standards.md`。
 - macOS の BSD `sed` は置換に `\n` を使えない。Edit ツールを使う。
 - `find /` は実行しない。
-- `docker-compose ... run --no-deps` は DB を起動しない。Vagrant を起動し直したあとは、先に `docker-compose -f docker-compose/docker-compose.yaml up -d db`（または `up`）で DB を起動する。起動していないと `could not translate host name "db"` になる。
+- `docker compose ... run --no-deps` は DB を起動しない。Vagrant を起動し直したあとは、先に `docker compose -f docker-compose/docker-compose.yaml up -d db`（または `up`）で DB を起動する。起動していないと `could not translate host name "db"` になる。
 
 ## 開発環境のコマンド
 
 ```bash
-docker-compose -f docker-compose/docker-compose.yaml run --rm [--no-deps] [-e CI=true] <api|next> ...
+docker compose -f docker-compose/docker-compose.yaml run --rm [--no-deps] [-e CI=true] <api|next> ...
 ```
 
 - ポート: web 53001、api 53000、db 55432。

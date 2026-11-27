@@ -122,7 +122,7 @@ seed のあと、実際の残高を画面から登録する。**仕訳の修正�
 ```
 docker build -t zentoo-api apps/api
 docker build -t zentoo-web apps/web
-docker-compose -f docker-compose/docker-compose.yaml up -d db
+docker compose -f docker-compose/docker-compose.yaml up -d db
 
 docker run -d --name zentoo-api-prod --network docker-compose_backend -p 53100:3000 \
   -e SECRET_KEY_BASE=$(openssl rand -hex 64) -e JWT_SECRET_KEY=$(openssl rand -hex 32) \

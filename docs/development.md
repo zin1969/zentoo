@@ -1,15 +1,16 @@
 # 開発手順
 
 Docker は Vagrant 上の Debian で動かす。以下のコマンドはリポジトリのルートで、Vagrant 内から実行する。
+Compose は Docker のプラグイン（`docker compose`、v2）を使う。ハイフン付きの `docker-compose` は使わない（2026-11-28 に切り替え）。入っているかは `docker compose version` で確かめる。
 
 ```
-docker-compose -f docker-compose/docker-compose.yaml ...
+docker compose -f docker-compose/docker-compose.yaml ...
 ```
 
 ## 起動
 
 ```
-docker-compose -f docker-compose/docker-compose.yaml up
+docker compose -f docker-compose/docker-compose.yaml up
 ```
 
 | サービス | URL |
@@ -25,8 +26,8 @@ api の起動時に `bin/rails db:prepare` が走る。
 マイグレーション後にシードを投入する。何度実行しても重複しない。
 
 ```
-docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/rails db:migrate
-docker-compose -f docker-compose/docker-compose.yaml run --rm api bin/rails db:seed
+docker compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/rails db:migrate
+docker compose -f docker-compose/docker-compose.yaml run --rm api bin/rails db:seed
 ```
 
 ### ログインできるユーザー
@@ -44,15 +45,15 @@ docker-compose -f docker-compose/docker-compose.yaml run --rm api bin/rails db:s
 CI（`.github/workflows/ci.yml`）と同じ内容を手元で確認する場合。
 
 ```
-docker-compose -f docker-compose/docker-compose.yaml run --rm -e CI=true api rspec
-docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/rubocop
-docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/brakeman --no-pager
-docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/bundler-audit
+docker compose -f docker-compose/docker-compose.yaml run --rm -e CI=true api rspec
+docker compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/rubocop
+docker compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/brakeman --no-pager
+docker compose -f docker-compose/docker-compose.yaml run --rm --no-deps api bin/bundler-audit
 ```
 
 Web（`apps/web`）の確認は `next` コンテナ内で行う。
 
 ```
-docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps next npx tsc --noEmit
-docker-compose -f docker-compose/docker-compose.yaml run --rm --no-deps next npm run lint
+docker compose -f docker-compose/docker-compose.yaml run --rm --no-deps next npx tsc --noEmit
+docker compose -f docker-compose/docker-compose.yaml run --rm --no-deps next npm run lint
 ```
