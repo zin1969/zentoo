@@ -412,7 +412,7 @@
 - [x] DB・API: 口座の種別に立替金（6）、お買い物の登録・修正で立替金の明細を扱う（費用の明細が無くてもよい）、精算の登録・修正、仕訳一覧で科目の借方・貸方の合計。`POST /settlement-journals`・`PUT /settlement-journals/{id}`（DB 関数 `create_settlement_journal`・`replace_settlement_journal`）、`GET /journals` の `account_totals` と借方の `asset_type`。振替は立替金から出せない（`receivable_requires_settlement`）。お買い物・振替の修正は精算の仕訳を断る
 - [x] Web: 管理画面で立替金の口座を作れる。お買い物登録（修正・コピーも）に立て替えの欄。精算の画面（登録・修正。`/settlement-journals`）。仕訳一覧に検索した科目の合計。振替の出す元・収入の入金先・決まった振替の出金元には立替金を出さない
 - [x] 仕様書（OpenAPI / `apps/api/docs/interfaces/rest`）の更新
-- [ ] 本番にデプロイし、スマホで確認する（DB を変えるので、先に手動でバックアップ）
+- [x] 本番にデプロイし、スマホで確認する（2026-11-28。先に手動でバックアップ）
 
 **完了条件**: 本番で、次の 2 つができる。
 - 飲み会の代金をまとめて払って相手ごとに立て替えを登録し、現金と PayPay で返してもらった分を精算して、月次の支出が自分の分だけになり、相手ごとの立替金が 0 になる。
