@@ -456,6 +456,130 @@ $$;
 
 
 --
+-- Name: create_settlement_journal(date, integer, integer, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_settlement_journal(journal_date date, receivable_account_id integer, settled_amount integer, received_amount integer, to_account_id integer, difference_account_id integer, description text, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_receivable_name TEXT;
+  v_to_type INT;
+  v_difference INT;
+  new_journal_id INT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_REVENUE CONSTANT INT := 4;
+  ELEMENT_EXPENSES CONSTANT INT := 5;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
+BEGIN
+  -- 消し込む額（立替金から減らす額）
+  IF settled_amount <= 0 THEN
+    RAISE EXCEPTION 'settled amount must be greater than 0';
+  END IF;
+
+  -- 受け取った額。全額おごりになったときは 0
+  IF received_amount < 0 THEN
+    RAISE EXCEPTION 'received amount must not be negative';
+  END IF;
+
+  -- 立替金は本人の種別「立替金」の口座。他ユーザーの口座と存在しない口座は区別しない
+  SELECT aa.name
+    INTO v_receivable_name
+    FROM asset_accounts aa
+   WHERE aa.id = create_settlement_journal.receivable_account_id
+     AND aa.user_id = create_settlement_journal.user_id
+     AND aa.asset_type = ASSET_TYPE_RECEIVABLE
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'receivable account not found: %', receivable_account_id;
+  END IF;
+
+  -- 入金先は本人の口座（立替金の口座は除く）。受け取りが無ければ要らない
+  IF received_amount > 0 THEN
+    SELECT aa.asset_type
+      INTO v_to_type
+      FROM asset_accounts aa
+     WHERE aa.id = create_settlement_journal.to_account_id
+       AND aa.user_id = create_settlement_journal.user_id
+       AND aa.asset_type <> ASSET_TYPE_RECEIVABLE
+    ;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'to account not found: %', to_account_id;
+    END IF;
+  END IF;
+
+  -- 差額 = 消し込む額 - 受け取った額。少なく受け取ったら費用、多く受け取ったら収益にする
+  v_difference := settled_amount - received_amount;
+
+  IF v_difference > 0 AND NOT EXISTS (
+    SELECT 1
+      FROM expense_accounts ea
+     WHERE ea.id = create_settlement_journal.difference_account_id
+       AND (ea.user_id IS NULL OR ea.user_id = create_settlement_journal.user_id)
+  ) THEN
+    RAISE EXCEPTION 'difference account not found: %', difference_account_id;
+  END IF;
+
+  IF v_difference < 0 AND NOT EXISTS (
+    SELECT 1
+      FROM revenue_accounts ra
+     WHERE ra.id = create_settlement_journal.difference_account_id
+       AND (ra.user_id IS NULL OR ra.user_id = create_settlement_journal.user_id)
+  ) THEN
+    RAISE EXCEPTION 'difference account not found: %', difference_account_id;
+  END IF;
+
+  INSERT INTO journals (
+    journal_dt, store_name, user_id
+  ) VALUES (
+    journal_date,
+    COALESCE(NULLIF(BTRIM(description), ''), '精算 ' || v_receivable_name),
+    user_id
+  )
+  RETURNING id INTO new_journal_id;
+
+  -- 借方: 入金先（受け取った額）
+  IF received_amount > 0 THEN
+    INSERT INTO debits (
+      journal_id, element_type, account_id, item_name, amount, user_id
+    ) VALUES (
+      new_journal_id, ELEMENT_ASSETS, to_account_id, NULL, received_amount, user_id
+    );
+  END IF;
+
+  -- 借方: 費用（少なく受け取った分。会社に認められない分・おごり）
+  IF v_difference > 0 THEN
+    INSERT INTO debits (
+      journal_id, element_type, account_id, item_name, amount, user_id
+    ) VALUES (
+      new_journal_id, ELEMENT_EXPENSES, difference_account_id, NULL, v_difference, user_id
+    );
+  END IF;
+
+  -- 貸方: 立替金（消し込む額）。支払い方法は口座の種別
+  INSERT INTO credits (
+    journal_id, element_type, payment_method_type, account_id, amount, user_id
+  ) VALUES (
+    new_journal_id, ELEMENT_ASSETS, ASSET_TYPE_RECEIVABLE, receivable_account_id, settled_amount, user_id
+  );
+
+  -- 貸方: 収益（多く受け取った分）
+  IF v_difference < 0 THEN
+    INSERT INTO credits (
+      journal_id, element_type, payment_method_type, account_id, amount, user_id
+    ) VALUES (
+      new_journal_id, ELEMENT_REVENUE, 0, difference_account_id, -v_difference, user_id
+    );
+  END IF;
+
+  RETURN new_journal_id;
+END;
+$$;
+
+
+--
 -- Name: create_stock_buy_journal(date, integer, integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -741,6 +865,7 @@ DECLARE
   ASSET_TYPE_CASH CONSTANT INT := 1;
   ASSET_TYPE_DEPOSIT CONSTANT INT := 2;
   ASSET_TYPE_E_MONEY CONSTANT INT := 3;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
   LIABILITY_TYPE_CREDIT_CARD CONSTANT INT := 3;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
 BEGIN
@@ -771,6 +896,11 @@ BEGIN
 
     IF NOT FOUND THEN
       RAISE EXCEPTION 'from account not found: %', from_account_id;
+    END IF;
+
+    -- 立替金から返してもらうのは精算（create_settlement_journal）で登録する。差額を費用・収益にできるようにするため
+    IF v_from_type = ASSET_TYPE_RECEIVABLE THEN
+      RAISE EXCEPTION 'receivable must be settled: %', from_account_id;
     END IF;
 
     IF from_account_id = to_account_id THEN
@@ -1865,8 +1995,10 @@ DECLARE
   v_carry_card_id INT;
   v_occurrence_entry_ids BIGINT[];
   v_occurrence_dates DATE[];
+  ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_EXPENSES CONSTANT INT := 5;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
   DIRECT_DEBIT_PAYMENT_DATE_SETTING CONSTANT TEXT := 'app.direct_debit_payment_date';
 BEGIN
@@ -1894,8 +2026,8 @@ BEGIN
     RAISE EXCEPTION 'direct debit journal cannot be updated: %', journal_id;
   END IF;
 
-  -- 修正できるのはお買い物の仕訳（借方がすべて費用）だけ。
-  -- 開始残高や預け入れは画面の項目が違うので、削除して登録し直す
+  -- 修正できるのはお買い物の仕訳（借方がすべて費用か立替金）だけ。立て替えた分は立替金の口座の明細になり、
+  -- 全額を立て替えたときは費用の明細が無い。開始残高や預け入れは画面の項目が違うので、削除して登録し直す
   IF NOT EXISTS (
        SELECT 1
          FROM debits d
@@ -1906,17 +2038,49 @@ BEGIN
          FROM debits d
         WHERE d.journal_id = replace_journal_entry.journal_id
           AND d.element_type <> ELEMENT_EXPENSES
+          AND NOT (
+            d.element_type = ELEMENT_ASSETS
+            AND d.shares IS NULL
+            AND EXISTS (
+              SELECT 1
+                FROM asset_accounts aa
+               WHERE aa.id = d.account_id
+                 AND aa.asset_type = ASSET_TYPE_RECEIVABLE
+            )
+          )
+     )
+     -- 全額おごりの精算（借方が費用だけ、貸方が立替金）は、精算の画面で直す
+     OR EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_journal_entry.journal_id
+          AND c.element_type = ELEMENT_ASSETS
+          AND c.payment_method_type = ASSET_TYPE_RECEIVABLE
      ) THEN
     RAISE EXCEPTION 'journal is not a shopping journal: %', journal_id;
   END IF;
 
-  -- 修正後も、お買い物の仕訳のままにする
-  IF EXISTS (
-    SELECT 1
-      FROM jsonb_to_recordset(journal_data->'debits') AS x(element_type INT)
-     WHERE x.element_type IS DISTINCT FROM ELEMENT_EXPENSES
-  ) THEN
-    RAISE EXCEPTION 'shopping journal must debit expenses only';
+  -- 修正後も、お買い物の仕訳（借方が費用か本人の立替金）のままにする
+  IF NOT EXISTS (
+       SELECT 1
+         FROM jsonb_to_recordset(journal_data->'debits') AS x(element_type INT)
+     )
+     OR EXISTS (
+       SELECT 1
+         FROM jsonb_to_recordset(journal_data->'debits') AS x(element_type INT, account_id INT)
+        WHERE x.element_type IS DISTINCT FROM ELEMENT_EXPENSES
+          AND NOT (
+            x.element_type = ELEMENT_ASSETS
+            AND EXISTS (
+              SELECT 1
+                FROM asset_accounts aa
+               WHERE aa.id = x.account_id
+                 AND aa.user_id = v_user_id
+                 AND aa.asset_type = ASSET_TYPE_RECEIVABLE
+            )
+          )
+     ) THEN
+    RAISE EXCEPTION 'shopping journal must debit expenses or receivables only';
   END IF;
 
   -- 引き落とし日を手で変えていたら、その日とカードを覚えておく。
@@ -1993,6 +2157,57 @@ $$;
 
 
 --
+-- Name: replace_settlement_journal(integer, date, integer, integer, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.replace_settlement_journal(journal_id integer, journal_date date, receivable_account_id integer, settled_amount integer, received_amount integer, to_account_id integer, difference_account_id integer, description text, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_new_journal_id INT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
+BEGIN
+  -- 他ユーザーの仕訳と存在しない仕訳は区別しない。
+  -- 同時に修正・削除されないよう、行をロックする
+  PERFORM 1
+     FROM journals j
+    WHERE j.id = replace_settlement_journal.journal_id
+      AND j.user_id = replace_settlement_journal.user_id
+      FOR UPDATE
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'journal not found: %', journal_id;
+  END IF;
+
+  -- 修正できるのは精算の仕訳だけ: 貸方に立替金が 1 つある。
+  -- 立替金が貸方に来るのは精算だけ（振替では立替金から出せず、お買い物の支払い方法にも出さない）
+  IF (
+       SELECT COUNT(*)
+         FROM credits c
+        WHERE c.journal_id = replace_settlement_journal.journal_id
+          AND c.element_type = ELEMENT_ASSETS
+          AND c.payment_method_type = ASSET_TYPE_RECEIVABLE
+     ) <> 1 THEN
+    RAISE EXCEPTION 'journal is not a settlement journal: %', journal_id;
+  END IF;
+
+  -- 元の仕訳を消して、登録と同じ確認をしながら作り直す。
+  -- どちらかで失敗すると、関数全体が取り消されて元の仕訳が残る
+  PERFORM delete_journal(replace_settlement_journal.journal_id, replace_settlement_journal.user_id);
+
+  v_new_journal_id := create_settlement_journal(
+    journal_date, receivable_account_id, settled_amount, received_amount,
+    to_account_id, difference_account_id, description, user_id
+  );
+
+  RETURN v_new_journal_id;
+END;
+$$;
+
+
+--
 -- Name: replace_transfer_journal(integer, date, integer, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2006,6 +2221,7 @@ DECLARE
   ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
 BEGIN
   -- 他ユーザーの仕訳と存在しない仕訳は区別しない。
   -- 同時に修正・削除されないよう、行をロックする
@@ -2059,6 +2275,14 @@ BEGIN
          FROM credits c
         WHERE c.journal_id = replace_transfer_journal.journal_id
           AND c.shares IS NOT NULL
+     )
+     -- 差額の無い精算（借方が入金先、貸方が立替金）も同じ形になるが、精算の画面で直す
+     OR EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_transfer_journal.journal_id
+          AND c.element_type = ELEMENT_ASSETS
+          AND c.payment_method_type = ASSET_TYPE_RECEIVABLE
      ) THEN
     RAISE EXCEPTION 'journal is not a transfer journal: %', journal_id;
   END IF;
@@ -2188,7 +2412,7 @@ CREATE TABLE public.asset_accounts (
     user_id bigint,
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT asset_account_asset_type CHECK ((asset_type = ANY (ARRAY[1, 2, 3, 4, 5])))
+    CONSTRAINT asset_account_asset_type CHECK ((asset_type = ANY (ARRAY[1, 2, 3, 4, 5, 6])))
 );
 
 
@@ -2294,7 +2518,7 @@ CREATE TABLE public.credits (
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     shares integer,
     CONSTRAINT credit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5]))),
-    CONSTRAINT credit_payment_method_type CHECK ((((element_type = 1) AND (payment_method_type = ANY (ARRAY[1, 2, 3, 4, 5]))) OR ((element_type = 2) AND (payment_method_type = ANY (ARRAY[1, 2, 3]))) OR ((element_type = ANY (ARRAY[3, 4, 5])) AND (payment_method_type = 0)))),
+    CONSTRAINT credit_payment_method_type CHECK ((((element_type = 1) AND (payment_method_type = ANY (ARRAY[1, 2, 3, 4, 5, 6]))) OR ((element_type = 2) AND (payment_method_type = ANY (ARRAY[1, 2, 3]))) OR ((element_type = ANY (ARRAY[3, 4, 5])) AND (payment_method_type = 0)))),
     CONSTRAINT credit_shares CHECK (((shares IS NULL) OR ((shares > 0) AND (element_type = 1))))
 );
 
@@ -3735,6 +3959,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261128140000'),
 ('20261128130000'),
 ('20261128120000'),
 ('20261127120000'),
