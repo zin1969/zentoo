@@ -84,11 +84,12 @@ RSpec.describe 'Settlement journals', type: :request do
       post_entry(party_entry)
 
       expect(response).to have_http_status(:created)
+      journal_id = body['journal_id']
       expect(monthly_total).to eq([ 12_000, 0 ])
       expect(balances.values_at(tanaka.id, suzuki.id)).to eq([ 10_000, 10_000 ])
       # カードの引き落としは全額
-      expect(Journal.find(body['journal_id']).credits.sole.amount.to_i).to eq(32_000)
-      expect(DirectDebitJournal.find_by!(original_id: body['journal_id'])).to be_present
+      expect(Journal.find(journal_id).credits.sole.amount.to_i).to eq(32_000)
+      expect(DirectDebitJournal.find_by!(original_id: journal_id)).to be_present
     end
 
     it 'registers and edits a purchase paid entirely for the company' do
