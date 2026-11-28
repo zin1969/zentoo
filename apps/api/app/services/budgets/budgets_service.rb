@@ -53,8 +53,9 @@ module Budgets
       raise TagNotFound unless user.tags.where(id: tag_ids).count == tag_ids.size
     end
 
+    # 関連の delete_all は（dependent が無いと）行を消さずに budget_id を NULL にしようとするので、行を直接消す
     def replace_excluded_tags!(budget, tag_ids)
-      budget.budget_excluded_tags.delete_all
+      BudgetExcludedTag.where(budget_id: budget.id).delete_all
       tag_ids.each { |tag_id| budget.budget_excluded_tags.create!(tag_id: tag_id) }
     end
   end
