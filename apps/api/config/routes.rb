@@ -17,6 +17,7 @@ Rails.application.routes.draw do
   get "/bank-account-ledgers/:id", to: "reports/bank_account_ledgers#show", constraints: { id: /\d+/ }
   get "/tag-reports/:id", to: "reports/tag_reports#show", constraints: { id: /\d+/ }
   get "/tag-reports/:id/items", to: "reports/tag_reports#items", constraints: { id: /\d+/ }
+  get "/stock-holdings", to: "reports/stock_holdings#index"
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"
   post "/liability-opening-journals", to: "journals/liability_opening_journals#create"
   post "/journal-entries", to: "journals/journal_entries#create"
@@ -26,6 +27,7 @@ Rails.application.routes.draw do
   put "/income-journals/:id", to: "journals/income_journals#update", constraints: { id: /\d+/ }
   post "/transfer-journals", to: "journals/transfer_journals#create"
   put "/transfer-journals/:id", to: "journals/transfer_journals#update", constraints: { id: /\d+/ }
+  post "/stock-trades", to: "journals/stock_trades#create"
   put "/direct-debit-journals/:id", to: "journals/direct_debit_journals#update", constraints: { id: /\d+/ }
 
   get "/asset-accounts", to: "accounts/asset_accounts#index"

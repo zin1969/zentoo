@@ -47,7 +47,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30、最終更新: 2026-11-28�
 - 仕訳一覧で、キーワード（店舗名・摘要・品目）、科目・口座・カード、タグから仕訳を探せる（M15、2026-11-27 完了）。API は `GET /journals` の `q`・`element_type` と `account_id`（組で指定。費用・収益科目は親を選ぶと子科目も含む）・`tag_id`。条件は期間と AND で、画面の「すべての期間」で期間を外せる。DB は変えていない。検索の条件は画面の中だけで持つので、修正画面などから戻ると初期値（今月・条件なし）に戻る。
 - 資産の口座に種別「証券口座（預り金）」（`securities` = 4）と「投資」（`investment` = 5。iDeCo・積立 NISA・株式など）がある（M16、2026-11-27 完了）。ユーザーの毎月の流れは、銀行 → 証券口座 → 積立 NISA と、銀行 → iDeCo で、どれも振替で登録する。振替は出す元の口座の種別を貸方の `payment_method_type` に入れるので、資産の貸方の制約は 1〜5。お買い物の支払い方法は現金・電子マネーだけ、決まった収支の支払い方法は現金・預金・電子マネーだけ（Web で絞っている。API では制限していない）。
 - 決まった収支で振替も設定・登録できる（M17、2026-11-28 完了）。`recurring_entries.kind` = 3（1 = 支出、2 = 収入）で、列は増やしていない（借方 `debit_account_id` が入金先の口座、貸方が出金元の口座かカード）。登録は振替と同じ DB 関数 `create_transfer_journal`（カードからのチャージは電子マネーだけで、引き落とし仕訳も自動）。摘要は `store_name`、空なら名前。振替の修正（`replace_transfer_journal`）でも回の記録を引き継ぐ。
-- **次は M18「現物株を銘柄ごとに管理」**（未着手、ユーザーの判断）。方針とタスクは `docs/milestones.md`。
+- **M18「現物株を銘柄ごとに管理」は実装中**（2026-11-28 着手。テスト・実機確認・デプロイが残り）。方針とタスクは `docs/milestones.md`、API は `apps/api/docs/interfaces/rest/stock_trades.md`・`stock_holdings.md`。銘柄は種別「投資」の口座で、明細の `shares` で株数を持つ。売りの取得額は移動平均で、売却益・売却損の科目（「株式売却益」「株式売却損」）は名前で探す（名前を変えると売りが 422）。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
 - push 済みかどうかは `git status` で確認する。
 
@@ -91,7 +91,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30、最終更新: 2026-11-28�
 
 ## 落とし穴（過去にハマったもの）
 
-- Rails は未来の日付のマイグレーションを拒否する。最新は `20261128120000`。次は、その日の日付（`YYYYMMDDhhmmss`）で、最新より後の番号を使う。
+- Rails は未来の日付のマイグレーションを拒否する。最新は `20261128130000`。次は、その日の日付（`YYYYMMDDhhmmss`）で、最新より後の番号を使う。
 - DB の `RAISE` を起こすスペックは、`transaction(requires_new: true)` で囲む。
 - 明細の `element_type` は独自の型（`ElementTypeType`）なので、`Debit.where(element_type: 5)` のようなハッシュの条件は `comparison of Integer with ElementType failed` で落ちる。`where("debits.element_type = ?", 5)` と SQL で書く。
 - `spec/rails_helper.rb` の FactoryBot は `config.include` で入れる。素の `include` だと `create` が Object に入り、モジュールから来る `create` アクション（`TwoLevelAccountsActions`）が 404 になる（2026-11-27 に直した）。

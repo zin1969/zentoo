@@ -11,7 +11,8 @@ module Journals
       asset_type:,
       asset_account_id:,
       amount:,
-      user_id:
+      user_id:,
+      shares: nil
     )
       ActiveRecord::Base.transaction do
         @repository.create_opening_asset_balance!(
@@ -19,13 +20,18 @@ module Journals
           asset_type:,
           asset_account_id:,
           amount:,
-          user_id:
+          user_id:,
+          shares:
         )
       end
     rescue CreateOpeningAsset::OpeningAssetAlreadyExists
       raise OpeningAssetAlreadyExistsError
     rescue CreateOpeningAsset::AssetAccountNotFound
       raise AssetAccountNotFoundError
+    rescue CreateOpeningAsset::SharesRequireInvestmentAccount
+      raise SharesRequireInvestmentAccountError
+    rescue CreateOpeningAsset::LaterStockSaleExists
+      raise LaterStockSaleExistsError
     end
   end
 end

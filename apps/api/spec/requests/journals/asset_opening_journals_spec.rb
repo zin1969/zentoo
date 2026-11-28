@@ -51,6 +51,7 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
       allow(form).to receive(:asset_type).and_return('cash')
       allow(form).to receive(:asset_account_id).and_return(1)
       allow(form).to receive(:amount).and_return(1000)
+      allow(form).to receive(:shares).and_return(nil)
 
       # Service
       allow(Journals::CreateOpeningAssetService)
@@ -153,6 +154,7 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
       allow(form).to receive(:asset_type).and_return('cash')
       allow(form).to receive(:asset_account_id).and_return(1)
       allow(form).to receive(:amount).and_return(1000)
+      allow(form).to receive(:shares).and_return(nil)
 
       # Service
       allow(Journals::CreateOpeningAssetService)
@@ -197,6 +199,7 @@ RSpec.describe 'POST /asset-opening-journals', type: :request do
       allow(form).to receive(:asset_type).and_return('cash')
       allow(form).to receive(:asset_account_id).and_return(1)
       allow(form).to receive(:amount).and_return(1000)
+      allow(form).to receive(:shares).and_return(nil)
 
       allow(Journals::CreateOpeningAssetService).to receive(:new).and_return(service)
       allow(service).to receive(:call).and_raise(Journals::AssetAccountNotFoundError)

@@ -9,6 +9,8 @@ export type JournalDebit = {
   // 外税のレシートで登録した明細の税率（%）と税抜の金額。内税の明細は null。消費税は amount - tax_excluded_amount
   tax_rate: number | null;
   tax_excluded_amount: number | null;
+  // 株の銘柄の株数（開始残高・買い）。それ以外の明細は null
+  shares: number | null;
   // 明細に付いているタグ（お買い物の費用の明細だけ）
   tags: { id: number; name: string }[];
 };
@@ -19,6 +21,8 @@ export type JournalCredit = {
   account_id: number;
   account_name: string | null;
   amount: number;
+  // 株の銘柄の株数（売り）。それ以外の明細は null
+  shares: number | null;
 };
 
 export type Journal = {
@@ -102,11 +106,13 @@ const LIABILITY_ELEMENT_TYPE = 2;
 const CREDIT_CARD_PAYMENT_METHOD_TYPE = 3;
 
 // 振替の仕訳（借方が口座 1 つ、貸方が口座かクレジットカード 1 つ）。振替の修正画面で直す。
-// 以前の「現金の預け入れ」もこの形。引き落とし仕訳（借方がカード）は含まれない
+// 以前の「現金の預け入れ」もこの形。引き落とし仕訳（借方がカード）は含まれない。
+// 株の買い（と損益の出ない売り）も同じ形になるが、株数を持つので振替ではない（直せない。削除して登録し直す）
 export function isTransferJournal(journal: Journal) {
   const [debit, ...otherDebits] = journal.debits;
   const [credit, ...otherCredits] = journal.credits;
   if (!debit || !credit || otherDebits.length > 0 || otherCredits.length > 0) return false;
+  if (debit.shares !== null || credit.shares !== null) return false;
 
   return (
     debit.element_type === ASSET_ELEMENT_TYPE &&

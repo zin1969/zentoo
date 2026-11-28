@@ -43,8 +43,9 @@ RSpec.describe 'GET /journals', type: :request do
       'journal_date' => '2026-10-09',
       'store_name' => 'まいばすけっと',
       'debits' => [ { 'element_type' => 5, 'account_id' => food.id, 'account_name' => '食費', 'item_name' => 'パン', 'amount' => 108,
-          'tax_rate' => nil, 'tax_excluded_amount' => nil, 'tags' => [] } ],
-      'credits' => [ { 'element_type' => 1, 'payment_method_type' => 1, 'account_id' => cash.id, 'account_name' => '現金', 'amount' => 108 } ],
+          'tax_rate' => nil, 'tax_excluded_amount' => nil, 'shares' => nil, 'tags' => [] } ],
+      'credits' => [ { 'element_type' => 1, 'payment_method_type' => 1, 'account_id' => cash.id, 'account_name' => '現金', 'amount' => 108,
+          'shares' => nil } ],
       'original_journal_id' => nil,
       'direct_debit_journal_id' => nil
     )

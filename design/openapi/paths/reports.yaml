@@ -37,6 +37,45 @@ account-balances:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
 
+stock-holdings:
+  get:
+    tags: [reports]
+    summary: 銘柄ごとの株数・取得額
+    description: |
+      認証済みユーザーの現物株の銘柄（種別「投資」の口座で、株数を持つ明細があるもの）ごとに、
+      基準日（含む）までの仕訳から株数・取得額・平均取得単価を返す。
+      内部で PostgreSQL 関数 `get_stock_holdings` を呼び出す。
+      参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: getStockHoldings
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: date
+        in: query
+        description: 基準日（この日を含む）。省略すると今日（日本時間）。
+        schema:
+          type: string
+          format: date
+    responses:
+      '200':
+        description: 銘柄ごとの株数・取得額
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/reports.yaml#/StockHoldings'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 基準日の指定が不正（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
 monthly-expenses:
   get:
     tags: [reports]

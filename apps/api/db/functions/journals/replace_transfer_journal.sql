@@ -58,6 +58,19 @@ BEGIN
             c.element_type = ELEMENT_ASSETS
             OR (c.element_type = ELEMENT_LIABILITIES AND c.payment_method_type = PAYMENT_METHOD_CREDIT_CARD)
           )
+     )
+     -- 株の買い（と損益の出ない売り）も同じ形になるが、株数を持つので振替ではない（作り直すと株数が消える）
+     OR EXISTS (
+       SELECT 1
+         FROM debits d
+        WHERE d.journal_id = replace_transfer_journal.journal_id
+          AND d.shares IS NOT NULL
+     )
+     OR EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_transfer_journal.journal_id
+          AND c.shares IS NOT NULL
      ) THEN
     RAISE EXCEPTION 'journal is not a transfer journal: %', journal_id;
   END IF;

@@ -21,8 +21,56 @@ CreateOpeningAssetBalanceJournalRequest:
     amount:
       type: integer
       minimum: 0
+      description: 株の銘柄のときは 株数 × 平均取得単価（円未満は画面で四捨五入）
       examples:
         - 100000
+    shares:
+      type: [integer, 'null']
+      minimum: 1
+      maximum: 2147483647
+      description: |
+        株数（任意）。渡すと株の銘柄の開始残高になり、借方の明細に株数を持たせる。
+        株数を持てるのは種別「投資」の口座（銘柄）だけ。iDeCo・NISA のように株数を持たないものは省略する
+
+StockTradeRequest:
+  type: object
+  description: ユーザー ID はトークンから決まるため、リクエストに含めても無視される。
+  required:
+    - trade_type
+    - journal_date
+    - stock_account_id
+    - securities_account_id
+    - shares
+    - amount
+  properties:
+    trade_type:
+      type: string
+      enum: [buy, sell]
+      description: 買い（`buy`）か売り（`sell`）か
+    journal_date:
+      type: string
+      format: date
+      description: 約定日
+    stock_account_id:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 銘柄（本人の種別「投資」の口座）の ID
+    securities_account_id:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 証券口座（本人の種別「証券口座（預り金）」の口座）の ID
+    shares:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 株数
+    amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 受渡金額。買いは証券口座から出ていった額（手数料込み。手数料も取得額に含める）、売りは証券口座に入った額（手数料・税金を引いたあと）
 
 CreateCashDepositJournalRequest:
   type: object
@@ -217,7 +265,7 @@ Journal:
       type: array
       items:
         type: object
-        required: [element_type, account_id, account_name, amount, tax_rate, tax_excluded_amount, tags]
+        required: [element_type, account_id, account_name, amount, tax_rate, tax_excluded_amount, shares, tags]
         properties:
           element_type:
             type: integer
@@ -236,6 +284,9 @@ Journal:
           tax_excluded_amount:
             type: [integer, 'null']
             description: 外税のレシートで登録した明細の税抜の金額。内税の明細は null。消費税は amount - tax_excluded_amount
+          shares:
+            type: [integer, 'null']
+            description: 株の銘柄の株数（開始残高・買いで増える）。それ以外の明細は null
           tags:
             type: array
             description: 明細に付いているタグ（お買い物の費用の明細だけ）
@@ -245,7 +296,7 @@ Journal:
       type: array
       items:
         type: object
-        required: [element_type, payment_method_type, account_id, account_name, amount]
+        required: [element_type, payment_method_type, account_id, account_name, amount, shares]
         properties:
           element_type:
             type: integer
@@ -257,6 +308,9 @@ Journal:
             type: [string, 'null']
           amount:
             type: integer
+          shares:
+            type: [integer, 'null']
+            description: 株の銘柄の株数（売りで減る）。それ以外の明細は null
     original_journal_id:
       type: [integer, 'null']
       description: この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID

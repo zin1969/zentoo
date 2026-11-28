@@ -106,7 +106,7 @@ function DirectDebitBadge({ journal }: { journal: Journal }) {
 }
 
 // お買い物・収入・振替は、それぞれの画面で直したり、コピーして新しく登録したりできる。
-// それ以外の仕訳（開始残高など）は、削除して登録し直す
+// それ以外の仕訳（開始残高・株の売買など）は、削除して登録し直す
 function journalPath(journal: Journal) {
   if (isEditableJournal(journal)) return `/journal-entries/${journal.id}`;
   if (isIncomeJournal(journal)) return `/income-journals/${journal.id}`;
@@ -145,6 +145,9 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
               {debit.item_name && (
                 <span className="text-xs text-black/50 dark:text-white/50">{debit.item_name}</span>
               )}
+              {debit.shares !== null && (
+                <span className="text-xs text-black/50 dark:text-white/50">+{debit.shares.toLocaleString("ja-JP")} 株</span>
+              )}
               {debit.tags.length > 0 && (
                 <span className="flex flex-wrap gap-1">
                   {debit.tags.map((tag) => (
@@ -166,6 +169,9 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
           {journal.credits.map((credit, i) => (
             <div key={i} className="flex flex-col">
               <span>{credit.account_name ?? "(不明な科目)"}</span>
+              {credit.shares !== null && (
+                <span className="text-xs text-black/50 dark:text-white/50">−{credit.shares.toLocaleString("ja-JP")} 株</span>
+              )}
               <span className="text-right tabular-nums">{formatYen(credit.amount)}</span>
             </div>
           ))}

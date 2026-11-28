@@ -165,6 +165,8 @@ asset-opening-journals:
     description: |
       資産勘定科目の開始残高を登録する。同じ勘定科目の開始残高は 1 件のみ登録できる。
       内部で PostgreSQL 関数 `create_opening_asset_balance_journal` を呼び出す。
+      `shares`（株数）を渡すと、株の銘柄（種別「投資」の口座）の開始残高として、借方の明細に株数を持たせる
+      （PostgreSQL 関数 `create_opening_stock_balance_journal`）。金額は 株数 × 平均取得単価。
       401 以外では新しい `next_token` を返す。
     operationId: createOpeningAssetBalanceJournal
     security:
@@ -201,7 +203,9 @@ asset-opening-journals:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '422':
-        description: バリデーションエラー（`errors`）
+        description: |
+          バリデーションエラー（`errors`）、株数を渡したが種別「投資」の口座ではない（`shares_require_investment_account`）、
+          株数を渡したが、その銘柄に後の日付の売りがある（`later_sale_exists`）
         content:
           application/json:
             schema:
@@ -556,6 +560,59 @@ income-journal:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
 
+stock-trades:
+  post:
+    tags: [journals]
+    summary: 株の売買の登録
+    description: |
+      現物株の買い・売りの仕訳を登録する。銘柄は種別「投資」の口座、相手は証券口座（預り金）。
+      - 買い: 借方 銘柄（株数 +n、金額 = 受渡金額）/ 貸方 証券口座。手数料は取得額に含める
+      - 売り: 借方 証券口座（受け取った額）/ 貸方 銘柄（株数 −n、金額 = 移動平均の取得額）。
+        差額は、高く売ったら貸方 収益科目「株式売却益」、安く売ったら借方 費用科目「株式売却損」（どちらも名前で探す）
+      移動平均の取得額は、約定日（含む）までの取得額 ÷ 株数 × 売る株数（四捨五入）。全部売るときは取得額をそのまま減らす。
+      その銘柄に約定日より後の日付の売りがあると登録できない（その売りの取得額が合わなくなるため。後の売りを削除してから日付の順に登録する）。
+      修正はできない（`DELETE /journals/{id}` で削除して登録し直す）。摘要は「買い 銘柄名」「売り 銘柄名」。
+      内部で PostgreSQL 関数 `create_stock_buy_journal`・`create_stock_sell_journal` を呼び出す。
+      401 以外では新しい `next_token` を返す。
+    operationId: createStockTrade
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/StockTradeRequest'
+    responses:
+      '201':
+        description: 登録成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: |
+          銘柄（`stock_account_not_found`）か証券口座（`securities_account_not_found`）が存在しない、他ユーザーのもの、または種別が違う（区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: |
+          バリデーションエラー（`errors`）、約定日に持っている株数より多く売る（`insufficient_shares`）、
+          その銘柄に後の日付の売りがある（`later_sale_exists`）、
+          売却益・売却損の科目が見つからない（`stock_gain_account_not_found`・`stock_loss_account_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
 transfer-journals:
   post:
     tags: [journals]
@@ -610,7 +667,7 @@ transfer-journal:
     tags: [journals]
     summary: 振替の修正
     description: |
-      振替の仕訳（借方が口座 1 つ、貸方が口座かクレジットカード 1 つ。以前の「現金の預け入れ」も含む）を、新しい内容で作り直す。本文は振替の登録と同じ。
+      振替の仕訳（借方が口座 1 つ、貸方が口座かクレジットカード 1 つ。以前の「現金の預け入れ」も含む。株数を持つ株の売買は除く）を、新しい内容で作り直す。本文は振替の登録と同じ。
       内部で PostgreSQL 関数 `replace_transfer_journal` を呼び出し、元の仕訳（とカードからのチャージの引き落とし仕訳）を削除して、登録と同じ確認をしながら登録し直す。
       失敗した場合は、元の仕訳がそのまま残る。**仕訳の ID は変わる**。カードからのチャージの引き落とし日は、自動の計算に戻る。
       401 以外では新しい `next_token` を返す。

@@ -25,6 +25,13 @@ ExpenseAccount.find_or_create_by!(
   name: "教育費"
 )
 
+# 株の売りで使う（DB 関数 create_stock_sell_journal が名前で探す）。本番はマイグレーション（20261128130000）で入れている
+ExpenseAccount.find_or_create_by!(
+  user: nil,
+  parent: nil,
+  name: "株式売却損"
+)
+
 # 食費 配下
 ExpenseAccount.find_or_create_by!(
   user: nil,

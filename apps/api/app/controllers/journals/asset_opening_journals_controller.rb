@@ -17,7 +17,8 @@ module Journals
         journal_date: params[:journal_date],
         asset_type: ElementType.new(params[:asset_type]),
         asset_account_id: params[:asset_account_id],
-        amount: Amount.new(params[:amount])
+        amount: Amount.new(params[:amount]),
+        shares: params[:shares]
       )
 
       unless form.valid?
@@ -33,7 +34,8 @@ module Journals
         asset_type: form.asset_type,
         asset_account_id: form.asset_account_id,
         amount: form.amount,
-        user_id: user.id
+        user_id: user.id,
+        shares: form.shares
       )
 
       render json: {
@@ -46,6 +48,20 @@ module Journals
         error: "opening_asset_already_exists",
         next_token: next_token
       }, status: :conflict
+
+    rescue Journals::SharesRequireInvestmentAccountError
+      # 株数を持てるのは種別「投資」の口座（銘柄）だけ
+      render json: {
+        error: "shares_require_investment_account",
+        next_token: next_token
+      }, status: :unprocessable_content
+
+    rescue Journals::LaterStockSaleExistsError
+      # その銘柄に後の日付の売りがあると、その売りの取得額（移動平均）が合わなくなる
+      render json: {
+        error: "later_sale_exists",
+        next_token: next_token
+      }, status: :unprocessable_content
 
     rescue Journals::AssetAccountNotFoundError
       # 存在しない科目と他ユーザーの科目は区別しない

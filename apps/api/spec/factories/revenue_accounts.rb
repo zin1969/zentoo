@@ -15,5 +15,14 @@ FactoryBot.define do
     trait :bonus do
       name { "賞与" }
     end
+
+    trait :dividend do
+      name { "配当金" }
+    end
+
+    # 株の売りで、取得額より高く売ったときに使う
+    trait :stock_gain do
+      name { "株式売却益" }
+    end
   end
 end

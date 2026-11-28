@@ -43,6 +43,46 @@ AccountBalances:
       type: integer
       description: total_assets − total_liabilities
 
+StockHolding:
+  type: object
+  required: [account_id, account_name, shares, cost, average_price]
+  properties:
+    account_id:
+      type: integer
+      description: 銘柄（種別「投資」の口座）の ID
+    account_name:
+      type: string
+      examples:
+        - トヨタ 7203
+    shares:
+      type: integer
+      description: 株数（借方 − 貸方の株数の合計）。全部売ると 0
+    cost:
+      type: integer
+      description: 取得額（銘柄の口座の残高。手数料を含む）
+    average_price:
+      type: [number, 'null']
+      description: 平均取得単価（取得額 ÷ 株数、小数第 2 位まで四捨五入）。株数が 0 のときは null
+      examples:
+        - 2550.25
+
+StockHoldings:
+  type: object
+  required: [date, holdings, total_cost]
+  properties:
+    date:
+      type: string
+      format: date
+      description: 基準日
+    holdings:
+      type: array
+      description: 基準日までに株数を持つ明細がある銘柄（口座の ID 順）。iDeCo・NISA のように株数を持たない投資の口座は含めない
+      items:
+        $ref: '#/StockHolding'
+    total_cost:
+      type: integer
+      description: 取得額の合計
+
 MonthlyExpense:
   type: object
   required:

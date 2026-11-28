@@ -38,5 +38,16 @@ FactoryBot.define do
       asset_type { :investment }
       name { "iDeCo" }
     end
+
+    # 現物株の銘柄（種別「投資」）
+    trait :toyota do
+      asset_type { :investment }
+      name { "トヨタ 7203" }
+    end
+
+    trait :sony do
+      asset_type { :investment }
+      name { "ソニー 6758" }
+    end
   end
 end

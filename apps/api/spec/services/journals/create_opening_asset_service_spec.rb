@@ -31,7 +31,8 @@ RSpec.describe Journals::CreateOpeningAssetService do
           asset_type: asset_type,
           asset_account_id: asset_account_id,
           amount: amount,
-          user_id: user_id
+          user_id: user_id,
+          shares: nil
         )
 
         expect(result).to eq(456)

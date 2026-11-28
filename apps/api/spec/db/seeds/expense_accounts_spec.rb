@@ -11,7 +11,7 @@ RSpec.describe "db/seeds/expense_accounts.rb" do
     seed
 
     expect(ExpenseAccount.where(name: "root")).to be_empty
-    expect(ExpenseAccount.where(parent_id: nil).order(:id).pluck(:name)).to eq(%w[食費 娯楽費 交通費 教育費])
+    expect(ExpenseAccount.where(parent_id: nil).order(:id).pluck(:name)).to eq(%w[食費 娯楽費 交通費 教育費 株式売却損])
   end
 
   it "puts the sub accounts under their top-level account" do

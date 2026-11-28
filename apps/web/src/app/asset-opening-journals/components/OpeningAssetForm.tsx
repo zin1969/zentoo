@@ -28,9 +28,28 @@ function extractErrorMessage(error: unknown): string {
       return "選択した勘定科目が見つかりません。画面を再読み込みしてください。";
     }
 
+    if (data?.error === "shares_require_investment_account") {
+      return "株数を入れられるのは、種別「投資」の口座（株の銘柄）だけです。";
+    }
+
+    if (data?.error === "later_sale_exists") {
+      return "この銘柄には、もっと後の日付の売りがあります。先にその売りを仕訳一覧で削除してください。";
+    }
+
   }
 
   return "登録に失敗しました。時間をおいて再度お試しください。";
+}
+
+const INVESTMENT = 5;
+
+// 株数 × 平均取得単価（円未満は四捨五入）。どちらかが空なら null
+function stockAmount(shares: string, averagePrice: string) {
+  const sharesNumber = Number(shares);
+  const priceNumber = Number(averagePrice);
+  if (!shares || !averagePrice || !(sharesNumber > 0) || !(priceNumber > 0)) return null;
+
+  return Math.round(sharesNumber * priceNumber);
 }
 
 // 認証切れ（BFF がトークン Cookie を破棄済み）の場合は、ログイン画面へ誘導する。
@@ -43,6 +62,9 @@ export default function OpeningAssetForm() {
   const [journalDate, setJournalDate] = useState("");
   const [assetAccountId, setAssetAccountId] = useState("");
   const [amount, setAmount] = useState("");
+  // 株の銘柄（種別「投資」の口座）のときだけ。入れると金額は 株数 × 平均取得単価 になる
+  const [shares, setShares] = useState("");
+  const [averagePrice, setAveragePrice] = useState("");
   const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -61,6 +83,11 @@ export default function OpeningAssetForm() {
       });
   }, [router]);
 
+  const selectedAccount = assetAccounts.find((a) => String(a.id) === assetAccountId);
+  const isInvestment = selectedAccount?.payment_method_type === INVESTMENT;
+  const computedAmount = isInvestment ? stockAmount(shares, averagePrice) : null;
+  const sendsShares = computedAmount !== null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("submitting");
@@ -71,13 +98,16 @@ export default function OpeningAssetForm() {
         journal_date: journalDate,
         asset_type: 1,
         asset_account_id: Number(assetAccountId),
-        amount: Number(amount)
+        amount: sendsShares ? computedAmount : Number(amount),
+        ...(sendsShares ? { shares: Number(shares) } : {})
       });
 
       setStatus("success");
       setJournalDate("");
       setAssetAccountId("");
       setAmount("");
+      setShares("");
+      setAveragePrice("");
     } catch (error) {
       if (isUnauthorized(error)) {
         router.replace("/login");
@@ -144,6 +174,48 @@ export default function OpeningAssetForm() {
         </select>
       </div>
 
+      {isInvestment && (
+        <div className="flex flex-col gap-3 rounded-md bg-black/5 p-3 dark:bg-white/5">
+          <p className="text-xs text-black/60 dark:text-white/60">
+            株の銘柄なら、株数と平均取得単価を入れてください（金額は 株数 × 平均取得単価）。iDeCo・NISA のように株数を持たないものは空のまま金額を入れます。
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="shares" className="text-sm font-medium text-foreground">
+                株数
+              </label>
+              <input
+                id="shares"
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={shares}
+                onChange={(e) => setShares(e.target.value)}
+                required={averagePrice !== ""}
+                className={`${inputClass} text-right`}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="average-price" className="text-sm font-medium text-foreground">
+                平均取得単価
+              </label>
+              <input
+                id="average-price"
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={averagePrice}
+                onChange={(e) => setAveragePrice(e.target.value)}
+                required={shares !== ""}
+                className={`${inputClass} text-right`}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <label htmlFor="amount" className="text-sm font-medium text-foreground">
           金額
@@ -156,10 +228,11 @@ export default function OpeningAssetForm() {
             id="amount"
             type="number"
             min="0"
-            value={amount}
+            value={sendsShares ? String(computedAmount) : amount}
             onChange={(e) => setAmount(e.target.value)}
+            readOnly={sendsShares}
             required
-            className={`${inputClass} w-full pl-7 text-right`}
+            className={`${inputClass} w-full pl-7 text-right ${sendsShares ? "bg-black/5 dark:bg-white/5" : ""}`}
           />
         </div>
       </div>

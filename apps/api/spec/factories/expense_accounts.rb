@@ -39,5 +39,10 @@ FactoryBot.define do
     trait :manga do
       name { "漫画" }
     end
+
+    # 株の売りで、取得額より安く売ったときに使う
+    trait :stock_loss do
+      name { "株式売却損" }
+    end
   end
 end

@@ -68,12 +68,16 @@ paths:
     $ref: './paths/journals.yaml#/income-journals'
   /income-journals/{id}:
     $ref: './paths/journals.yaml#/income-journal'
+  /stock-trades:
+    $ref: './paths/journals.yaml#/stock-trades'
   /transfer-journals:
     $ref: './paths/journals.yaml#/transfer-journals'
   /transfer-journals/{id}:
     $ref: './paths/journals.yaml#/transfer-journal'
   /account-balances:
     $ref: './paths/reports.yaml#/account-balances'
+  /stock-holdings:
+    $ref: './paths/reports.yaml#/stock-holdings'
   /monthly-expenses:
     $ref: './paths/reports.yaml#/monthly-expenses'
   /bank-account-ledgers/{id}:
@@ -142,6 +146,8 @@ components:
       $ref: './schemas/journals.yaml#/IncomeJournalRequest'
     TransferJournalRequest:
       $ref: './schemas/journals.yaml#/TransferJournalRequest'
+    StockTradeRequest:
+      $ref: './schemas/journals.yaml#/StockTradeRequest'
     JournalList:
       $ref: './schemas/journals.yaml#/JournalList'
     Journal:
@@ -150,6 +156,10 @@ components:
       $ref: './schemas/reports.yaml#/AccountBalance'
     AccountBalances:
       $ref: './schemas/reports.yaml#/AccountBalances'
+    StockHolding:
+      $ref: './schemas/reports.yaml#/StockHolding'
+    StockHoldings:
+      $ref: './schemas/reports.yaml#/StockHoldings'
     MonthlyExpense:
       $ref: './schemas/reports.yaml#/MonthlyExpense'
     MonthlyExpenses:
