@@ -261,7 +261,8 @@ journal-entry:
     tags: [journals]
     summary: お買い物の仕訳の修正
     description: |
-      お買い物の仕訳（借方がすべて費用）を、新しい内容で作り直す。本文は仕訳の登録と同じ（借方はすべて費用にする）。
+      お買い物の仕訳（借方がすべて費用か立替金。全額を立て替えて費用の明細が無いものも含む）を、新しい内容で作り直す。
+      本文は仕訳の登録と同じ（借方は費用か本人の立替金の口座にする）。精算の仕訳は `PUT /settlement-journals/{id}` で直す。
       内部で PostgreSQL 関数 `replace_journal_entry` を呼び出し、元の仕訳（とカード払いの引き落とし仕訳）を削除して、
       登録と同じ確認をしながら登録し直す。失敗した場合は、元の仕訳がそのまま残る。
       **仕訳の ID は変わる**。新しい ID を `journal_id` で返す。
@@ -306,7 +307,7 @@ journal-entry:
       '422':
         description: |
           バリデーションエラー（`errors`）、引き落とし仕訳（`direct_debit_journal_not_editable`）、
-          お買い物の仕訳ではない（`journal_not_editable`）、借方に費用以外がある（`expense_debits_required`）、
+          お買い物の仕訳ではない（`journal_not_editable`）、借方に費用と本人の立替金以外がある（`expense_debits_required`）、
           貸借不一致（`unbalanced_journal`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）、費用以外の明細にタグがある（`tags_only_for_expense_debits`）、費用以外の明細に税率がある（`tax_only_for_expense_debits`）
         content:
           application/json:
@@ -560,6 +561,108 @@ income-journal:
             schema:
               $ref: '../schemas/error.yaml#/ErrorResponse'
 
+settlement-journals:
+  post:
+    tags: [journals]
+    summary: 立替金の精算の登録
+    description: |
+      立て替えた分（立替金の口座、種別 6）を返してもらったときの仕訳を登録する。
+      - 額どおり: 借方 入金先 / 貸方 立替金
+      - 少なく受け取った: 借方 入金先・費用（差額）/ 貸方 立替金
+      - 多く受け取った: 借方 入金先 / 貸方 立替金・収益（差額）
+      - 受け取りなし（全額おごり）: 借方 費用 / 貸方 立替金
+      立替金から出すのは精算だけ（振替では出せない）。摘要が空なら「精算 立替金の口座名」。
+      内部で PostgreSQL 関数 `create_settlement_journal` を呼び出す。
+      401 以外では新しい `next_token` を返す。
+    operationId: createSettlementJournal
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/SettlementJournalRequest'
+    responses:
+      '201':
+        description: 登録成功
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: |
+          立替金の口座（`receivable_account_not_found`）、入金先（`to_account_not_found`）、
+          差額の科目（`difference_account_not_found`。少なく受け取ったのに費用科目でない、多く受け取ったのに収益科目でない場合も）が
+          存在しない、他ユーザーのもの、または種別が違う（区別しない）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+settlement-journal:
+  put:
+    tags: [journals]
+    summary: 立替金の精算の修正
+    description: |
+      精算の仕訳（貸方に立替金が 1 つある）を、新しい内容で作り直す。本文は精算の登録と同じ。
+      内部で PostgreSQL 関数 `replace_settlement_journal` を呼び出す。失敗した場合は、元の仕訳がそのまま残る。**仕訳の ID は変わる**。
+      401 以外では新しい `next_token` を返す。
+    operationId: replaceSettlementJournal
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: 修正する仕訳の ID
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/journals.yaml#/SettlementJournalRequest'
+    responses:
+      '200':
+        description: 修正成功（`journal_id` は作り直した仕訳の新しい ID）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/journals.yaml#/JournalCreatedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 仕訳（`journal_not_found`）か、口座・科目（登録と同じ）が見つからない
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）、精算の仕訳ではない（`journal_not_editable`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
 stock-trades:
   post:
     tags: [journals]
@@ -656,7 +759,8 @@ transfer-journals:
       '422':
         description: |
           バリデーションエラー（`errors`）、出す元と入れる先が同じ口座（`same_account`）、
-          カードから電子マネー以外への振替（`credit_card_charge_requires_e_money`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）
+          カードから電子マネー以外への振替（`credit_card_charge_requires_e_money`）、カードの引き落とし設定が無い（`credit_card_setting_not_found`）、
+          出す元が立替金の口座（`receivable_requires_settlement`。返してもらった分は `POST /settlement-journals` で登録する）
         content:
           application/json:
             schema:

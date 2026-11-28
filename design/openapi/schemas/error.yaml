@@ -51,6 +51,9 @@ ErrorResponse:
         - later_sale_exists
         - stock_gain_account_not_found
         - stock_loss_account_not_found
+        - receivable_requires_settlement
+        - receivable_account_not_found
+        - difference_account_not_found
     errors:
       type: array
       items:

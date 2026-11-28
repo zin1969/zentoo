@@ -39,7 +39,7 @@ GET /journals/{id}
   "journal_date": "2026-10-20",
   "store_name": "Aquavit 001",
   "debits": [
-    { "element_type": 5, "account_id": 7, "account_name": "外食", "item_name": "バー", "amount": 3300, "tax_rate": 10, "tax_excluded_amount": 3000, "shares": null, "tags": [] }
+    { "element_type": 5, "account_id": 7, "account_name": "外食", "asset_type": null, "item_name": "バー", "amount": 3300, "tax_rate": 10, "tax_excluded_amount": 3000, "shares": null, "tags": [] }
   ],
   "credits": [
     { "element_type": 2, "payment_method_type": 3, "account_id": 3, "account_name": "tcard", "amount": 3300, "shares": null }
@@ -50,6 +50,7 @@ GET /journals/{id}
 ```
 
 - 借方の `tax_rate` / `tax_excluded_amount`: 外税のレシートで登録した明細の税率（%）と税抜の金額。内税の明細は `null`。消費税は `amount - tax_excluded_amount`
+- `asset_type`（借方）: 資産の明細の口座の種別（6 = 立替金など）。資産以外の明細は `null`
 - `shares`: 株の銘柄の株数（借方は開始残高・買い、貸方は売り。[株の売買 API](stock_trades.md)）。それ以外の明細は `null`
 
 ### Not Found (404 Not Found)

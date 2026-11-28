@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/apiFetch";
-import { ASSET_TYPES, getAssetAccounts, type AssetAccount } from "@/lib/masters/assetAccounts";
+import { NON_RECEIVABLE_ASSET_TYPES, getAssetAccounts, type AssetAccount } from "@/lib/masters/assetAccounts";
 import { getRevenueAccounts, type RevenueAccount } from "@/lib/masters/revenueAccounts";
 import { createIncomeJournal, updateIncomeJournal } from "@/lib/journals/incomeJournals";
 import type { Journal } from "@/lib/journals/journals";
@@ -197,7 +197,8 @@ export default function IncomeJournalForm({ journal, copy = false }: Props = {})
           className={inputClass}
         >
           <option value="">入金先を選択</option>
-          {ASSET_TYPES.map((type) => (
+          {/* 立替金は収入の入金先にしない（返してもらった分は精算の画面で登録する） */}
+          {NON_RECEIVABLE_ASSET_TYPES.map((type) => (
             <optgroup key={type.value} label={type.label}>
               {assetAccounts
                 .filter((account) => account.payment_method_type === type.value)

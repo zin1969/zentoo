@@ -9,8 +9,10 @@ DECLARE
   v_carry_card_id INT;
   v_occurrence_entry_ids BIGINT[];
   v_occurrence_dates DATE[];
+  ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_EXPENSES CONSTANT INT := 5;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
   DIRECT_DEBIT_PAYMENT_DATE_SETTING CONSTANT TEXT := 'app.direct_debit_payment_date';
 BEGIN
@@ -38,8 +40,8 @@ BEGIN
     RAISE EXCEPTION 'direct debit journal cannot be updated: %', journal_id;
   END IF;
 
-  -- 修正できるのはお買い物の仕訳（借方がすべて費用）だけ。
-  -- 開始残高や預け入れは画面の項目が違うので、削除して登録し直す
+  -- 修正できるのはお買い物の仕訳（借方がすべて費用か立替金）だけ。立て替えた分は立替金の口座の明細になり、
+  -- 全額を立て替えたときは費用の明細が無い。開始残高や預け入れは画面の項目が違うので、削除して登録し直す
   IF NOT EXISTS (
        SELECT 1
          FROM debits d
@@ -50,17 +52,49 @@ BEGIN
          FROM debits d
         WHERE d.journal_id = replace_journal_entry.journal_id
           AND d.element_type <> ELEMENT_EXPENSES
+          AND NOT (
+            d.element_type = ELEMENT_ASSETS
+            AND d.shares IS NULL
+            AND EXISTS (
+              SELECT 1
+                FROM asset_accounts aa
+               WHERE aa.id = d.account_id
+                 AND aa.asset_type = ASSET_TYPE_RECEIVABLE
+            )
+          )
+     )
+     -- 全額おごりの精算（借方が費用だけ、貸方が立替金）は、精算の画面で直す
+     OR EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_journal_entry.journal_id
+          AND c.element_type = ELEMENT_ASSETS
+          AND c.payment_method_type = ASSET_TYPE_RECEIVABLE
      ) THEN
     RAISE EXCEPTION 'journal is not a shopping journal: %', journal_id;
   END IF;
 
-  -- 修正後も、お買い物の仕訳のままにする
-  IF EXISTS (
-    SELECT 1
-      FROM jsonb_to_recordset(journal_data->'debits') AS x(element_type INT)
-     WHERE x.element_type IS DISTINCT FROM ELEMENT_EXPENSES
-  ) THEN
-    RAISE EXCEPTION 'shopping journal must debit expenses only';
+  -- 修正後も、お買い物の仕訳（借方が費用か本人の立替金）のままにする
+  IF NOT EXISTS (
+       SELECT 1
+         FROM jsonb_to_recordset(journal_data->'debits') AS x(element_type INT)
+     )
+     OR EXISTS (
+       SELECT 1
+         FROM jsonb_to_recordset(journal_data->'debits') AS x(element_type INT, account_id INT)
+        WHERE x.element_type IS DISTINCT FROM ELEMENT_EXPENSES
+          AND NOT (
+            x.element_type = ELEMENT_ASSETS
+            AND EXISTS (
+              SELECT 1
+                FROM asset_accounts aa
+               WHERE aa.id = x.account_id
+                 AND aa.user_id = v_user_id
+                 AND aa.asset_type = ASSET_TYPE_RECEIVABLE
+            )
+          )
+     ) THEN
+    RAISE EXCEPTION 'shopping journal must debit expenses or receivables only';
   END IF;
 
   -- 引き落とし日を手で変えていたら、その日とカードを覚えておく。

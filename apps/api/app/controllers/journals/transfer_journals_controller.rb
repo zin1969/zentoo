@@ -21,6 +21,11 @@ module Journals
       render_error("credit_card_charge_requires_e_money", :unprocessable_content)
     end
 
+    # 立替金から返してもらうのは精算（POST /settlement-journals）で登録する
+    rescue_from Journals::TransferJournals::ReceivableRequiresSettlement do
+      render_error("receivable_requires_settlement", :unprocessable_content)
+    end
+
     rescue_from Journals::TransferJournals::CreditCardSettingNotFound do
       render_error("credit_card_setting_not_found", :unprocessable_content)
     end

@@ -36,7 +36,7 @@ module Journals
         DirectDebitJournalNotEditable.new
       when /journal is not a shopping journal/
         JournalNotEditable.new
-      when /shopping journal must debit expenses only/
+      when /shopping journal must debit expenses or receivables only/
         ExpenseDebitsRequired.new
       when /unbalance debit and credit/
         InsertJournalEntry::UnbalancedJournal.new

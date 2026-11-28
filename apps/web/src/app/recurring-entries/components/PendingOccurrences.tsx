@@ -32,6 +32,8 @@ function errorMessage(error: unknown) {
         return "出金元と入金先が同じ口座です。決まった収支の設定を確かめてください。";
       case "credit_card_charge_requires_e_money":
         return "クレジットカードから入れられるのは、電子マネーだけです。決まった収支の設定を確かめてください。";
+      case "receivable_requires_settlement":
+        return "立替金から出す振替は登録できません。返してもらった分は「立替金の精算」で登録してください。";
     }
 
     if (error.data?.errors?.length) {

@@ -63,6 +63,7 @@ PUT  /transfer-journals/{id}
 ## 登録と修正の仕方
 - 登録は DB 関数 `create_transfer_journal`。借方: 入れる先の口座、貸方: 出す元の仕訳を 1 つ作る
 - 出す元と入れる先は、同じ口座にできない
+- 立替金の口座（種別 6）には入れられるが（例: 仕事で乗った分を PASMO → 立替金 会社）、立替金から出すことはできない。返してもらった分は [精算 API](settlement_journals.md) で登録する
 - クレジットカードから入れられるのは電子マネーだけ（チャージ）。お買い物のカード払いと同じく、カードの締め日・支払日から引き落とし仕訳を自動で作る（[通帳](bank_account_ledgers.md)に引き落とし予定として出る）
 - 修正は DB 関数 `replace_transfer_journal`。振替の仕訳（借方が口座 1 つ、貸方が口座かクレジットカード 1 つ。株数を持つ株の売買は除く）か確かめてから、元の仕訳を削除して、登録と同じ確認をしながら登録し直す。失敗した場合は元の仕訳が残る。**仕訳の ID は変わる**
 - 決まった振替（[決まった支払い API](recurring_entries.md)）で登録した仕訳を修正しても、回の記録は新しい仕訳に付いたまま
@@ -88,6 +89,7 @@ PUT  /transfer-journals/{id}
 | 422 | `same_account` | 出す元と入れる先が同じ口座 |
 | 422 | `credit_card_charge_requires_e_money` | カードから電子マネー以外に入れようとした |
 | 422 | `credit_card_setting_not_found` | カードの引き落とし設定が無い |
+| 422 | `receivable_requires_settlement` | 出す元が立替金の口座（返してもらった分は [精算 API](settlement_journals.md) で登録する） |
 | 422 | `journal_not_editable` | 振替の仕訳ではない（株の売買を含む。PUT） |
 | 422 | `errors` | 本文のバリデーションエラー |
 

@@ -50,7 +50,7 @@ GET /journals
       "journal_date": "2026-10-27",
       "store_name": "フェザー・ステップ",
       "debits": [
-        { "element_type": 2, "account_id": 3, "account_name": "tcard", "item_name": "革靴", "amount": 14000, "tax_rate": null, "tax_excluded_amount": null, "shares": null, "tags": [] }
+        { "element_type": 2, "account_id": 3, "account_name": "tcard", "asset_type": null, "item_name": "革靴", "amount": 14000, "tax_rate": null, "tax_excluded_amount": null, "shares": null, "tags": [] }
       ],
       "credits": [
         { "element_type": 1, "payment_method_type": 2, "account_id": 2, "account_name": "三菱UFJ銀行 用賀出張所", "amount": 14000, "shares": null }
@@ -62,12 +62,15 @@ GET /journals
   ],
   "page": 1,
   "per_page": 50,
-  "total_count": 1
+  "total_count": 1,
+  "account_totals": null
 }
 ```
 
 - `account_name`: 科目の名前。科目を引けない場合は `null`
 - `shares`: 株の銘柄の株数（借方は開始残高・買いで増える分、貸方は売りで減る分。[株の売買 API](stock_trades.md)）。それ以外の明細は `null`
+- `asset_type`（借方）: 資産の明細の口座の種別（6 = 立替金など。[口座](accounts.md)と同じ値）。資産以外の明細は `null`
+- `account_totals`: `element_type` と `account_id` で科目を指定したときだけ、条件に合う仕訳全体（全ページ）での、その科目（費用・収益科目は子科目も含む）の借方合計・貸方合計（`{ "debit_total": 1620, "credit_total": 0 }`）。指定しないときは `null`。立替金なら、借方が立て替えた額、貸方が精算した額
 - `tags`（借方）: 明細に付いているタグ（`{ "id", "name" }` の配列。お買い物の費用の明細だけ。付いていなければ空配列）
 - `original_journal_id`: この仕訳が引き落とし仕訳の場合、元のカード払い仕訳の ID。それ以外は `null`
 - `payment_date_overridden`: 引き落とし仕訳の日付を手で変えた場合は `true`（[引き落とし日の変更 API](direct_debit_journals.md)）。引き落とし仕訳以外は `false`

@@ -21,6 +21,7 @@ DECLARE
   ASSET_TYPE_CASH CONSTANT INT := 1;
   ASSET_TYPE_DEPOSIT CONSTANT INT := 2;
   ASSET_TYPE_E_MONEY CONSTANT INT := 3;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
   LIABILITY_TYPE_CREDIT_CARD CONSTANT INT := 3;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
 BEGIN
@@ -51,6 +52,11 @@ BEGIN
 
     IF NOT FOUND THEN
       RAISE EXCEPTION 'from account not found: %', from_account_id;
+    END IF;
+
+    -- 立替金から返してもらうのは精算（create_settlement_journal）で登録する。差額を費用・収益にできるようにするため
+    IF v_from_type = ASSET_TYPE_RECEIVABLE THEN
+      RAISE EXCEPTION 'receivable must be settled: %', from_account_id;
     END IF;
 
     IF from_account_id = to_account_id THEN

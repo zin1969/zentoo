@@ -37,7 +37,7 @@ PUT /journal-entries/{id}
 - 確認で失敗した場合は、元の仕訳がそのまま残る
 - **仕訳の ID は変わる**。レスポンスの `journal_id` が新しい ID
 - カード払いの引き落とし仕訳も作り直す。現金払いとカード払いを切り替えた場合も、引き落とし仕訳が正しく作られる（または消える）
-- 修正できるのはお買い物の仕訳（借方がすべて費用）だけ。収入は [収入の修正](income_journals.md)、振替（以前の預け入れを含む）は [振替の修正](transfer_journals.md) で直す。引き落とし仕訳の日付は [引き落とし日の変更](direct_debit_journals.md)。開始残高は修正できない（削除して登録し直す）
+- 修正できるのはお買い物の仕訳（借方がすべて費用か立替金。全額を立て替えて費用の明細が無いものも含む）だけ。精算は [精算の修正](settlement_journals.md) で直す。収入は [収入の修正](income_journals.md)、振替（以前の預け入れを含む）は [振替の修正](transfer_journals.md) で直す。引き落とし仕訳の日付は [引き落とし日の変更](direct_debit_journals.md)。開始残高は修正できない（削除して登録し直す）
 
 ## Response
 
@@ -71,7 +71,7 @@ PUT /journal-entries/{id}
 | `errors` | 本文のバリデーションエラー |
 | `direct_debit_journal_not_editable` | 引き落とし仕訳を指定した |
 | `journal_not_editable` | お買い物の仕訳ではない（開始残高、預け入れなど） |
-| `expense_debits_required` | 借方に費用以外の科目がある |
+| `expense_debits_required` | 借方に費用と本人の立替金以外の科目がある |
 | `unbalanced_journal` | 借方と貸方の合計が一致しない |
 | `credit_card_setting_not_found` | カード払いなのに、カードの引き落とし設定が無い |
 

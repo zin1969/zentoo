@@ -2,10 +2,11 @@ import Link from "next/link";
 import LogoutButton from "./components/LogoutButton";
 
 const MENU = [
-  { href: "/journal-entries", title: "お買い物登録", description: "日々の支出を登録する" },
+  { href: "/journal-entries", title: "お買い物登録", description: "日々の支出を登録する。ほかの人・会社の分を立て替えたときも、ここで立替金に分ける" },
   { href: "/income-journals", title: "収入登録", description: "給料などの収入を、入金先の口座に登録する" },
   { href: "/recurring-entries", title: "決まった収支", description: "家賃・サブスク・給料・積立など、決まった支払い・収入・振替の今月の分を確かめて登録する" },
-  { href: "/transfer-journals", title: "振替", description: "ATM での引き出し・預け入れ、口座間の振替、電子マネーへのチャージ、証券口座・iDeCo・NISA への積立を登録する" },
+  { href: "/transfer-journals", title: "振替", description: "ATM での引き出し・預け入れ、口座間の振替、電子マネーへのチャージ、証券口座・iDeCo・NISA への積立、仕事の交通費の立替金への付け替えを登録する" },
+  { href: "/settlement-journals", title: "立替金の精算", description: "立て替えた分（友だち・会社）を返してもらったら登録する。金額が違えば差額を支出か収入にする" },
   { href: "/stock-trades", title: "株の売買", description: "現物株の買い・売りを、証券口座（預り金）との間で登録する。売りの損益は自動で計算する" },
   { href: "/journals", title: "仕訳一覧", description: "登録した仕訳を期間で確認する" },
   { href: "/account-balances", title: "残高", description: "口座・現金・カードの残高を確認する" },

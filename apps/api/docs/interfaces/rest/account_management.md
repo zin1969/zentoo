@@ -52,7 +52,7 @@ DELETE /revenue-accounts/{id}
 | Name       | Required | Description |
 | ---------- | -------- | ----------- |
 | name       | Yes      | 口座の名前 |
-| asset_type | Yes      | 1 = 現金, 2 = 預貯金, 3 = 電子マネー, 4 = 証券口座（預り金）, 5 = 投資（iDeCo・積立 NISA・株式など）（一覧の `payment_method_type` と同じ値） |
+| asset_type | Yes      | 1 = 現金, 2 = 預貯金, 3 = 電子マネー, 4 = 証券口座（預り金）, 5 = 投資（iDeCo・積立 NISA・株式など）, 6 = 立替金（立て替えた相手ごと。[精算 API](settlement_journals.md)）（一覧の `payment_method_type` と同じ値） |
 
 - 現金の口座は 1 つだけ（現金の預け入れが、現金の口座が 1 つに決まることを前提にしているため）
 - 次の口座は「使われている」扱いで、削除と種別の変更ができない: 仕訳か決まった支払いで使われている口座、カードの引き落とし口座になっている預金口座

@@ -49,5 +49,26 @@ FactoryBot.define do
       asset_type { :investment }
       name { "ソニー 6758" }
     end
+
+    trait :pasmo do
+      asset_type { :e_money }
+      name { "PASMO" }
+    end
+
+    # 立替金（相手ごと）
+    trait :advance_tanaka do
+      asset_type { :receivable }
+      name { "立替金 田中" }
+    end
+
+    trait :advance_suzuki do
+      asset_type { :receivable }
+      name { "立替金 鈴木" }
+    end
+
+    trait :advance_company do
+      asset_type { :receivable }
+      name { "立替金 会社" }
+    end
   end
 end

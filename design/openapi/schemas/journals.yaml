@@ -72,6 +72,47 @@ StockTradeRequest:
       maximum: 2147483647
       description: 受渡金額。買いは証券口座から出ていった額（手数料込み。手数料も取得額に含める）、売りは証券口座に入った額（手数料・税金を引いたあと）
 
+SettlementJournalRequest:
+  type: object
+  description: ユーザー ID はトークンから決まるため、リクエストに含めても無視される。
+  required:
+    - journal_date
+    - receivable_account_id
+    - settled_amount
+    - received_amount
+  properties:
+    journal_date:
+      type: string
+      format: date
+    receivable_account_id:
+      type: integer
+      minimum: 1
+      description: 立替金の口座（本人の種別 6 の口座）の ID
+    settled_amount:
+      type: integer
+      minimum: 1
+      maximum: 2147483647
+      description: 消し込む額（立替金から減らす額）
+    received_amount:
+      type: integer
+      minimum: 0
+      maximum: 2147483647
+      description: 受け取った額。全額おごりになったときは 0
+    to_account_id:
+      type: [integer, 'null']
+      minimum: 1
+      description: 入金先の口座（本人の、立替金以外の口座）。受け取った額が 1 以上のときに必須。0 のときは無視する
+    difference_account_id:
+      type: [integer, 'null']
+      minimum: 1
+      description: |
+        差額（消し込む額 − 受け取った額）の科目。少なく受け取ったら費用科目、多く受け取ったら収益科目（共通か本人の科目）。
+        差額があるときに必須。差額が無いときは無視する
+    description:
+      type: [string, 'null']
+      maxLength: 100
+      description: 摘要。空なら「精算 立替金の口座名」
+
 CreateCashDepositJournalRequest:
   type: object
   description: ユーザー ID はトークンから決まるため、リクエストに含めても無視される。
@@ -242,6 +283,17 @@ JournalList:
     total_count:
       type: integer
       description: 期間に該当する仕訳の総数
+    account_totals:
+      type: ['object', 'null']
+      description: |
+        `element_type` と `account_id` で科目を指定したときだけ、条件に合う仕訳全体（全ページ）での、
+        その科目（費用・収益科目は子科目も含む）の借方合計・貸方合計。指定しないときは null
+      required: [debit_total, credit_total]
+      properties:
+        debit_total:
+          type: integer
+        credit_total:
+          type: integer
 
 Journal:
   type: object
@@ -265,7 +317,7 @@ Journal:
       type: array
       items:
         type: object
-        required: [element_type, account_id, account_name, amount, tax_rate, tax_excluded_amount, shares, tags]
+        required: [element_type, account_id, account_name, asset_type, amount, tax_rate, tax_excluded_amount, shares, tags]
         properties:
           element_type:
             type: integer
@@ -273,6 +325,9 @@ Journal:
             type: integer
           account_name:
             type: [string, 'null']
+          asset_type:
+            type: [integer, 'null']
+            description: 資産の明細の口座の種別（6 = 立替金など）。資産以外の明細は null
           item_name:
             type: [string, 'null']
           amount:

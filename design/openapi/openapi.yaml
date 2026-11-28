@@ -68,6 +68,10 @@ paths:
     $ref: './paths/journals.yaml#/income-journals'
   /income-journals/{id}:
     $ref: './paths/journals.yaml#/income-journal'
+  /settlement-journals:
+    $ref: './paths/journals.yaml#/settlement-journals'
+  /settlement-journals/{id}:
+    $ref: './paths/journals.yaml#/settlement-journal'
   /stock-trades:
     $ref: './paths/journals.yaml#/stock-trades'
   /transfer-journals:
@@ -146,6 +150,8 @@ components:
       $ref: './schemas/journals.yaml#/IncomeJournalRequest'
     TransferJournalRequest:
       $ref: './schemas/journals.yaml#/TransferJournalRequest'
+    SettlementJournalRequest:
+      $ref: './schemas/journals.yaml#/SettlementJournalRequest'
     StockTradeRequest:
       $ref: './schemas/journals.yaml#/StockTradeRequest'
     JournalList:

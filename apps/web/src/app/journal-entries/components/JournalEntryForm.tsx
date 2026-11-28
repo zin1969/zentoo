@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createJournalEntry } from "../actions/createJournalEntry";
 import { updateJournalEntry } from "../actions/updateJournalEntry";
 import { ExpenseAccount, getExpenseAccounts } from "@/lib/masters/expenseAccounts";
-import { getAssetAccounts } from "@/lib/masters/assetAccounts";
+import { RECEIVABLE_ASSET_TYPE, getAssetAccounts, type AssetAccount } from "@/lib/masters/assetAccounts";
 import { getLiabilityAccounts } from "@/lib/masters/liabilityAccounts";
 import { ApiError, type ApiErrorBody } from "@/lib/api/apiFetch";
 import type { Journal } from "@/lib/journals/journals";
@@ -38,6 +38,13 @@ type DebitLine = {
   // 税抜（外税）のときの税率。「10」「8」か「other」（customRate に数値を入れる）
   rateChoice: string;
   customRate: string;
+};
+
+// 立て替えた分（ほかの人・会社の分）。立替金の口座の明細になり、支出には入らない
+type AdvanceLine = {
+  key: string;
+  receivableId: string;
+  amount: string;
 };
 
 type CreditLine = {
@@ -82,13 +89,17 @@ function emptyDebitLine(): DebitLine {
   };
 }
 
+function emptyAdvanceLine(): AdvanceLine {
+  return { key: nextKey(), receivableId: "", amount: "" };
+}
+
 function emptyCreditLine(): CreditLine {
   return { key: nextKey(), paymentKey: "", amount: "" };
 }
 
 // 修正のときは、元の仕訳の内容をフォームの初期値にする。外税で登録した明細は、税抜の金額と税率で開く
 function debitLinesFrom(journal: Journal): DebitLine[] {
-  return journal.debits.map((debit) => {
+  return journal.debits.filter((debit) => debit.element_type === EXPENSE_ELEMENT_TYPE).map((debit) => {
     const rate = debit.tax_rate === null ? null : String(debit.tax_rate);
     const isChoice = rate !== null && TAX_RATE_CHOICES.includes(rate);
 
@@ -103,6 +114,13 @@ function debitLinesFrom(journal: Journal): DebitLine[] {
       customRate: rate !== null && !isChoice ? rate : ""
     };
   });
+}
+
+// 立替金の明細（借方の資産）。立て替えた分の金額は、いつも税込
+function advanceLinesFrom(journal: Journal): AdvanceLine[] {
+  return journal.debits
+    .filter((debit) => debit.element_type === ASSET_ELEMENT_TYPE)
+    .map((debit) => ({ key: nextKey(), receivableId: String(debit.account_id), amount: String(debit.amount) }));
 }
 
 function isExcludedJournal(journal?: Journal) {
@@ -233,6 +251,8 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
   const [creditLines, setCreditLines] = useState<CreditLine[]>(() =>
     journal ? creditLinesFrom(journal) : [emptyCreditLine()]
   );
+  const [advanceLines, setAdvanceLines] = useState<AdvanceLine[]>(() => (journal ? advanceLinesFrom(journal) : []));
+  const [receivableAccounts, setReceivableAccounts] = useState<AssetAccount[]>([]);
 
   const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccount[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -261,6 +281,7 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
 
     Promise.all([getAssetAccounts(), getLiabilityAccounts()])
       .then(([assetAccounts, liabilityAccounts]) => {
+        setReceivableAccounts(assetAccounts.filter((a) => a.payment_method_type === RECEIVABLE_ASSET_TYPE));
         setPaymentAccounts([
           // 支払い方法は現金と電子マネーだけ。預貯金（銀行口座）は選ばせない（カード払いの引き落としは自動仕訳で作る）。
           // 証券口座・投資の口座も、お買い物には使わない
@@ -299,7 +320,9 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
         return value === undefined || /^\d+$/.test(value.trim());
       }));
 
-  const debitTotal = isExcluded ? taxResult.total : sumAmounts(debitLines.map((l) => l.amount));
+  const advanceTotal = sumAmounts(advanceLines.map((l) => l.amount));
+  // 自分の分（費用）と立て替えた分の合計。支払い方法の合計と一致させる
+  const debitTotal = (isExcluded ? taxResult.total : sumAmounts(debitLines.map((l) => l.amount))) + advanceTotal;
   // 外税で支払い方法が 1 つなら、その金額は税込の合計で埋める（自分で計算しなくて済むように）
   const autoCreditAmount = isExcluded && creditLines.length === 1;
   const creditAmountOf = (line: CreditLine) => (autoCreditAmount ? debitTotal : Number(line.amount) || 0);
@@ -351,8 +374,20 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
     setCreditLines((lines) => lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   };
 
+  // 立て替えがあれば、自分の分の明細を 0 件にできる（全額を立て替えたとき）
   const removeDebitLine = (key: string) => {
-    setDebitLines((lines) => (lines.length > 1 ? lines.filter((l) => l.key !== key) : lines));
+    setDebitLines((lines) => (lines.length > 1 || advanceLines.length > 0 ? lines.filter((l) => l.key !== key) : lines));
+  };
+
+  const updateAdvanceLine = (key: string, patch: Partial<AdvanceLine>) => {
+    setAdvanceLines((lines) => lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  };
+
+  // 立て替えを全部消して、自分の分の明細も無いときは、空の明細を 1 つ出す
+  const removeAdvanceLine = (key: string) => {
+    const rest = advanceLines.filter((l) => l.key !== key);
+    setAdvanceLines(rest);
+    if (rest.length === 0 && debitLines.length === 0) setDebitLines([emptyDebitLine()]);
   };
 
   const removeCreditLine = (key: string) => {
@@ -396,15 +431,24 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
       const body = {
         date,
         store_name: storeName,
-        debits: debitLines.map((line) => ({
-          element_type: EXPENSE_ELEMENT_TYPE,
-          account_id: Number(line.expenseAccountId),
-          // 金額はいつも税込。外税のときは、税率と税抜の金額も一緒に送る（修正のときの表示に使う）
-          amount: isExcluded ? taxResult.amounts.get(line.key) : Number(line.amount),
-          item_name: line.itemName,
-          tag_ids: line.tagName.trim() ? [tagIds.get(line.tagName.trim())] : [],
-          ...(isExcluded ? { tax_rate: lineTaxRate(line), tax_excluded_amount: Number(line.amount) } : {})
-        })),
+        debits: [
+          ...debitLines.map((line) => ({
+            element_type: EXPENSE_ELEMENT_TYPE,
+            account_id: Number(line.expenseAccountId),
+            // 金額はいつも税込。外税のときは、税率と税抜の金額も一緒に送る（修正のときの表示に使う）
+            amount: isExcluded ? taxResult.amounts.get(line.key) : Number(line.amount),
+            item_name: line.itemName,
+            tag_ids: line.tagName.trim() ? [tagIds.get(line.tagName.trim())] : [],
+            ...(isExcluded ? { tax_rate: lineTaxRate(line), tax_excluded_amount: Number(line.amount) } : {})
+          })),
+          // 立て替えた分は立替金の口座の明細（資産）。支出には入らない
+          ...advanceLines.map((line) => ({
+            element_type: ASSET_ELEMENT_TYPE,
+            account_id: Number(line.receivableId),
+            amount: Number(line.amount),
+            item_name: "立替"
+          }))
+        ],
         credits: creditLines.map((line) => {
           const account = paymentAccounts.find((a) => paymentKey(a) === line.paymentKey);
 
@@ -429,6 +473,7 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
       setDate("");
       setStoreName("");
       setDebitLines([emptyDebitLine()]);
+      setAdvanceLines([]);
       setCreditLines([emptyCreditLine()]);
       setTaxOverrides({});
     } catch (error) {
@@ -553,7 +598,7 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
                 <button
                   type="button"
                   onClick={() => removeDebitLine(line.key)}
-                  disabled={debitLines.length === 1}
+                  disabled={debitLines.length === 1 && advanceLines.length === 0}
                   aria-label="この明細を削除"
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-black/35 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:text-white/35"
                 >
@@ -706,6 +751,81 @@ export default function JournalEntryForm({ journal, copy = false }: JournalEntry
             </p>
           </div>
         )}
+
+        {/* 複数人分をまとめて払ったときの、ほかの人・会社の分。立替金の口座に入り、返してもらったら精算の画面で登録する */}
+        <div className="flex flex-col gap-2 pt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">立て替え（任意）</span>
+            <button
+              type="button"
+              onClick={() => setAdvanceLines((lines) => [...lines, emptyAdvanceLine()])}
+              className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              + 立て替えを追加
+            </button>
+          </div>
+          {advanceLines.length === 0 && receivableAccounts.length === 0 && (
+            <p className="text-xs text-black/50 dark:text-white/50">
+              立て替えるには、「口座・カード・科目・タグの管理」で、種別「立替金」の口座を相手ごとに作ってください。
+            </p>
+          )}
+          {advanceLines.map((line) => (
+            <div
+              key={line.key}
+              className="flex items-center gap-2 rounded-lg border border-dashed border-black/15 p-3 dark:border-white/15"
+            >
+              <select
+                aria-label="立て替えた相手"
+                value={line.receivableId}
+                onChange={(e) => updateAdvanceLine(line.key, { receivableId: e.target.value })}
+                required
+                className={`${lineInputClass} min-w-0 flex-1`}
+              >
+                <option value="">立替金の口座を選択</option>
+                {receivableAccounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+              <div className="relative w-28 shrink-0">
+                <span className="pointer-events-none absolute inset-y-0 left-2.5 flex items-center text-sm text-black/40 dark:text-white/40">
+                  ¥
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  aria-label="立て替えた金額（税込）"
+                  value={line.amount}
+                  onChange={(e) => updateAdvanceLine(line.key, { amount: e.target.value })}
+                  required
+                  className={`${lineInputClass} w-full pl-6 text-right`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeAdvanceLine(line.key)}
+                aria-label="この立て替えを削除"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-black/35 hover:text-red-600 dark:text-white/35"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3.5 4.5h9M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5l.6 8a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          ))}
+          {advanceLines.length > 0 && (
+            <p className="text-xs text-black/50 dark:text-white/50">
+              立て替えた分は税込の金額で入れます。支出には入らず、立替金の残りになります（自分の分の明細は消して 0 件にもできます）。
+            </p>
+          )}
+        </div>
 
         <div className="flex items-baseline justify-between pt-0.5">
           <span className="text-sm text-black/55 dark:text-white/55">{isExcluded ? "税込合計" : "借方合計"}</span>

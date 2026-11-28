@@ -2,7 +2,8 @@
 
 module Journals
   class ListJournals
-    Result = Struct.new(:journals, :total_count, :account_names, :direct_debit_links, keyword_init: true)
+    Result = Struct.new(:journals, :total_count, :account_names, :direct_debit_links, :asset_types, :account_totals,
+                        keyword_init: true)
 
     # 費用科目・収益科目は、親の科目を指定すると子科目の仕訳も含める
     TWO_LEVEL_MODELS = {
@@ -36,7 +37,9 @@ module Journals
         journals: journals,
         total_count: scope.count,
         account_names: account_names_for(journals),
-        direct_debit_links: direct_debit_links_for(journals, user_id)
+        direct_debit_links: direct_debit_links_for(journals, user_id),
+        asset_types: asset_types_for(journals),
+        account_totals: account && account_totals_for(scope, user_id, account)
       )
     end
 
@@ -49,7 +52,9 @@ module Journals
         journals: [ journal ],
         total_count: 1,
         account_names: account_names_for([ journal ]),
-        direct_debit_links: direct_debit_links_for([ journal ], user_id)
+        direct_debit_links: direct_debit_links_for([ journal ], user_id),
+        asset_types: asset_types_for([ journal ]),
+        account_totals: nil
       )
     end
 
@@ -86,6 +91,33 @@ module Journals
       selected = available.where(id: account_id).select(:id)
 
       available.where(id: selected).or(available.where(parent_id: selected)).pluck(:id)
+    end
+
+    # 条件に合う仕訳全体（全ページ）での、指定した科目（費用・収益科目は子科目も含む）の借方合計・貸方合計。
+    # 月末に、立替金の口座の合計を会社の精算書と突き合わせるために使う
+    def account_totals_for(scope, user_id, account)
+      element_type = account[:element_type]
+      account_ids = account_ids_with_children(user_id, element_type, account[:account_id])
+      journal_ids = scope.select(:id)
+
+      {
+        debit_total: Debit.where("debits.element_type = ?", element_type)
+                          .where(account_id: account_ids, journal_id: journal_ids)
+                          .pick(Arel.sql("COALESCE(SUM(debits.amount), 0)")),
+        credit_total: Credit.where("credits.element_type = ?", element_type)
+                            .where(account_id: account_ids, journal_id: journal_ids)
+                            .pick(Arel.sql("COALESCE(SUM(credits.amount), 0)"))
+      }
+    end
+
+    # { account_id => asset_type } 資産の明細の口座の種別（立替金の明細かどうかを画面で見分ける）
+    def asset_types_for(journals)
+      ids = journals.flat_map { |journal| journal.debits.to_a + journal.credits.to_a }
+                    .select { |entry| entry.element_type.to_i == ElementType::ASSETS }
+                    .map(&:account_id).uniq
+      return {} if ids.empty?
+
+      AssetAccount.where(id: ids).pluck(:id, :asset_type).to_h { |id, type| [ id, AssetAccount.asset_types.fetch(type) ] }
     end
 
     # 他人のタグを指定しても何も出ない

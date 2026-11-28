@@ -18,7 +18,9 @@ module Journals
         journals: result.journals.map { |journal| JournalPresenter.present(journal, result) },
         page: page,
         per_page: PER_PAGE,
-        total_count: result.total_count
+        total_count: result.total_count,
+        # 科目で絞り込んだときだけ、条件に合う仕訳全体でのその科目の借方合計・貸方合計。それ以外は null
+        account_totals: result.account_totals
       }
     end
   end

@@ -42,6 +42,11 @@ class RecurringOccurrencesController < ApplicationController
     render_error("credit_card_charge_requires_e_money", :unprocessable_content)
   end
 
+  # 振替: 立替金から出す振替は、精算（POST /settlement-journals）で登録する
+  rescue_from Journals::TransferJournals::ReceivableRequiresSettlement do
+    render_error("receivable_requires_settlement", :unprocessable_content)
+  end
+
   def index
     items = RecurringEntries::OccurrencesService.new.pending(user: current_user)
 

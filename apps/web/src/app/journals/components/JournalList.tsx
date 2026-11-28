@@ -9,6 +9,7 @@ import {
   getJournals,
   isEditableJournal,
   isIncomeJournal,
+  isSettlementJournal,
   isTransferJournal,
   type Journal,
   type JournalPage
@@ -105,9 +106,10 @@ function DirectDebitBadge({ journal }: { journal: Journal }) {
   return null;
 }
 
-// お買い物・収入・振替は、それぞれの画面で直したり、コピーして新しく登録したりできる。
+// お買い物・収入・振替は、それぞれの画面で直したり、コピーして新しく登録したりできる。精算は直せるが、コピーはしない。
 // それ以外の仕訳（開始残高・株の売買など）は、削除して登録し直す
 function journalPath(journal: Journal) {
+  if (isSettlementJournal(journal)) return `/settlement-journals/${journal.id}`;
   if (isEditableJournal(journal)) return `/journal-entries/${journal.id}`;
   if (isIncomeJournal(journal)) return `/income-journals/${journal.id}`;
   if (isTransferJournal(journal)) return `/transfer-journals/${journal.id}`;
@@ -124,6 +126,7 @@ type JournalCardProps = {
 
 function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProps) {
   const path = journalPath(journal);
+  const copyable = !isSettlementJournal(journal);
 
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-black/20">
@@ -188,12 +191,14 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
           {path && (
             <>
               {/* 同じ内容で、日付を今日にして新しく登録する（元の仕訳は変えない） */}
-              <Link
-                href={`${path}/copy`}
-                className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
-              >
-                コピー
-              </Link>
+              {copyable && (
+                <Link
+                  href={`${path}/copy`}
+                  className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
+                >
+                  コピー
+                </Link>
+              )}
               <Link
                 href={`${path}/edit`}
                 className="rounded-md border border-black/15 px-3 py-1.5 text-sm text-foreground dark:border-white/15"
@@ -361,6 +366,23 @@ export default function JournalList() {
       {data && (
         <>
           <p className="text-sm text-black/60 dark:text-white/60">{data.total_count} 件</p>
+
+          {/* 科目で絞り込んだときは、条件に合う仕訳全体での、その科目の合計を出す（立替金を精算書と突き合わせるなど） */}
+          {data.account_totals && (
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm shadow-sm dark:border-white/10 dark:bg-black/20">
+              <div className="flex flex-col">
+                <span className="text-xs text-black/50 dark:text-white/50">借方合計</span>
+                <span className="tabular-nums font-medium">{formatYen(data.account_totals.debit_total)}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-black/50 dark:text-white/50">貸方合計</span>
+                <span className="tabular-nums font-medium">{formatYen(data.account_totals.credit_total)}</span>
+              </div>
+              <span className="col-span-2 text-xs text-black/50 dark:text-white/50">
+                選んだ科目の、条件に合う仕訳すべて（全ページ）の合計です。立替金なら、借方が立て替えた額、貸方が精算した額です。
+              </span>
+            </div>
+          )}
 
           {data.journals.length === 0 ? (
             <p className="rounded-xl border border-dashed border-black/15 px-4 py-8 text-center text-sm text-black/50 dark:border-white/15 dark:text-white/50">

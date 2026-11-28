@@ -94,10 +94,10 @@ RSpec.describe 'Managing asset accounts', type: :request do
     end
 
     it 'returns 422 with errors for a blank name or an unknown type' do
-      post_account(name: ' ', asset_type: 6)
+      post_account(name: ' ', asset_type: 7)
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(body['errors']).to contain_exactly("Name can't be blank", 'Asset type must be 1 (cash), 2 (deposit), 3 (e_money), 4 (securities) or 5 (investment)')
+      expect(body['errors']).to contain_exactly("Name can't be blank", 'Asset type must be 1 (cash), 2 (deposit), 3 (e_money), 4 (securities), 5 (investment) or 6 (receivable)')
     end
   end
 

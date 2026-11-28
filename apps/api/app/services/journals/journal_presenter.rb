@@ -18,6 +18,8 @@ module Journals
             element_type: debit.element_type.to_i,
             account_id: debit.account_id,
             account_name: account_name(result, debit),
+            # 資産の明細の口座の種別（6 = 立替金など）。資産以外の明細は null
+            asset_type: asset_type(result, debit),
             item_name: debit.item_name,
             amount: debit.amount.to_i,
             # 外税のレシートで登録した明細の税率（%）と税抜の金額。内税の明細は null。消費税は amount - tax_excluded_amount
@@ -47,6 +49,12 @@ module Journals
         # この仕訳がカード払いの場合、引き落とし仕訳の ID
         direct_debit_journal_id: result.direct_debit_links.find { |link| link.original_id == journal.id }&.direct_debit_id
       }
+    end
+
+    def asset_type(result, entry)
+      return nil unless entry.element_type.to_i == ElementType::ASSETS
+
+      result.asset_types[entry.account_id]
     end
 
     def account_name(result, entry)

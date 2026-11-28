@@ -9,6 +9,7 @@ module Journals
     class CreditCardSettingNotFound < StandardError; end
     class JournalNotFound < StandardError; end
     class NotTransferJournal < StandardError; end
+    class ReceivableRequiresSettlement < StandardError; end
 
     def initialize(base: ActiveRecord::Base)
       @base = base
@@ -61,6 +62,8 @@ module Journals
         JournalNotFound.new
       when /journal is not a transfer journal/
         NotTransferJournal.new
+      when /receivable must be settled/
+        ReceivableRequiresSettlement.new
       else
         error
       end

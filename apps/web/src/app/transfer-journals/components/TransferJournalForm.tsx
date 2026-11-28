@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api/apiFetch";
-import { ASSET_TYPES, getAssetAccounts, type AssetAccount } from "@/lib/masters/assetAccounts";
+import { ASSET_TYPES, NON_RECEIVABLE_ASSET_TYPES, getAssetAccounts, type AssetAccount } from "@/lib/masters/assetAccounts";
 import { getCreditCards, type CreditCard } from "@/lib/masters/creditCards";
 import { createTransferJournal, updateTransferJournal } from "@/lib/journals/transferJournals";
 import type { Journal } from "@/lib/journals/journals";
@@ -55,6 +55,8 @@ function errorMessage(error: unknown, isEdit: boolean) {
         return "出す元と入れる先に、同じ口座は選べません。";
       case "credit_card_charge_requires_e_money":
         return "クレジットカードから入れられるのは、電子マネーだけです。";
+      case "receivable_requires_settlement":
+        return "立替金から返してもらったときは、「立替金の精算」で登録してください。";
       case "credit_card_setting_not_found":
         return "このカードには引き落とし設定がありません。「口座・カード・科目の管理」で登録してください。";
       case "journal_not_found":
@@ -228,7 +230,8 @@ export default function TransferJournalForm({ journal, copy = false }: Props = {
           className={inputClass}
         >
           <option value="">出す元を選択</option>
-          {ASSET_TYPES.map((type) => (
+          {/* 立替金から返してもらうのは精算の画面で登録する（差額を費用・収益にできるように） */}
+          {NON_RECEIVABLE_ASSET_TYPES.map((type) => (
             <optgroup key={type.value} label={type.label}>
               {assetAccounts
                 .filter((account) => account.payment_method_type === type.value)

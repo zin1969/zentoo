@@ -18,6 +18,7 @@ DECLARE
   ELEMENT_ASSETS CONSTANT INT := 1;
   ELEMENT_LIABILITIES CONSTANT INT := 2;
   PAYMENT_METHOD_CREDIT_CARD CONSTANT INT := 3;
+  ASSET_TYPE_RECEIVABLE CONSTANT INT := 6;
 BEGIN
   -- 他ユーザーの仕訳と存在しない仕訳は区別しない。
   -- 同時に修正・削除されないよう、行をロックする
@@ -71,6 +72,14 @@ BEGIN
          FROM credits c
         WHERE c.journal_id = replace_transfer_journal.journal_id
           AND c.shares IS NOT NULL
+     )
+     -- 差額の無い精算（借方が入金先、貸方が立替金）も同じ形になるが、精算の画面で直す
+     OR EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_transfer_journal.journal_id
+          AND c.element_type = ELEMENT_ASSETS
+          AND c.payment_method_type = ASSET_TYPE_RECEIVABLE
      ) THEN
     RAISE EXCEPTION 'journal is not a transfer journal: %', journal_id;
   END IF;

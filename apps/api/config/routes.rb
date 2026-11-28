@@ -28,6 +28,8 @@ Rails.application.routes.draw do
   post "/transfer-journals", to: "journals/transfer_journals#create"
   put "/transfer-journals/:id", to: "journals/transfer_journals#update", constraints: { id: /\d+/ }
   post "/stock-trades", to: "journals/stock_trades#create"
+  post "/settlement-journals", to: "journals/settlement_journals#create"
+  put "/settlement-journals/:id", to: "journals/settlement_journals#update", constraints: { id: /\d+/ }
   put "/direct-debit-journals/:id", to: "journals/direct_debit_journals#update", constraints: { id: /\d+/ }
 
   get "/asset-accounts", to: "accounts/asset_accounts#index"

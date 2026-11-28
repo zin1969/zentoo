@@ -2,7 +2,7 @@
 
 # 口座の追加・変更（POST /asset-accounts、PUT /asset-accounts/:id）のリクエストを検証する。
 # asset_type は、口座の一覧の payment_method_type と同じ数値
-# （1: 現金、2: 預金、3: 電子マネー、4: 証券口座、5: 投資）で受け取る。
+# （1: 現金、2: 預金、3: 電子マネー、4: 証券口座、5: 投資、6: 立替金）で受け取る。
 class AssetAccountForm
   include ActiveModel::Model
   include ActiveModel::Attributes
@@ -29,6 +29,6 @@ class AssetAccountForm
   def validate_asset_type
     return if asset_type.is_a?(Integer) && asset_type_key
 
-    errors.add(:asset_type, "must be 1 (cash), 2 (deposit), 3 (e_money), 4 (securities) or 5 (investment)")
+    errors.add(:asset_type, "must be 1 (cash), 2 (deposit), 3 (e_money), 4 (securities), 5 (investment) or 6 (receivable)")
   end
 end
