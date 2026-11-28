@@ -399,6 +399,331 @@ $$;
 
 
 --
+-- Name: create_opening_stock_balance_journal(date, integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_opening_stock_balance_journal(journal_date date, stock_account_id integer, shares integer, amount integer, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  new_journal_id INT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ASSET_TYPE_INVESTMENT CONSTANT INT := 5;
+BEGIN
+  IF shares <= 0 THEN
+    RAISE EXCEPTION 'shares must be greater than 0';
+  END IF;
+
+  -- 株数を持てるのは銘柄（本人の種別「投資」の口座）だけ。
+  -- 他ユーザーの口座と存在しない口座は、開始資産と同じく区別しない
+  IF NOT EXISTS (
+    SELECT 1
+      FROM asset_accounts aa
+     WHERE aa.id = create_opening_stock_balance_journal.stock_account_id
+       AND aa.user_id = create_opening_stock_balance_journal.user_id
+  ) THEN
+    RAISE EXCEPTION 'asset_account not found: %', stock_account_id;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM asset_accounts aa
+     WHERE aa.id = create_opening_stock_balance_journal.stock_account_id
+       AND aa.asset_type = ASSET_TYPE_INVESTMENT
+  ) THEN
+    RAISE EXCEPTION 'shares require an investment account: %', stock_account_id;
+  END IF;
+
+  -- 後の日付の売りがあると、その売りの取得額（移動平均）が合わなくなる
+  IF get_last_stock_sale_date(stock_account_id) > journal_date THEN
+    RAISE EXCEPTION 'later stock sale exists: %', stock_account_id;
+  END IF;
+
+  -- 金額（株数 × 平均取得単価）の確認・重複の確認・元入金は、開始資産の登録と同じ
+  new_journal_id := create_opening_asset_balance_journal(
+    journal_date, ELEMENT_ASSETS, stock_account_id, amount, user_id
+  );
+
+  UPDATE debits d
+     SET shares = create_opening_stock_balance_journal.shares
+   WHERE d.journal_id = new_journal_id
+     AND d.element_type = ELEMENT_ASSETS
+  ;
+
+  RETURN new_journal_id;
+END;
+$$;
+
+
+--
+-- Name: create_stock_buy_journal(date, integer, integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_stock_buy_journal(journal_date date, stock_account_id integer, securities_account_id integer, shares integer, amount integer, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_stock_name TEXT;
+  new_journal_id INT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ASSET_TYPE_SECURITIES CONSTANT INT := 4;
+  ASSET_TYPE_INVESTMENT CONSTANT INT := 5;
+BEGIN
+  IF shares <= 0 THEN
+    RAISE EXCEPTION 'shares must be greater than 0';
+  END IF;
+
+  -- 手数料も取得額に含めるので、金額は証券口座から出ていった額
+  IF amount <= 0 THEN
+    RAISE EXCEPTION 'amount must be greater than 0';
+  END IF;
+
+  -- 銘柄は本人の種別「投資」の口座。他ユーザーの口座と存在しない口座は区別しない
+  SELECT aa.name
+    INTO v_stock_name
+    FROM asset_accounts aa
+   WHERE aa.id = create_stock_buy_journal.stock_account_id
+     AND aa.user_id = create_stock_buy_journal.user_id
+     AND aa.asset_type = ASSET_TYPE_INVESTMENT
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'stock account not found: %', stock_account_id;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM asset_accounts aa
+     WHERE aa.id = create_stock_buy_journal.securities_account_id
+       AND aa.user_id = create_stock_buy_journal.user_id
+       AND aa.asset_type = ASSET_TYPE_SECURITIES
+  ) THEN
+    RAISE EXCEPTION 'securities account not found: %', securities_account_id;
+  END IF;
+
+  -- 売りの取得額（移動平均）は、売った日までの売買から決まる。
+  -- 後の日付の売りがあるところに前の日付で登録すると、その売りの取得額が合わなくなる
+  IF get_last_stock_sale_date(stock_account_id) > journal_date THEN
+    RAISE EXCEPTION 'later stock sale exists: %', stock_account_id;
+  END IF;
+
+  INSERT INTO journals (
+    journal_dt, store_name, user_id
+  ) VALUES (
+    journal_date,
+    '買い ' || v_stock_name,
+    user_id
+  )
+  RETURNING id INTO new_journal_id;
+
+  -- 借方: 銘柄（株数が増える）
+  INSERT INTO debits (
+    journal_id, element_type, account_id, item_name, amount, shares, user_id
+  ) VALUES (
+    new_journal_id,
+    ELEMENT_ASSETS,
+    stock_account_id,
+    NULL,
+    amount,
+    shares,
+    user_id
+  );
+
+  -- 貸方: 証券口座（預り金）
+  INSERT INTO credits (
+    journal_id, element_type, payment_method_type, account_id, amount, user_id
+  ) VALUES (
+    new_journal_id,
+    ELEMENT_ASSETS,
+    ASSET_TYPE_SECURITIES,
+    securities_account_id,
+    amount,
+    user_id
+  );
+
+  RETURN new_journal_id;
+END;
+$$;
+
+
+--
+-- Name: create_stock_sell_journal(date, integer, integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_stock_sell_journal(journal_date date, stock_account_id integer, securities_account_id integer, shares integer, amount integer, user_id integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_stock_name TEXT;
+  v_held_shares BIGINT;
+  v_held_cost BIGINT;
+  v_cost INT;
+  v_gain_account_id BIGINT;
+  v_loss_account_id BIGINT;
+  new_journal_id INT;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ELEMENT_REVENUE CONSTANT INT := 4;
+  ELEMENT_EXPENSES CONSTANT INT := 5;
+  ASSET_TYPE_SECURITIES CONSTANT INT := 4;
+  ASSET_TYPE_INVESTMENT CONSTANT INT := 5;
+  GAIN_ACCOUNT_NAME CONSTANT TEXT := '株式売却益';
+  LOSS_ACCOUNT_NAME CONSTANT TEXT := '株式売却損';
+BEGIN
+  IF shares <= 0 THEN
+    RAISE EXCEPTION 'shares must be greater than 0';
+  END IF;
+
+  -- 金額は証券口座に入った額（手数料・税金を引いたあと）
+  IF amount <= 0 THEN
+    RAISE EXCEPTION 'amount must be greater than 0';
+  END IF;
+
+  -- 銘柄は本人の種別「投資」の口座。他ユーザーの口座と存在しない口座は区別しない
+  SELECT aa.name
+    INTO v_stock_name
+    FROM asset_accounts aa
+   WHERE aa.id = create_stock_sell_journal.stock_account_id
+     AND aa.user_id = create_stock_sell_journal.user_id
+     AND aa.asset_type = ASSET_TYPE_INVESTMENT
+  ;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'stock account not found: %', stock_account_id;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM asset_accounts aa
+     WHERE aa.id = create_stock_sell_journal.securities_account_id
+       AND aa.user_id = create_stock_sell_journal.user_id
+       AND aa.asset_type = ASSET_TYPE_SECURITIES
+  ) THEN
+    RAISE EXCEPTION 'securities account not found: %', securities_account_id;
+  END IF;
+
+  -- 後の日付の売りがあると、その売りの取得額（移動平均）が合わなくなる
+  IF get_last_stock_sale_date(stock_account_id) > journal_date THEN
+    RAISE EXCEPTION 'later stock sale exists: %', stock_account_id;
+  END IF;
+
+  -- 売った日（含む）までの株数と取得額
+  SELECT h.shares, h.cost
+    INTO v_held_shares, v_held_cost
+    FROM get_stock_holdings(create_stock_sell_journal.user_id, journal_date) h
+   WHERE h.account_id = create_stock_sell_journal.stock_account_id
+  ;
+
+  IF NOT FOUND OR v_held_shares < shares THEN
+    RAISE EXCEPTION 'insufficient shares: %', stock_account_id;
+  END IF;
+
+  -- 減らす取得額は移動平均（取得額 ÷ 株数）× 売った株数。全部売るときは端数を残さないよう取得額をそのまま減らす
+  v_cost := CASE
+    WHEN shares = v_held_shares THEN v_held_cost
+    ELSE ROUND(v_held_cost::NUMERIC * shares / v_held_shares)
+  END;
+
+  IF v_cost <= 0 THEN
+    RAISE EXCEPTION 'stock cost must be greater than 0: %', stock_account_id;
+  END IF;
+
+  -- 売却益・売却損の科目は元入金と同じく名前で探す（共通科目を優先し、無ければ本人の科目を使う）
+  IF amount > v_cost THEN
+    SELECT ra.id
+      INTO v_gain_account_id
+      FROM revenue_accounts ra
+     WHERE ra.name = GAIN_ACCOUNT_NAME
+       AND (ra.user_id IS NULL OR ra.user_id = create_stock_sell_journal.user_id)
+     ORDER BY ra.user_id NULLS FIRST, ra.id
+     LIMIT 1
+    ;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'stock gain account not found: %', GAIN_ACCOUNT_NAME;
+    END IF;
+  ELSIF amount < v_cost THEN
+    SELECT ea.id
+      INTO v_loss_account_id
+      FROM expense_accounts ea
+     WHERE ea.name = LOSS_ACCOUNT_NAME
+       AND (ea.user_id IS NULL OR ea.user_id = create_stock_sell_journal.user_id)
+     ORDER BY ea.user_id NULLS FIRST, ea.id
+     LIMIT 1
+    ;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'stock loss account not found: %', LOSS_ACCOUNT_NAME;
+    END IF;
+  END IF;
+
+  INSERT INTO journals (
+    journal_dt, store_name, user_id
+  ) VALUES (
+    journal_date,
+    '売り ' || v_stock_name,
+    user_id
+  )
+  RETURNING id INTO new_journal_id;
+
+  -- 借方: 証券口座（預り金）に入った額
+  INSERT INTO debits (
+    journal_id, element_type, account_id, item_name, amount, user_id
+  ) VALUES (
+    new_journal_id,
+    ELEMENT_ASSETS,
+    securities_account_id,
+    NULL,
+    amount,
+    user_id
+  );
+
+  -- 借方: 売却損（取得額より安く売ったとき）
+  IF v_loss_account_id IS NOT NULL THEN
+    INSERT INTO debits (
+      journal_id, element_type, account_id, item_name, amount, user_id
+    ) VALUES (
+      new_journal_id,
+      ELEMENT_EXPENSES,
+      v_loss_account_id,
+      NULL,
+      v_cost - amount,
+      user_id
+    );
+  END IF;
+
+  -- 貸方: 銘柄（株数と取得額が減る）
+  INSERT INTO credits (
+    journal_id, element_type, payment_method_type, account_id, amount, shares, user_id
+  ) VALUES (
+    new_journal_id,
+    ELEMENT_ASSETS,
+    ASSET_TYPE_INVESTMENT,
+    stock_account_id,
+    v_cost,
+    shares,
+    user_id
+  );
+
+  -- 貸方: 売却益（取得額より高く売ったとき）
+  IF v_gain_account_id IS NOT NULL THEN
+    INSERT INTO credits (
+      journal_id, element_type, payment_method_type, account_id, amount, user_id
+    ) VALUES (
+      new_journal_id,
+      ELEMENT_REVENUE,
+      0,
+      v_gain_account_id,
+      amount - v_cost,
+      user_id
+    );
+  END IF;
+
+  RETURN new_journal_id;
+END;
+$$;
+
+
+--
 -- Name: create_transfer_journal(date, integer, integer, integer, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -888,6 +1213,32 @@ $$;
 
 
 --
+-- Name: get_last_stock_sale_date(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_last_stock_sale_date(stock_account_id integer) RETURNS date
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_last_date DATE;
+  ELEMENT_ASSETS CONSTANT INT := 1;
+BEGIN
+  -- 売りは、銘柄が貸方で株数を持つ明細。売りが無ければ NULL
+  SELECT MAX(j.journal_dt)
+    INTO v_last_date
+    FROM credits c
+    JOIN journals j ON j.id = c.journal_id
+   WHERE c.element_type = ELEMENT_ASSETS
+     AND c.account_id = get_last_stock_sale_date.stock_account_id
+     AND c.shares IS NOT NULL
+  ;
+
+  RETURN v_last_date;
+END;
+$$;
+
+
+--
 -- Name: get_monthly_expenses(integer, date); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1129,6 +1480,50 @@ BEGIN
    ) d
    WHERE d.d_date BETWEEN v_from AND v_to
    ORDER BY d.d_date;
+END;
+$$;
+
+
+--
+-- Name: get_stock_holdings(integer, date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_stock_holdings(user_id integer, as_of_date date) RETURNS TABLE(account_id bigint, account_name text, shares bigint, cost bigint)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  ELEMENT_ASSETS CONSTANT INT := 1;
+  ASSET_TYPE_INVESTMENT CONSTANT INT := 5;
+BEGIN
+  -- 銘柄は種別「投資」の口座。指定日（含む）までの仕訳から、株数（借方 - 貸方）と取得額（口座の残高）を求める。
+  -- iDeCo・NISA のように株数を持たない投資の口座は、株の銘柄ではないので出さない
+  RETURN QUERY
+  WITH movements AS (
+    SELECT d.account_id AS account_id, d.shares::BIGINT AS shares, d.amount::BIGINT AS amount
+      FROM debits d
+      JOIN journals j ON j.id = d.journal_id
+     WHERE j.user_id = get_stock_holdings.user_id
+       AND j.journal_dt <= as_of_date
+       AND d.element_type = ELEMENT_ASSETS
+    UNION ALL
+    SELECT c.account_id, -c.shares::BIGINT, -c.amount::BIGINT
+      FROM credits c
+      JOIN journals j ON j.id = c.journal_id
+     WHERE j.user_id = get_stock_holdings.user_id
+       AND j.journal_dt <= as_of_date
+       AND c.element_type = ELEMENT_ASSETS
+  )
+  SELECT aa.id::BIGINT,
+         aa.name,
+         COALESCE(SUM(m.shares), 0)::BIGINT,
+         COALESCE(SUM(m.amount), 0)::BIGINT
+    FROM asset_accounts aa
+    JOIN movements m ON m.account_id = aa.id
+   WHERE aa.user_id = get_stock_holdings.user_id
+     AND aa.asset_type = ASSET_TYPE_INVESTMENT
+   GROUP BY aa.id, aa.name
+  HAVING COUNT(m.shares) > 0
+   ORDER BY aa.id;
 END;
 $$;
 
@@ -1651,6 +2046,19 @@ BEGIN
             c.element_type = ELEMENT_ASSETS
             OR (c.element_type = ELEMENT_LIABILITIES AND c.payment_method_type = PAYMENT_METHOD_CREDIT_CARD)
           )
+     )
+     -- 株の買い（と損益の出ない売り）も同じ形になるが、株数を持つので振替ではない（作り直すと株数が消える）
+     OR EXISTS (
+       SELECT 1
+         FROM debits d
+        WHERE d.journal_id = replace_transfer_journal.journal_id
+          AND d.shares IS NOT NULL
+     )
+     OR EXISTS (
+       SELECT 1
+         FROM credits c
+        WHERE c.journal_id = replace_transfer_journal.journal_id
+          AND c.shares IS NOT NULL
      ) THEN
     RAISE EXCEPTION 'journal is not a transfer journal: %', journal_id;
   END IF;
@@ -1884,8 +2292,10 @@ CREATE TABLE public.credits (
     user_id bigint,
     created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    shares integer,
     CONSTRAINT credit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5]))),
-    CONSTRAINT credit_payment_method_type CHECK ((((element_type = 1) AND (payment_method_type = ANY (ARRAY[1, 2, 3, 4, 5]))) OR ((element_type = 2) AND (payment_method_type = ANY (ARRAY[1, 2, 3]))) OR ((element_type = ANY (ARRAY[3, 4, 5])) AND (payment_method_type = 0))))
+    CONSTRAINT credit_payment_method_type CHECK ((((element_type = 1) AND (payment_method_type = ANY (ARRAY[1, 2, 3, 4, 5]))) OR ((element_type = 2) AND (payment_method_type = ANY (ARRAY[1, 2, 3]))) OR ((element_type = ANY (ARRAY[3, 4, 5])) AND (payment_method_type = 0)))),
+    CONSTRAINT credit_shares CHECK (((shares IS NULL) OR ((shares > 0) AND (element_type = 1))))
 );
 
 
@@ -1955,7 +2365,9 @@ CREATE TABLE public.debits (
     updated_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     tax_rate integer,
     tax_excluded_amount integer,
+    shares integer,
     CONSTRAINT debit_element_type CHECK ((element_type = ANY (ARRAY[1, 2, 3, 4, 5]))),
+    CONSTRAINT debit_shares CHECK (((shares IS NULL) OR ((shares > 0) AND (element_type = 1)))),
     CONSTRAINT debit_tax_columns_together CHECK (((tax_rate IS NULL) = (tax_excluded_amount IS NULL))),
     CONSTRAINT debit_tax_excluded_amount_range CHECK (((tax_excluded_amount IS NULL) OR ((tax_excluded_amount >= 0) AND (tax_excluded_amount <= amount)))),
     CONSTRAINT debit_tax_rate_range CHECK (((tax_rate IS NULL) OR ((tax_rate >= 0) AND (tax_rate <= 100))))
@@ -3323,6 +3735,7 @@ ALTER TABLE ONLY public.direct_debit_journals
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261128130000'),
 ('20261128120000'),
 ('20261127120000'),
 ('20261122124000'),
