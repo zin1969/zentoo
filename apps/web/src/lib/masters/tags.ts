@@ -20,7 +20,7 @@ export async function updateTag(id: number, name: string) {
   return apiFetch<{ id: number; name: string }>(`/tags/${id}`, { method: "PUT", body: { name } });
 }
 
-// 使っているタグも削除できる。明細からタグが外れるだけで、明細は消えない
+// 使っているタグも削除できる。明細からタグが外れるだけで、明細は消えない。予算の対象にしているタグは削除できない
 export async function deleteTag(id: number) {
   await apiFetch<null>(`/tags/${id}`, { method: "DELETE" });
 }

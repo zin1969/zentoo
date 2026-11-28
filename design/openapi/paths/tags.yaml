@@ -111,7 +111,8 @@ tag:
     tags: [tags]
     summary: タグの削除
     description: |
-      タグを削除する。使っているタグも削除でき、明細からタグが外れるだけで、明細は消えない。
+      タグを削除する。使っているタグも削除でき、明細からタグが外れるだけで、明細は消えない。予算の除くタグからも外れる。
+      予算の対象にしているタグは削除できない（`tag_used_by_budget`。先に予算を削除するか対象を変える）。
       成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
     operationId: deleteTag
     security:
@@ -135,6 +136,12 @@ tag:
               $ref: '../schemas/error.yaml#/ErrorResponse'
       '404':
         description: タグが存在しない、または他ユーザーのタグ（`tag_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 予算の対象にしているタグ（`tag_used_by_budget`）
         content:
           application/json:
             schema:

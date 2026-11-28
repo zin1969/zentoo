@@ -13,6 +13,7 @@ const MENU = [
   { href: "/bank-account-ledgers", title: "通帳", description: "預金口座の出入金と、これからの引き落とし予定を確認する" },
   { href: "/stock-holdings", title: "保有株", description: "銘柄ごとの株数・取得額・平均取得単価を確認する" },
   { href: "/monthly-expenses", title: "月次の収支", description: "月ごとの収入・支出を科目別に、収支と一緒に確認する" },
+  { href: "/budgets", title: "予算", description: "科目・タグごとの週・月・年の予算と、使った額・残りを確認する（設定もここから）" },
   { href: "/tag-reports", title: "タグの集計", description: "タグ（目的）ごとの支出を、1 年分の月ごとに確認する" },
   { href: "/asset-opening-journals", title: "開始資産登録", description: "口座・現金の開始残高と、今持っている株（株数と平均取得単価）を登録する" },
   { href: "/liability-opening-journals", title: "開始負債登録", description: "未払いのカードの残高を登録する" },

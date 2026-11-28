@@ -1,0 +1,182 @@
+budgets:
+  get:
+    tags: [budgets]
+    summary: 予算の一覧
+    description: |
+      認証済みユーザーの予算を、周期の順（週・月・年）、同じ周期は作った順に返す。
+      参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: listBudgets
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: 予算の一覧
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../schemas/budgets.yaml#/Budget'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  post:
+    tags: [budgets]
+    summary: 予算の追加
+    description: |
+      費用科目かタグの、週・月・年の予算を追加する。401 以外では新しい `next_token` を返す。
+    operationId: createBudget
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/budgets.yaml#/BudgetRequest'
+    responses:
+      '201':
+        description: 追加した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/budgets.yaml#/BudgetSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 費用科目（`expense_account_not_found`）かタグ（`tag_not_found`。除くタグも）が存在しない、または他ユーザーのもの
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+budget:
+  put:
+    tags: [budgets]
+    summary: 予算の変更
+    description: |
+      予算を変更する。本文は追加と同じ。除くタグは送った内容に置き換える。401 以外では新しい `next_token` を返す。
+    operationId: updateBudget
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/budgets.yaml#/BudgetRequest'
+    responses:
+      '200':
+        description: 変更した
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/budgets.yaml#/BudgetSavedResponse'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 予算（`budget_not_found`）、費用科目（`expense_account_not_found`）、タグ（`tag_not_found`）が存在しない、または他ユーザーのもの
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: バリデーションエラー（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+  delete:
+    tags: [budgets]
+    summary: 予算の削除
+    description: |
+      予算を削除する（仕訳は変わらない）。成功時は本文を返さず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す（エラー時は本文の `next_token`）。
+    operationId: deleteBudget
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    responses:
+      '204':
+        description: 削除した
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '404':
+        description: 予算が存在しない、または他ユーザーの予算（`budget_not_found`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+
+budget-reports:
+  get:
+    tags: [budgets]
+    summary: 期間ごとの予算と使った額
+    description: |
+      予算ごとに、基準日を含む期間（週は月曜〜日曜、月、年は 1 月〜12 月）の予算額・使った額・残りを返す。
+      使った額は、期間の中の日付（買った日）の費用の明細の合計。費用科目は子科目も含み、除くタグの付いた明細は数えない。
+      タグはそのタグが付いた明細。立替金の明細は費用ではないので入らない。
+      内部で PostgreSQL 関数 `get_budget_report` を呼び出す。
+      参照のみの API なので本文に `next_token` は含めず、新しいトークンはレスポンスヘッダ `X-Next-Token` で返す。
+    operationId: getBudgetReport
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: date
+        in: query
+        description: 基準日。省略すると今日（日本時間）。
+        schema:
+          type: string
+          format: date
+    responses:
+      '200':
+        description: 予算ごとの予算額と使った額
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/budgets.yaml#/BudgetReport'
+      '401':
+        description: 未認証
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'
+      '422':
+        description: 基準日の指定が不正（`errors`）
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/error.yaml#/ErrorResponse'

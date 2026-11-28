@@ -1,0 +1,127 @@
+BudgetRequest:
+  type: object
+  description: ユーザー ID はトークンから決まるため、リクエストに含めても無視される。
+  required:
+    - name
+    - target_type
+    - period_type
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 30
+      description: 前後の空白は取り除く
+    target_type:
+      type: integer
+      enum: [1, 2]
+      description: 対象。1 = 費用科目（子科目も含む）、2 = タグ
+    expense_account_id:
+      type: [integer, 'null']
+      minimum: 1
+      description: 費用科目（共通か本人の科目）の ID。target_type が 1 のときに必須。2 のときは無視する
+    tag_id:
+      type: [integer, 'null']
+      minimum: 1
+      description: タグ（本人のタグ）の ID。target_type が 2 のときに必須。1 のときは無視する
+    period_type:
+      type: integer
+      enum: [1, 2, 3]
+      description: 周期。1 = 週（月曜〜日曜）、2 = 月、3 = 年（1 月〜12 月）
+    amount:
+      type: integer
+      minimum: 0
+      maximum: 2147483647
+      description: 1 回の期間の額。monthly_amounts を送らないときに必須
+    monthly_amounts:
+      type: [array, 'null']
+      minItems: 12
+      maxItems: 12
+      items:
+        type: integer
+        minimum: 0
+        maximum: 2147483647
+      description: 月の予算だけ。1〜12 月の額（12 個）。送ると amount は使わない（0 で保存する）。省略か null なら毎月同じ額
+    excluded_tag_ids:
+      type: array
+      maxItems: 10
+      items:
+        type: integer
+        minimum: 1
+      description: 費用科目の予算から外すタグ（本人のタグ）。このタグが付いた明細は数えない。タグの予算では無視する
+
+Budget:
+  type: object
+  required:
+    [id, name, target_type, expense_account_id, tag_id, target_name, period_type, amount, monthly_amounts, excluded_tags]
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+    target_type:
+      type: integer
+      enum: [1, 2]
+    expense_account_id:
+      type: [integer, 'null']
+    tag_id:
+      type: [integer, 'null']
+    target_name:
+      type: [string, 'null']
+      description: 対象の科目かタグの名前
+    period_type:
+      type: integer
+      enum: [1, 2, 3]
+    amount:
+      type: integer
+      description: 1 回の期間の額（月ごとに決めた額があるときは 0）
+    monthly_amounts:
+      type: [array, 'null']
+      items:
+        type: integer
+      description: 1〜12 月の額（月の予算で月ごとに決めたときだけ）
+    excluded_tags:
+      type: array
+      items:
+        $ref: './tags.yaml#/TagRef'
+
+BudgetSavedResponse:
+  type: object
+  required: [id, next_token]
+  properties:
+    id:
+      type: integer
+    next_token:
+      type: string
+
+BudgetReport:
+  type: object
+  required: [date, budgets]
+  properties:
+    date:
+      type: string
+      format: date
+      description: 基準日
+    budgets:
+      type: array
+      description: 予算ごとの、基準日を含む期間の予算額と使った額。周期の順（週・月・年）、同じ周期は作った順
+      items:
+        allOf:
+          - $ref: '#/Budget'
+          - type: object
+            required: [period_start, period_end, budget_amount, used_amount, remaining_amount]
+            properties:
+              period_start:
+                type: string
+                format: date
+              period_end:
+                type: string
+                format: date
+              budget_amount:
+                type: integer
+                description: その期間の予算額（月ごとに決めた額なら、その月の額）
+              used_amount:
+                type: integer
+                description: 期間の中の日付（買った日）の費用の明細の合計
+              remaining_amount:
+                type: integer
+                description: budget_amount − used_amount（使いすぎるとマイナス）

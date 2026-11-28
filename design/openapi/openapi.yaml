@@ -24,6 +24,8 @@ tags:
     description: 残高・支出の集計
   - name: tags
     description: タグ（明細に付ける目的）
+  - name: budgets
+    description: 予算（費用科目かタグごとの、週・月・年の額）
   - name: recurring_entries
     description: 決まった支払い（回ごとに確かめてから登録する）
 
@@ -94,6 +96,12 @@ paths:
     $ref: './paths/tags.yaml#/tags'
   /tags/{id}:
     $ref: './paths/tags.yaml#/tag'
+  /budgets:
+    $ref: './paths/budgets.yaml#/budgets'
+  /budgets/{id}:
+    $ref: './paths/budgets.yaml#/budget'
+  /budget-reports:
+    $ref: './paths/budgets.yaml#/budget-reports'
   /recurring-entries:
     $ref: './paths/recurring_entries.yaml#/recurring-entries'
   /recurring-entries/{id}:
@@ -188,6 +196,14 @@ components:
       $ref: './schemas/tags.yaml#/TagReport'
     TagReportItems:
       $ref: './schemas/tags.yaml#/TagReportItems'
+    BudgetRequest:
+      $ref: './schemas/budgets.yaml#/BudgetRequest'
+    Budget:
+      $ref: './schemas/budgets.yaml#/Budget'
+    BudgetSavedResponse:
+      $ref: './schemas/budgets.yaml#/BudgetSavedResponse'
+    BudgetReport:
+      $ref: './schemas/budgets.yaml#/BudgetReport'
     RecurringEntryRequest:
       $ref: './schemas/recurring_entries.yaml#/RecurringEntryRequest'
     RecurringEntry:

@@ -23,6 +23,8 @@ function errorMessage(error: unknown) {
         return "同じ名前のタグがあります。";
       case "tag_not_found":
         return "タグが見つかりません。画面を再読み込みしてください。";
+      case "tag_used_by_budget":
+        return "予算の対象にしているタグは削除できません。先に「予算の設定」で予算を削除するか、対象を変えてください。";
     }
 
     if (error.data?.errors?.length) {

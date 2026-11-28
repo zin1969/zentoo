@@ -18,6 +18,7 @@ Rails.application.routes.draw do
   get "/tag-reports/:id", to: "reports/tag_reports#show", constraints: { id: /\d+/ }
   get "/tag-reports/:id/items", to: "reports/tag_reports#items", constraints: { id: /\d+/ }
   get "/stock-holdings", to: "reports/stock_holdings#index"
+  get "/budget-reports", to: "reports/budget_reports#index"
   post "/asset-opening-journals", to: "journals/asset_opening_journals#create"
   post "/liability-opening-journals", to: "journals/liability_opening_journals#create"
   post "/journal-entries", to: "journals/journal_entries#create"
@@ -53,6 +54,11 @@ Rails.application.routes.draw do
   post "/recurring-entries", to: "recurring_entries#create"
   put "/recurring-entries/:id", to: "recurring_entries#update", constraints: { id: /\d+/ }
   delete "/recurring-entries/:id", to: "recurring_entries#destroy", constraints: { id: /\d+/ }
+
+  get "/budgets", to: "budgets#index"
+  post "/budgets", to: "budgets#create"
+  put "/budgets/:id", to: "budgets#update", constraints: { id: /\d+/ }
+  delete "/budgets/:id", to: "budgets#destroy", constraints: { id: /\d+/ }
 
   get "/revenue-accounts", to: "accounts/revenue_accounts#index"
   post "/revenue-accounts", to: "accounts/revenue_accounts#create"

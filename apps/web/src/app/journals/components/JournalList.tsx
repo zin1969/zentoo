@@ -221,12 +221,25 @@ function JournalCard({ journal, deleting, onDelete, onChanged }: JournalCardProp
   );
 }
 
-export default function JournalList() {
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// URL で渡された初期の条件（予算の画面から開くときなど）。形の合わないものは使わない
+type InitialConditions = { from: string; to: string; accountKey: string; tagId: string };
+
+export default function JournalList({ initial }: { initial?: InitialConditions } = {}) {
   const router = useRouter();
-  const [range, setRange] = useState(currentMonthRange);
+  const [range, setRange] = useState(() =>
+    initial && DATE_PATTERN.test(initial.from) && DATE_PATTERN.test(initial.to)
+      ? { from: initial.from, to: initial.to }
+      : currentMonthRange()
+  );
   // 期間を外して、全期間から探す
   const [allPeriods, setAllPeriods] = useState(false);
-  const [conditions, setConditions] = useState<JournalSearchConditions>(EMPTY_CONDITIONS);
+  const [conditions, setConditions] = useState<JournalSearchConditions>(() => ({
+    ...EMPTY_CONDITIONS,
+    accountKey: initial && parseAccountKey(initial.accountKey) ? initial.accountKey : "",
+    tagId: initial && /^\d+$/.test(initial.tagId) ? initial.tagId : ""
+  }));
   const [page, setPage] = useState(1);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   // 削除や引き落とし日の変更のあとに、同じ期間・ページを読み直すための番号

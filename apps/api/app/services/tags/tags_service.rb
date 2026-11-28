@@ -5,6 +5,7 @@ module Tags
   class TagsService
     class NotFound < StandardError; end
     class DuplicateName < StandardError; end
+    class UsedByBudget < StandardError; end
 
     Item = Struct.new(:tag, :usage_count, keyword_init: true)
 
@@ -34,9 +35,15 @@ module Tags
       end
     end
 
-    # 使っているタグも削除できる。明細からタグが外れるだけで、明細は消えない（DB の ON DELETE CASCADE）
+    # 明細で使っているタグも削除できる。明細からタグが外れるだけで、明細は消えない（DB の ON DELETE CASCADE）。
+    # 予算の除くタグからも外れる。予算の対象にしているタグは、先に予算を消すか対象を変えてもらう（予算が黙って消えないように）
     def destroy!(user:, id:)
-      find!(user, id).destroy!
+      Tag.transaction do
+        tag = find!(user, id)
+        raise UsedByBudget if Budget.where(tag_id: tag.id).exists?
+
+        tag.destroy!
+      end
     end
 
     private

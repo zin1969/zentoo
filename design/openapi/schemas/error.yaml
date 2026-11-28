@@ -54,6 +54,9 @@ ErrorResponse:
         - receivable_requires_settlement
         - receivable_account_not_found
         - difference_account_not_found
+        - budget_not_found
+        - expense_account_not_found
+        - tag_used_by_budget
     errors:
       type: array
       items:

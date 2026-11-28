@@ -13,6 +13,11 @@ class TagsController < ApplicationController
     render_error("duplicate_tag_name", :unprocessable_content)
   end
 
+  # 予算の対象にしているタグは削除できない
+  rescue_from Tags::TagsService::UsedByBudget do
+    render_error("tag_used_by_budget", :unprocessable_content)
+  end
+
   def index
     tags = Tags::TagsService.new.list(user: current_user).map do |item|
       # usage_count: タグが付いている明細の数

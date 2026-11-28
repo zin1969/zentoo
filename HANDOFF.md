@@ -49,7 +49,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30、最終更新: 2026-11-28�
 - 決まった収支で振替も設定・登録できる（M17、2026-11-28 完了）。`recurring_entries.kind` = 3（1 = 支出、2 = 収入）で、列は増やしていない（借方 `debit_account_id` が入金先の口座、貸方が出金元の口座かカード）。登録は振替と同じ DB 関数 `create_transfer_journal`（カードからのチャージは電子マネーだけで、引き落とし仕訳も自動）。摘要は `store_name`、空なら名前。振替の修正（`replace_transfer_journal`）でも回の記録を引き継ぐ。
 - 現物株を銘柄ごとに、株数と取得額で管理できる（M18、2026-11-28 完了）。銘柄は種別「投資」の口座（取得額 = 口座の残高）で、明細の `shares`（資産の明細だけ）で株数を持つ。今持っている株は「開始資産登録」で株数と平均取得単価から登録する（`POST /asset-opening-journals` の `shares`、DB 関数 `create_opening_stock_balance_journal`）。売買は「株の売買」（`/stock-trades`、DB 関数 `create_stock_buy_journal`・`create_stock_sell_journal`）、一覧は「保有株」（`/stock-holdings`、`get_stock_holdings`）。相手は証券口座（預り金）だけ。買いの手数料は取得額に含め、売りは移動平均の取得額を減らし、差額を「株式売却益」（収益）か「株式売却損」（費用）に入れる。この 2 つは名前で探すので、名前を変えると売りが 422 になる。配当は収入登録で、入金先を証券口座、科目を「配当金」にして手取りの額で登録する。後の日付の売りがある銘柄には、前の日付で登録できない（移動平均が合わなくなるため。後の売りを消して日付の順に登録し直す）。売買は修正できず、株の買いは振替と同じ形でも振替として直せない。仕様は `apps/api/docs/interfaces/rest/stock_trades.md`・`stock_holdings.md`。
 - 立て替えた分を精算できる（M19、2026-11-28 完了）。立替金は資産の口座の種別 6 で、相手ごとに作る（友だち・「立替金 会社」）。お買い物登録の「立て替え」の欄で自分以外の分を立替金の明細（借方の資産）にする。全額の立て替え（費用の明細 0 件）も登録・修正できる（`replace_journal_entry` が費用か本人の立替金の明細を許す）。会社の交通費は、仕事で乗った日に振替（PASMO → 立替金 会社）で付ける。振替では立替金から出せない（`receivable_requires_settlement`）。返してもらった分は「立替金の精算」（`/settlement-journals`、DB 関数 `create_settlement_journal`・`replace_settlement_journal`）で登録し、差額は少なければ費用、多ければ収益、受け取りなしは全額費用。精算の仕訳は貸方に立替金（`payment_method_type` = 6）があるもので、お買い物・振替の修正では直せない。仕訳一覧で科目を指定すると、全ページ分の借方・貸方の合計（`account_totals`）が出る（月末に精算書と突き合わせる）。借方の明細には口座の種別 `asset_type` が付く。仕様は `apps/api/docs/interfaces/rest/settlement_journals.md`。
-- **次は M20「予算と実績」**（未着手、2026-11-28 ユーザーの判断）。予算は費用科目かタグごとに、週（月曜始まり）・月（毎月同じ額か月ごとの額）・年（暦年）で持つ。科目の予算には除くタグ（食費からアルコールを外す）を付けられる。繰り越しと額の履歴は持たない。方針とタスクは `docs/milestones.md`。
+- **M20「予算と実績」は実装中**（2026-11-28 着手。テスト・実機確認・デプロイが残り）。予算は費用科目かタグごとに、週（月曜始まり）・月（毎月同じ額か月ごとの額）・年（暦年）で持つ。科目の予算には除くタグ（食費からアルコールを外す）を付けられる。繰り越しと額の履歴は持たない。画面は「予算」（`/budgets`）と「予算の設定」（`/budgets/settings`）。方針とタスクは `docs/milestones.md`、API は `apps/api/docs/interfaces/rest/budgets.md`。
 - PayPay は、カード（負債）と電子マネー（資産）の 2 つを本番で別々に登録する（ユーザーの運用）。
 - イメージは VPS の上でビルドする（`builder.remote`）。Vagrant は arm64 で、QEMU では Next.js のビルドが落ちるため。Kamal 2.12.0 は VPS でビルドするとき ghcr.io にログインしないので、Vagrant で `kamal registry login` してログイン情報を `~/.zentoo-kamal-docker` に残している。
 - push 済みかどうかは `git status` で確認する。
@@ -93,7 +93,7 @@ zentoo の引き継ぎメモ。作成日: 2026-10-30、最終更新: 2026-11-28�
 
 ## 落とし穴（過去にハマったもの）
 
-- Rails は未来の日付のマイグレーションを拒否する。最新は `20261128140000`。次は、その日の日付（`YYYYMMDDhhmmss`）で、最新より後の番号を使う。
+- Rails は未来の日付のマイグレーションを拒否する。最新は `20261128150000`。次は、その日の日付（`YYYYMMDDhhmmss`）で、最新より後の番号を使う。
 - DB の `RAISE` を起こすスペックは、`transaction(requires_new: true)` で囲む。
 - 明細の `element_type` は独自の型（`ElementTypeType`）なので、`Debit.where(element_type: 5)` のようなハッシュの条件は `comparison of Integer with ElementType failed` で落ちる。`where("debits.element_type = ?", 5)` と SQL で書く。
 - `spec/rails_helper.rb` の FactoryBot は `config.include` で入れる。素の `include` だと `create` が Object に入り、モジュールから来る `create` アクション（`TwoLevelAccountsActions`）が 404 になる（2026-11-27 に直した）。

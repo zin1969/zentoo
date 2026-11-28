@@ -70,13 +70,14 @@ DELETE /tags/{id}
 
 ### `DELETE /tags/{id}`（204 No Content）
 
-本文なし。使っているタグも削除でき、明細からタグが外れるだけで、明細は消えない。
+本文なし。使っているタグも削除でき、明細からタグが外れるだけで、明細は消えない。[予算](budgets.md)の除くタグからも外れる。予算の対象にしているタグは削除できない（先に予算を削除するか、対象を変える）。
 
 ### Errors
 | Status | error / errors | 内容 |
 | ------ | -------------- | ---- |
 | 404 | `tag_not_found` | タグが存在しない、または他ユーザーのタグ |
 | 422 | `duplicate_tag_name` | 同じ名前のタグがある |
+| 422 | `tag_used_by_budget` | 予算の対象にしているタグの削除 |
 | 422 | `errors` | 名前が空、または 30 文字を超える |
 
 ### Authorization Error (401 Unauthorized)

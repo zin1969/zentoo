@@ -10,4 +10,5 @@ class User < ApplicationRecord
   has_many :credit_cards
   has_many :tags
   has_many :recurring_entries
+  has_many :budgets
 end
